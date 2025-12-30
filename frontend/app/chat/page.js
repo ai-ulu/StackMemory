@@ -67,8 +67,6 @@ import { useTheme } from 'next-themes';
 import { formatRelativeTime, generateTitle, cn } from '@/lib/utils';
 import { AVAILABLE_MODELS } from '@/lib/models';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 // Message component with markdown support
 function Message({ message, isUser }) {
