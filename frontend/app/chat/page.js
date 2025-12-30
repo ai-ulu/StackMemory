@@ -113,21 +113,17 @@ function Message({ message, isUser }) {
           <ReactMarkdown
             components={{
               code({ node, inline, className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || '');
-                return !inline && match ? (
-                  <SyntaxHighlighter
-                    style={oneDark}
-                    language={match[1]}
-                    PreTag="div"
-                    className="rounded-lg !bg-zinc-900"
-                    {...props}
-                  >
-                    {String(children).replace(/\n$/, '')}
-                  </SyntaxHighlighter>
-                ) : (
-                  <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                return (
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                     {children}
                   </code>
+                );
+              },
+              pre({ children }) {
+                return (
+                  <pre className="bg-zinc-900 text-zinc-100 rounded-lg p-4 overflow-x-auto text-sm">
+                    {children}
+                  </pre>
                 );
               },
             }}
