@@ -1,0 +1,821 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import {
+  Brain,
+  Plus,
+  Send,
+  Menu,
+  Settings,
+  LogOut,
+  Trash2,
+  MessageSquare,
+  Sparkles,
+  Edit3,
+  Check,
+  X,
+  ChevronDown,
+  Loader2,
+  Bot,
+  User,
+  Moon,
+  Sun,
+  Copy,
+  MoreVertical,
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { formatRelativeTime, generateTitle, cn } from '@/lib/utils';
+import { AVAILABLE_MODELS } from '@/lib/models';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+// Message component with markdown support
+function Message({ message, isUser }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className={cn(
+      'group flex gap-3 px-4 py-6 transition-colors',
+      isUser ? 'bg-transparent' : 'bg-muted/30'
+    )}>
+      <div className={cn(
+        'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
+        isUser 
+          ? 'bg-gradient-to-br from-primary to-violet-600' 
+          : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+      )}>
+        {isUser ? (
+          <User className="w-4 h-4 text-white" />
+        ) : (
+          <Bot className="w-4 h-4 text-white" />
+        )}
+      </div>
+      
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">
+            {isUser ? 'Sen' : 'AI-ULU'}
+          </span>
+          {message.memories > 0 && (
+            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/20">
+              <Brain className="w-3 h-3 mr-1" />
+              {message.memories} hatıra
+            </Badge>
+          )}
+        </div>
+        
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={match[1]}
+                    PreTag="div"
+                    className="rounded-lg !bg-zinc-900"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        </div>
+        
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={copyToClipboard}
+          >
+            {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+            {copied ? 'Kopyalandı' : 'Kopyala'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Typing indicator
+function TypingIndicator() {
+  return (
+    <div className="flex gap-3 px-4 py-6 bg-muted/30">
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+        <Bot className="w-4 h-4 text-white" />
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="typing-dot" />
+        <div className="typing-dot" />
+        <div className="typing-dot" />
+      </div>
+    </div>
+  );
+}
+
+// Empty state
+function EmptyState({ onSuggestionClick }) {
+  const suggestions = [
+    '💡 Bir proje fikirim var, yardım eder misin?',
+    '📝 Bu kodu açıklar mısın?',
+    '🌟 Bugün nasıl yardımcı olabilirim?',
+    '🚀 Yeni bir şeyler öğrenmek istiyorum',
+  ];
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
+        <Brain className="w-10 h-10 text-white" />
+      </div>
+      <h2 className="text-2xl font-bold mb-2">AI-ULU'ya Hoş Geldiniz</h2>
+      <p className="text-muted-foreground mb-8 max-w-md">
+        Sizi hatırlayan yapay zeka asistanınız. Bir soru sorun veya önerilerden birini seçin.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+        {suggestions.map((suggestion, idx) => (
+          <button
+            key={idx}
+            onClick={() => onSuggestionClick(suggestion.slice(2).trim())}
+            className="p-4 text-left rounded-xl border-2 border-transparent bg-muted/50 hover:bg-muted hover:border-primary/20 transition-all text-sm"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Conversation item in sidebar
+function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(conv.title);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    if (editTitle.trim() && editTitle !== conv.title) {
+      onRename(conv.id, editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') {
+      setEditTitle(conv.title);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        'group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all',
+        isActive 
+          ? 'bg-primary/10 text-primary' 
+          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+      )}
+      onClick={() => !isEditing && onClick(conv.id)}
+    >
+      <MessageSquare className="w-4 h-4 flex-shrink-0" />
+      
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm truncate">{conv.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatRelativeTime(conv.updated_at)}
+            </p>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="opacity-0 group-hover:opacity-100 h-7 w-7"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}>
+                <Edit3 className="w-4 h-4 mr-2" />
+                Yeniden Adlandır
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(conv.id);
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Sil
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function ChatPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  
+  // State
+  const [user, setUser] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [activeConversation, setActiveConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Auto-scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Initialize
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      setUser(user);
+      await loadConversations();
+      setIsLoading(false);
+    };
+    init();
+  }, []);
+
+  // Load conversations
+  const loadConversations = async () => {
+    try {
+      const res = await fetch('/api/conversations');
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data);
+      }
+    } catch (error) {
+      console.error('Load conversations error:', error);
+    }
+  };
+
+  // Load conversation messages
+  const loadConversation = async (id) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveConversation(data);
+        setMessages(data.messages || []);
+        setSelectedModel(data.model || 'gpt-4o-mini');
+      }
+    } catch (error) {
+      console.error('Load conversation error:', error);
+      toast.error('Sohbet yüklenemedi');
+    }
+    setSidebarOpen(false);
+  };
+
+  // Create new conversation
+  const createConversation = async (title = 'Yeni Sohbet') => {
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, model: selectedModel }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(prev => [data, ...prev]);
+        setActiveConversation(data);
+        setMessages([]);
+        return data;
+      }
+    } catch (error) {
+      console.error('Create conversation error:', error);
+      toast.error('Yeni sohbet oluşturulamadı');
+    }
+    return null;
+  };
+
+  // Delete conversation
+  const deleteConversation = async (id) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (activeConversation?.id === id) {
+          setActiveConversation(null);
+          setMessages([]);
+        }
+        toast.success('Sohbet silindi');
+      }
+    } catch (error) {
+      console.error('Delete conversation error:', error);
+      toast.error('Sohbet silinemedi');
+    }
+    setDeleteDialogOpen(false);
+    setConversationToDelete(null);
+  };
+
+  // Rename conversation
+  const renameConversation = async (id, title) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      if (res.ok) {
+        setConversations(prev => 
+          prev.map(c => c.id === id ? { ...c, title } : c)
+        );
+        if (activeConversation?.id === id) {
+          setActiveConversation(prev => ({ ...prev, title }));
+        }
+      }
+    } catch (error) {
+      console.error('Rename conversation error:', error);
+    }
+  };
+
+  // Send message
+  const sendMessage = async (content = inputValue) => {
+    if (!content.trim() || isSending) return;
+
+    const messageContent = content.trim();
+    setInputValue('');
+    setIsSending(true);
+
+    let convId = activeConversation?.id;
+
+    // Create new conversation if needed
+    if (!convId) {
+      const title = generateTitle(messageContent);
+      const newConv = await createConversation(title);
+      if (!newConv) {
+        setIsSending(false);
+        return;
+      }
+      convId = newConv.id;
+    } else {
+      // Update title if first message
+      if (messages.length === 0) {
+        const title = generateTitle(messageContent);
+        await renameConversation(convId, title);
+      }
+    }
+
+    // Add user message to UI
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: messageContent,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsStreaming(true);
+
+    // Add placeholder for assistant message
+    const assistantMessage = {
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: '',
+      memories: 0,
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageContent,
+          conversationId: convId,
+          model: selectedModel,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Chat request failed');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let memories = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.memories) {
+                memories = parsed.memories;
+                setMessages(prev => 
+                  prev.map(m => 
+                    m.id === assistantMessage.id 
+                      ? { ...m, memories } 
+                      : m
+                  )
+                );
+              }
+              
+              if (parsed.content) {
+                fullContent += parsed.content;
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantMessage.id
+                      ? { ...m, content: fullContent }
+                      : m
+                  )
+                );
+              }
+              
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+
+      // Refresh conversations list
+      await loadConversations();
+    } catch (error) {
+      console.error('Send message error:', error);
+      toast.error('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+      // Remove the failed assistant message
+      setMessages(prev => prev.filter(m => m.id !== assistantMessage.id));
+    } finally {
+      setIsSending(false);
+      setIsStreaming(false);
+    }
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Sign out
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Brain className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Sidebar content (reused for mobile and desktop)
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* New Chat Button */}
+      <div className="p-4">
+        <Button
+          onClick={() => {
+            setActiveConversation(null);
+            setMessages([]);
+            setSidebarOpen(false);
+          }}
+          className="w-full bg-gradient-to-r from-primary to-violet-600 hover:opacity-90"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Yeni Sohbet
+        </Button>
+      </div>
+
+      {/* Conversations List */}
+      <ScrollArea className="flex-1 px-2">
+        <div className="space-y-1 pb-4">
+          {conversations.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              Henüz sohbet yok
+            </p>
+          ) : (
+            conversations.map(conv => (
+              <ConversationItem
+                key={conv.id}
+                conv={conv}
+                isActive={activeConversation?.id === conv.id}
+                onClick={loadConversation}
+                onDelete={(id) => {
+                  setConversationToDelete(id);
+                  setDeleteDialogOpen(true);
+                }}
+                onRename={renameConversation}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* User Profile */}
+      <div className="p-4 border-t">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-muted transition-colors">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white">
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium truncate">{user?.email}</p>
+                <p className="text-xs text-muted-foreground">Ücretsiz Plan</p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+              {theme === 'dark' ? 'Açık Mod' : 'Koyu Mod'}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Ayarlar
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              Çıkış Yap
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-72 border-r bg-sidebar flex-col">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-72 p-0">
+          <SidebarContent />
+        </SheetContent>
+      </Sheet>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Top Bar */}
+        <header className="h-14 border-b flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+            </Sheet>
+            
+            <div className="flex items-center gap-2">
+              <Brain className="w-6 h-6 text-primary" />
+              <span className="font-semibold">
+                {activeConversation?.title || 'Yeni Sohbet'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_MODELS.map(model => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <div>
+                      <p className="font-medium">{model.name}</p>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </header>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            {messages.length === 0 ? (
+              <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
+            ) : (
+              <div className="divide-y divide-border/50">
+                {messages.map((msg, idx) => (
+                  <Message
+                    key={msg.id || idx}
+                    message={msg}
+                    isUser={msg.role === 'user'}
+                  />
+                ))}
+                {isStreaming && messages[messages.length - 1]?.content === '' && (
+                  <TypingIndicator />
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t p-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Mesajınızı yazın..."
+                className="min-h-[56px] max-h-[200px] pr-14 resize-none"
+                disabled={isSending}
+              />
+              <Button
+                onClick={() => sendMessage()}
+                disabled={!inputValue.trim() || isSending}
+                size="icon"
+                className="absolute right-2 bottom-2 h-10 w-10 bg-gradient-to-r from-primary to-violet-600 hover:opacity-90"
+              >
+                {isSending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+              <span>
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Cmd</kbd>
+                {' + '}
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>
+                {' ile gönder'}
+              </span>
+              <span>{inputValue.length} karakter</span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sohbeti Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm mesajlar silinecektir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConversation(conversationToDelete)}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
