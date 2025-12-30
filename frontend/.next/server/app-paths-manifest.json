@@ -6,9 +6,9 @@
   "/api/conversations/route": "app/api/conversations/route.js",
   "/api/embed/route": "app/api/embed/route.js",
   "/api/health/route": "app/api/health/route.js",
-  "/chat/page": "app/chat/page.js",
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
   "/settings/page": "app/settings/page.js",
+  "/chat/page": "app/chat/page.js",
+  "/page": "app/page.js",
   "/signup/page": "app/signup/page.js"
 }
