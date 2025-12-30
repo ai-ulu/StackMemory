@@ -1,70 +1,115 @@
-# Getting Started with Create React App
+# AI-ULU - Kalıcı Hafızalı AI Chat Platformu
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+AI-ULU, geçmiş konuşmalarınızı semantik olarak hatırlayan ve bağlamı hiç kaybetmeyen bir yapay zeka chat platformudur.
 
-## Available Scripts
+## 🚀 Özellikler
 
-In the project directory, you can run:
+- **🧠 Kalıcı Hafıza**: pgvector ile semantik benzerlik araması
+- **🔄 Çoklu Model**: GPT-4o, Claude Sonnet, Gemini arasında geçiş
+- **💬 Akıllı Sohbet**: Streaming yanıtlar ve markdown desteği
+- **🌙 Koyu/Açık Tema**: Otomatik tema desteği
+- **🔐 Güvenli Auth**: Supabase Auth ile email doğrulama
 
-### `npm start`
+## 🛠️ Teknolojiler
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: Next.js 14, React, TailwindCSS, shadcn/ui
+- **Backend**: Next.js API Routes
+- **Database**: Supabase PostgreSQL + pgvector
+- **Auth**: Supabase Auth
+- **AI**: OpenAI GPT-4o, Emergent LLM API
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📝 Kurulum
 
-### `npm test`
+### 1. Supabase Projesi Oluşturun
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. [supabase.com](https://supabase.com) adresinden yeni proje oluşturun
+2. Project Settings > API bölümünden:
+   - `Project URL` (NEXT_PUBLIC_SUPABASE_URL)
+   - `anon public` key (NEXT_PUBLIC_SUPABASE_ANON_KEY)
+   - `service_role` key (SUPABASE_SERVICE_ROLE_KEY)
 
-### `npm run build`
+### 2. Database Schema
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+`supabase/schema.sql` dosyasını Supabase SQL Editor'da çalıştırın.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3. Environment Variables
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+`.env.local` dosyasını düzenleyin:
 
-### `npm run eject`
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# AI API
+OPENAI_API_KEY=your-openai-or-emergent-key
+OPENAI_BASE_URL=https://api.emergentmethods.ai/v1  # veya https://api.openai.com/v1
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Opsiyonel: Custom Model Endpoint
+# CUSTOM_MODEL_ENDPOINT=https://your-server.com/v1/chat/completions
+# CUSTOM_MODEL_API_KEY=your-key
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 4. Bağımlılıkları Yükleyin
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+yarn install
+```
 
-## Learn More
+### 5. Geliştirme Sunucusu
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+yarn dev
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 📁 Proje Yapısı
 
-### Code Splitting
+```
+frontend/
+├── app/
+│   ├── api/
+│   │   ├── chat/route.js         # Chat API + streaming
+│   │   ├── conversations/        # CRUD işlemleri
+│   │   ├── embed/route.js        # Embedding API
+│   │   └── health/route.js       # Health check
+│   ├── chat/page.js              # Ana chat arayüzü
+│   ├── login/page.js             # Giriş sayfası
+│   ├── signup/page.js            # Kayıt sayfası
+│   ├── settings/page.js          # Ayarlar sayfası
+│   ├── layout.js                 # Root layout
+│   └── page.js                   # Landing page
+├── components/ui/                # shadcn/ui bileşenleri
+├── lib/
+│   ├── supabase/                 # Supabase client'lar
+│   ├── models.js                 # Model konfigürasyonu
+│   └── utils.js                  # Yardımcı fonksiyonlar
+└── supabase/
+    └── schema.sql                # Database schema
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 🧠 Hafıza Sistemi Nasıl Çalışır?
 
-### Analyzing the Bundle Size
+1. **Mesaj Gönderilir**: Kullanıcı yeni mesaj gönderir
+2. **Embedding Oluşturulur**: text-embedding-3-small ile vektör oluşturulur
+3. **Benzer Mesajlar Bulunur**: pgvector ile semantik arama yapılır
+4. **Context Oluşturulur**: En benzer 3 mesaj + son 15 mesaj
+5. **AI Yanıt Verir**: Tüm bağlam ile yanıt üretilir
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🚀 Deployment
 
-### Making a Progressive Web App
+### Vercel
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+vercel --prod
+```
 
-### Advanced Configuration
+Environment variables'ları Vercel dashboard'dan ekleyin.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 📄 Lisans
 
-### Deployment
+MIT License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## 💜 Katkıda Bulunun
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Pull request'ler ve öneriler memnuniyetle karşılanır!
