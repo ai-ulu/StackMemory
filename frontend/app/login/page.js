@@ -12,6 +12,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Brain, Loader2, Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
