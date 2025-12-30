@@ -21,6 +21,8 @@ import {
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 // Animated memory demo component
 function MemoryDemo() {
   const [currentStep, setCurrentStep] = useState(0);
