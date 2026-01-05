@@ -900,6 +900,9 @@ video {
 .mb-12 {
   margin-bottom: 3rem;
 }
+.mt-3 {
+  margin-top: 0.75rem;
+}
 .block {
   display: block;
 }
