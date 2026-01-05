@@ -9,12 +9,30 @@ const openai = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
 });
 
+// Memory-First System Prompt (LOCKED)
+const SYSTEM_PROMPT_BASE = `Sen AI-ULU, **memory-first architecture** ile tasarlanmış bir yapay zeka asistanısın.
+
+TEMEL KURALLAR (DEĞİŞTİRİLEMEZ):
+1. Hafıza bütünlüğü > Hız > Yaratıcılık
+2. Asla tahmin yapma, kaynak belirsizse belirt
+3. Hafıza ve API çıktısını sessizce karıştırma
+4. Önemsiz/çöp veriyi kaydetme
+5. Her yanıtta kaynak şeffaflığı sağla
+
+KAYNAK ETİKETLEME:
+- Hafızadan gelen bilgiyi [HAFIZA] ile işaretle
+- API'den geleni [API] ile işaretle
+- Saf muhakemeyi [ÇIKARIM] ile işaretle
+
+Kullanıcı ile doğal, samimi ve yardımcı bir şekilde sohbet et.
+Türkçe konuş.`;
+
 // Generate embedding for text
 async function generateEmbedding(text) {
   try {
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: text.slice(0, 8000), // Limit text length
+      input: text.slice(0, 8000),
     });
     return response.data[0].embedding;
   } catch (error) {
@@ -23,13 +41,12 @@ async function generateEmbedding(text) {
   }
 }
 
-// Search similar messages using vector similarity
-async function searchSimilarMessages(supabase, embedding, userId, limit = 3) {
+// Search memories with confidence scoring
+async function searchMemories(supabase, embedding, userId, limit = 5) {
   if (!embedding) return [];
   
   try {
-    // Call the RPC function for vector search
-    const { data, error } = await supabase.rpc('match_messages', {
+    const { data, error } = await supabase.rpc('match_memories', {
       query_embedding: embedding,
       match_threshold: 0.7,
       match_count: limit,
@@ -37,13 +54,40 @@ async function searchSimilarMessages(supabase, embedding, userId, limit = 3) {
     });
 
     if (error) {
-      console.error('Vector search error:', error);
+      console.error('Memory search error:', error);
       return [];
     }
 
+    // Calculate influence percentage based on similarity * confidence * recency
+    return (data || []).map(mem => {
+      const recency = Math.exp(-(Date.now() - new Date(mem.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000));
+      const influence = Math.round(mem.similarity * mem.confidence * recency * 100);
+      return {
+        ...mem,
+        influence_percentage: influence,
+      };
+    }).sort((a, b) => b.influence_percentage - a.influence_percentage);
+  } catch (err) {
+    console.error('Memory search error:', err);
+    return [];
+  }
+}
+
+// Search similar messages
+async function searchSimilarMessages(supabase, embedding, userId, limit = 3) {
+  if (!embedding) return [];
+  
+  try {
+    const { data, error } = await supabase.rpc('match_messages', {
+      query_embedding: embedding,
+      match_threshold: 0.7,
+      match_count: limit,
+      user_id_filter: userId,
+    });
+
     return data || [];
   } catch (err) {
-    console.error('Search error:', err);
+    console.error('Message search error:', err);
     return [];
   }
 }
@@ -57,12 +101,40 @@ async function getRecentMessages(supabase, conversationId, limit = 15) {
     .order('created_at', { ascending: true })
     .limit(limit);
 
-  if (error) {
-    console.error('Get messages error:', error);
-    return [];
-  }
-
   return data || [];
+}
+
+// Classify if message should be stored as memory
+function classifyForMemory(content) {
+  const lowerContent = content.toLowerCase();
+  
+  // Garbage patterns - don't store
+  const garbagePatterns = [
+    /^(ok|tamam|evet|hayır|yes|no|hi|merhaba|selam|teşekkür|thanks)$/i,
+    /^.{1,10}$/,
+  ];
+  
+  if (garbagePatterns.some(p => p.test(content.trim()))) {
+    return { shouldStore: false, type: 'garbage' };
+  }
+  
+  // Memory candidate patterns
+  const memoryPatterns = [
+    { pattern: /benim.*adım|my name is|i am called/i, type: 'identity' },
+    { pattern: /çalışıyorum|work.*at|job|mesleğim/i, type: 'identity' },
+    { pattern: /yaşıyorum|live.*in|from|şehir/i, type: 'identity' },
+    { pattern: /seviyorum|severim|tercih|like|love|prefer|favori/i, type: 'preference' },
+    { pattern: /her zaman|always|usually|genellikle/i, type: 'preference' },
+    { pattern: /unutma|remember|hatırla/i, type: 'fact' },
+  ];
+  
+  for (const { pattern, type } of memoryPatterns) {
+    if (pattern.test(content)) {
+      return { shouldStore: true, type };
+    }
+  }
+  
+  return { shouldStore: false, type: 'normal' };
 }
 
 export async function POST(request) {
@@ -76,7 +148,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { message, conversationId, model = 'gpt-4o-mini' } = body;
+    const { message, conversationId, model = 'gpt-4o-mini', privacyMode = false } = body;
 
     if (!message || !conversationId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -85,23 +157,37 @@ export async function POST(request) {
     // Generate embedding for user message
     const userEmbedding = await generateEmbedding(message);
 
-    // Search for similar past messages (memories)
-    const memories = await searchSimilarMessages(supabase, userEmbedding, user.id, 3);
+    // Search for relevant memories (if not in privacy mode)
+    let memories = [];
+    let memoryIds = [];
+    if (!privacyMode && userEmbedding) {
+      memories = await searchMemories(supabase, userEmbedding, user.id, 5);
+      memoryIds = memories.map(m => m.id);
+    }
+
+    // Search for similar past messages
+    const similarMessages = await searchSimilarMessages(supabase, userEmbedding, user.id, 3);
 
     // Get recent conversation messages
     const recentMessages = await getRecentMessages(supabase, conversationId, 15);
 
-    // Build system prompt with memories
-    let systemPrompt = `Sen AI-ULU, kalıcı hafızaya sahip bir yapay zeka asistanısın. 
-Kullanıcı ile doğal ve yardımcı bir şekilde sohbet et.
-Türkçe konuş ve samimi ol.`;
+    // Build system prompt with memories (SOURCE TRANSPARENCY)
+    let systemPrompt = SYSTEM_PROMPT_BASE;
 
     if (memories.length > 0) {
-      systemPrompt += `\n\nGEÇMİŞ KONUŞMALARDAN HATIRALAR:\n`;
+      systemPrompt += `\n\n📚 HAFIZADAN ALINAN BİLGİLER (Güvenilirlik sıralı):\n`;
       memories.forEach((mem, idx) => {
-        systemPrompt += `- ${mem.content}\n`;
+        const typeEmoji = mem.type === 'identity' ? '👤' : mem.type === 'preference' ? '❤️' : '📌';
+        systemPrompt += `${idx + 1}. ${typeEmoji} [${mem.type.toUpperCase()}] (Etki: %${mem.influence_percentage}, Güven: ${Math.round(mem.confidence * 100)}%): ${mem.content}\n`;
       });
-      systemPrompt += `\nBu hatıraları doğal bir şekilde kullan, gerektiğinde referans ver.`;
+      systemPrompt += `\nBu hafızaları DOĞAL bir şekilde kullan. Kullandığında [HAFIZA] etiketi ile belirt.`;
+    }
+
+    if (similarMessages.length > 0) {
+      systemPrompt += `\n\n💬 GEÇMİŞ KONUŞMALARDAN:\n`;
+      similarMessages.forEach((msg, idx) => {
+        systemPrompt += `- ${msg.content.slice(0, 100)}...\n`;
+      });
     }
 
     // Build messages array for API
@@ -111,20 +197,39 @@ Türkçe konuş ve samimi ol.`;
       { role: 'user', content: message },
     ];
 
+    // Determine source type
+    const sourceType = memories.length > 0 ? 'mixed' : 'api';
+
     // Save user message to database
-    const { data: userMsg, error: userMsgError } = await supabase
+    await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
         role: 'user',
         content: message,
         embedding: userEmbedding,
-      })
-      .select()
-      .single();
+        source_type: 'api',
+        memory_ids: [],
+      });
 
-    if (userMsgError) {
-      console.error('Save user message error:', userMsgError);
+    // Store as memory if candidate (not in privacy mode)
+    if (!privacyMode) {
+      const classification = classifyForMemory(message);
+      if (classification.shouldStore) {
+        await supabase
+          .from('memories')
+          .insert({
+            user_id: user.id,
+            content: message,
+            type: classification.type,
+            confidence: 0.8,
+            status: 'active',
+            truth_type: 'user_claim',
+            scope: 'global',
+            embedding: userEmbedding,
+          });
+        console.log('[Memory] Stored new memory:', classification.type);
+      }
     }
 
     // Update conversation timestamp
@@ -172,10 +277,17 @@ Türkçe konuş ve samimi ol.`;
         const decoder = new TextDecoder();
         let fullResponse = '';
 
-        // Send memory indicator if memories were used
-        if (memories.length > 0) {
-          await writer.write(encoder.encode(`data: {"memories": ${memories.length}}\n\n`));
-        }
+        // Send source info first (TRANSPARENCY)
+        await writer.write(encoder.encode(`data: ${JSON.stringify({
+          source: sourceType,
+          memory_used: memories.length > 0,
+          memories: memories.map(m => ({
+            id: m.id,
+            content: m.content.slice(0, 50) + '...',
+            type: m.type,
+            influence: m.influence_percentage,
+          })),
+        })}\n\n`));
 
         while (true) {
           const { done, value } = await reader.read();
@@ -216,6 +328,8 @@ Türkçe konuş ve samimi ol.`;
               role: 'assistant',
               content: fullResponse,
               embedding: assistantEmbedding,
+              source_type: sourceType,
+              memory_ids: memoryIds,
             });
         }
 
