@@ -718,15 +718,15 @@ export default function SettingsPage() {
                       <SelectContent>
                         <SelectItem value="all">Tümü</SelectItem>
                         <SelectItem value="identity">Kimlik</SelectItem>
-                        <SelectItem value="preference">Preference</SelectItem>
-                        <SelectItem value="fact">Fact</SelectItem>
+                        <SelectItem value="preference">Tercih</SelectItem>
+                        <SelectItem value="fact">Gerçek</SelectItem>
                       </SelectContent>
                     </Select>
                     <Badge variant="outline">{filteredMemories.length}</Badge>
                   </div>
                 </CardTitle>
                 <CardDescription>
-                  View, manage, and restore memory versions
+                  Hafızaları görüntüle, yönet ve sürümleri geri yükle
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -734,15 +734,15 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="p-3 rounded-lg bg-muted/50 text-center">
                     <p className="text-2xl font-bold">{memoryStats.total}</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-xs text-muted-foreground">Toplam</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50 text-center">
                     <p className="text-2xl font-bold">{memoryStats.avgConfidence}%</p>
-                    <p className="text-xs text-muted-foreground">Avg Confidence</p>
+                    <p className="text-xs text-muted-foreground">Ort. Güvenilirlik</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50 text-center">
                     <p className="text-2xl font-bold">{memoryStats.avgDecay}%</p>
-                    <p className="text-xs text-muted-foreground">Avg Freshness</p>
+                    <p className="text-xs text-muted-foreground">Ort. Tazelik</p>
                   </div>
                 </div>
 
@@ -753,8 +753,8 @@ export default function SettingsPage() {
                 ) : filteredMemories.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No memories yet</p>
-                    <p className="text-sm">Chat with AI to build your memory</p>
+                    <p>Henüz hafıza yok</p>
+                    <p className="text-sm">AI ile sohbet ederek hafızanızı oluşturun</p>
                   </div>
                 ) : (
                   <ScrollArea className="h-[500px]">
@@ -778,14 +778,14 @@ export default function SettingsPage() {
           <TabsContent value="appearance">
             <Card>
               <CardHeader>
-                <CardTitle>Appearance</CardTitle>
-                <CardDescription>Customize the look and feel</CardDescription>
+                <CardTitle>Görünüm</CardTitle>
+                <CardDescription>Görünüm ve hissiyatı özelleştirin</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Dark Mode</Label>
-                    <p className="text-sm text-muted-foreground">Enable dark theme</p>
+                    <Label>Karanlık Mod</Label>
+                    <p className="text-sm text-muted-foreground">Karanlık temayı etkinleştir</p>
                   </div>
                   {mounted && (
                     <Switch
