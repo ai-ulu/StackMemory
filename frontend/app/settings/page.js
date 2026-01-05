@@ -479,18 +479,18 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="w-5 h-5" />
-                  Memory Controls
+                  Hafıza Kontrolleri
                 </CardTitle>
                 <CardDescription>
-                  Core memory system settings
+                  Temel hafıza sistemi ayarları
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Memory Enabled */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Memory System</Label>
-                    <p className="text-sm text-muted-foreground">Enable AI to remember you</p>
+                    <Label>Hafıza Sistemi</Label>
+                    <p className="text-sm text-muted-foreground">AI'nin sizi hatırlamasını sağlayın</p>
                   </div>
                   <Switch
                     checked={memorySettings.enabled}
@@ -507,9 +507,9 @@ export default function SettingsPage() {
                   <div className="space-y-0.5">
                     <Label className="flex items-center gap-2">
                       <EyeOff className="w-4 h-4 text-amber-500" />
-                      Privacy Mode (Stealth)
+                      Gizlilik Modu (Stealth)
                     </Label>
-                    <p className="text-sm text-muted-foreground">No read, no write, no resonance</p>
+                    <p className="text-sm text-muted-foreground">Okuma yok, yazma yok, rezonans yok</p>
                   </div>
                   <Switch
                     checked={memorySettings.privacy_mode}
@@ -524,9 +524,9 @@ export default function SettingsPage() {
                   <div className="space-y-0.5">
                     <Label className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-blue-500" />
-                      Safe Mode
+                      Güvenli Mod
                     </Label>
-                    <p className="text-sm text-muted-foreground">Read allowed, write fully disabled</p>
+                    <p className="text-sm text-muted-foreground">Okuma izinli, yazma tamamen devre dışı</p>
                   </div>
                   <Switch
                     checked={memorySettings.safe_mode}
@@ -539,8 +539,8 @@ export default function SettingsPage() {
                 {/* Auto Save */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Auto Capture</Label>
-                    <p className="text-sm text-muted-foreground">Automatically save important info</p>
+                    <Label>Otomatik Kayıt</Label>
+                    <p className="text-sm text-muted-foreground">Önemli bilgileri otomatik kaydet</p>
                   </div>
                   <Switch
                     checked={memorySettings.auto_save}
