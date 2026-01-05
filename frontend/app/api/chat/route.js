@@ -10,22 +10,20 @@ const openai = new OpenAI({
 });
 
 // Memory-First System Prompt (LOCKED)
-const SYSTEM_PROMPT_BASE = `Sen AI-ULU, **memory-first architecture** ile tasarlanmış bir yapay zeka asistanısın.
+const SYSTEM_PROMPT_BASE = `You are AI-ULU, an AI assistant with **memory-first architecture**.
 
-TEMEL KURALLAR (DEĞİŞTİRİLEMEZ):
-1. Hafıza bütünlüğü > Hız > Yaratıcılık
-2. Asla tahmin yapma, kaynak belirsizse belirt
-3. Hafıza ve API çıktısını sessizce karıştırma
-4. Önemsiz/çöp veriyi kaydetme
-5. Her yanıtta kaynak şeffaflığı sağla
+CORE RULES (NON-NEGOTIABLE):
+1. Memory integrity > Speed > Creativity
+2. Never guess when uncertain - say so
+3. Never silently mix memory and API outputs
+4. Source transparency is MANDATORY
 
-KAYNAK ETİKETLEME:
-- Hafızadan gelen bilgiyi [HAFIZA] ile işaretle
-- API'den geleni [API] ile işaretle
-- Saf muhakemeyi [ÇIKARIM] ile işaretle
+SOURCE TAGGING:
+- Tag memory-sourced info with [MEMORY]
+- Tag API-sourced info with [API]
+- Tag pure reasoning with [INFERENCE]
 
-Kullanıcı ile doğal, samimi ve yardımcı bir şekilde sohbet et.
-Türkçe konuş.`;
+Be helpful, natural, and professional.`;
 
 // Generate embedding for text
 async function generateEmbedding(text) {
@@ -41,8 +39,8 @@ async function generateEmbedding(text) {
   }
 }
 
-// Search memories with confidence scoring
-async function searchMemories(supabase, embedding, userId, limit = 5) {
+// Search memories with decay and scope
+async function searchMemories(supabase, embedding, userId, includeTeam = true, limit = 5) {
   if (!embedding) return [];
   
   try {
@@ -51,6 +49,7 @@ async function searchMemories(supabase, embedding, userId, limit = 5) {
       match_threshold: 0.7,
       match_count: limit,
       user_id_filter: userId,
+      include_team: includeTeam,
     });
 
     if (error) {
@@ -58,15 +57,15 @@ async function searchMemories(supabase, embedding, userId, limit = 5) {
       return [];
     }
 
-    // Calculate influence percentage based on similarity * confidence * recency
-    return (data || []).map(mem => {
-      const recency = Math.exp(-(Date.now() - new Date(mem.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000));
-      const influence = Math.round(mem.similarity * mem.confidence * recency * 100);
-      return {
-        ...mem,
-        influence_percentage: influence,
-      };
-    }).sort((a, b) => b.influence_percentage - a.influence_percentage);
+    // Track access for decay calculation
+    for (const mem of (data || [])) {
+      await supabase.rpc('track_memory_access', { memory_uuid: mem.id });
+    }
+
+    return (data || []).map(mem => ({
+      ...mem,
+      influence_percentage: Math.round(mem.final_score * 100),
+    }));
   } catch (err) {
     console.error('Memory search error:', err);
     return [];
@@ -104,13 +103,31 @@ async function getRecentMessages(supabase, conversationId, limit = 15) {
   return data || [];
 }
 
-// Classify if message should be stored as memory
+// Check if user can write memory
+async function canWriteMemory(supabase, userId) {
+  try {
+    const { data } = await supabase.rpc('can_write_memory', { user_uuid: userId });
+    return data === true;
+  } catch {
+    // Fallback: check settings directly
+    const { data: settings } = await supabase
+      .from('memory_settings')
+      .select('enabled, privacy_mode, safe_mode')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!settings) return true; // Default: allow
+    return settings.enabled && !settings.privacy_mode && !settings.safe_mode;
+  }
+}
+
+// Classify message for memory storage
 function classifyForMemory(content) {
   const lowerContent = content.toLowerCase();
   
-  // Garbage patterns - don't store
+  // Garbage patterns
   const garbagePatterns = [
-    /^(ok|tamam|evet|hayır|yes|no|hi|merhaba|selam|teşekkür|thanks)$/i,
+    /^(ok|okay|yes|no|hi|hello|hey|thanks|thank you|sure|right|got it)$/i,
     /^.{1,10}$/,
   ];
   
@@ -118,23 +135,61 @@ function classifyForMemory(content) {
     return { shouldStore: false, type: 'garbage' };
   }
   
-  // Memory candidate patterns
+  // Memory candidate patterns with intent
   const memoryPatterns = [
-    { pattern: /benim.*adım|my name is|i am called/i, type: 'identity' },
-    { pattern: /çalışıyorum|work.*at|job|mesleğim/i, type: 'identity' },
-    { pattern: /yaşıyorum|live.*in|from|şehir/i, type: 'identity' },
-    { pattern: /seviyorum|severim|tercih|like|love|prefer|favori/i, type: 'preference' },
-    { pattern: /her zaman|always|usually|genellikle/i, type: 'preference' },
-    { pattern: /unutma|remember|hatırla/i, type: 'fact' },
+    { pattern: /my name is|i am called|i'm called/i, type: 'identity', intent: 'user_explicit' },
+    { pattern: /i work|my job|profession|i do for/i, type: 'identity', intent: 'user_explicit' },
+    { pattern: /i live|i'm from|my city|my country/i, type: 'identity', intent: 'user_explicit' },
+    { pattern: /i (like|love|prefer|enjoy|hate|dislike)/i, type: 'preference', intent: 'user_explicit' },
+    { pattern: /my favorite|i always|i usually|i never/i, type: 'preference', intent: 'user_explicit' },
+    { pattern: /remember (that|this)|don't forget|keep in mind/i, type: 'fact', intent: 'user_explicit' },
   ];
   
-  for (const { pattern, type } of memoryPatterns) {
+  for (const { pattern, type, intent } of memoryPatterns) {
     if (pattern.test(content)) {
-      return { shouldStore: true, type };
+      return { shouldStore: true, type, intent };
     }
   }
   
   return { shouldStore: false, type: 'normal' };
+}
+
+// Store memory with Write-Intent Guard
+async function storeMemory(supabase, userId, content, embedding, classification) {
+  if (!classification.shouldStore) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('memories')
+      .insert({
+        user_id: userId,
+        content,
+        type: classification.type,
+        confidence: 0.8,
+        status: 'active',
+        truth_type: 'user_claim',
+        scope: 'private',
+        embedding,
+        language: 'en', // TODO: detect language
+        // Write-Intent Guard fields (REQUIRED)
+        write_reason: 'User shared personal information during chat',
+        write_intent: classification.intent || 'auto_capture',
+        write_source: 'chat',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Memory store error:', error);
+      return null;
+    }
+
+    console.log('[Memory] Stored new memory:', classification.type, data?.id);
+    return data;
+  } catch (err) {
+    console.error('Memory store error:', err);
+    return null;
+  }
 }
 
 export async function POST(request) {
@@ -154,14 +209,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Check write permission
+    const canWrite = await canWriteMemory(supabase, user.id);
+
     // Generate embedding for user message
     const userEmbedding = await generateEmbedding(message);
 
-    // Search for relevant memories (if not in privacy mode)
+    // Search for relevant memories (if not in privacy mode and write enabled)
     let memories = [];
     let memoryIds = [];
     if (!privacyMode && userEmbedding) {
-      memories = await searchMemories(supabase, userEmbedding, user.id, 5);
+      memories = await searchMemories(supabase, userEmbedding, user.id, true, 5);
       memoryIds = memories.map(m => m.id);
     }
 
@@ -175,16 +233,17 @@ export async function POST(request) {
     let systemPrompt = SYSTEM_PROMPT_BASE;
 
     if (memories.length > 0) {
-      systemPrompt += `\n\n📚 HAFIZADAN ALINAN BİLGİLER (Güvenilirlik sıralı):\n`;
+      systemPrompt += `\n\n📚 RETRIEVED MEMORIES (ranked by relevance):\n`;
       memories.forEach((mem, idx) => {
         const typeEmoji = mem.type === 'identity' ? '👤' : mem.type === 'preference' ? '❤️' : '📌';
-        systemPrompt += `${idx + 1}. ${typeEmoji} [${mem.type.toUpperCase()}] (Etki: %${mem.influence_percentage}, Güven: ${Math.round(mem.confidence * 100)}%): ${mem.content}\n`;
+        const decayIndicator = mem.decay_factor < 0.5 ? ' (fading)' : '';
+        systemPrompt += `${idx + 1}. ${typeEmoji} [${mem.type.toUpperCase()}] (Score: ${mem.influence_percentage}%, Confidence: ${Math.round(mem.confidence * 100)}%${decayIndicator}): ${mem.content}\n`;
       });
-      systemPrompt += `\nBu hafızaları DOĞAL bir şekilde kullan. Kullandığında [HAFIZA] etiketi ile belirt.`;
+      systemPrompt += `\nUse these memories NATURALLY. When used, tag with [MEMORY].`;
     }
 
     if (similarMessages.length > 0) {
-      systemPrompt += `\n\n💬 GEÇMİŞ KONUŞMALARDAN:\n`;
+      systemPrompt += `\n\n💬 SIMILAR PAST CONVERSATIONS:\n`;
       similarMessages.forEach((msg, idx) => {
         systemPrompt += `- ${msg.content.slice(0, 100)}...\n`;
       });
@@ -212,25 +271,26 @@ export async function POST(request) {
         memory_ids: [],
       });
 
-    // Store as memory if candidate (not in privacy mode)
-    if (!privacyMode) {
+    // Store as memory if candidate (Write-Intent Guard)
+    if (canWrite && !privacyMode) {
       const classification = classifyForMemory(message);
       if (classification.shouldStore) {
-        await supabase
-          .from('memories')
-          .insert({
-            user_id: user.id,
-            content: message,
-            type: classification.type,
-            confidence: 0.8,
-            status: 'active',
-            truth_type: 'user_claim',
-            scope: 'global',
-            embedding: userEmbedding,
-          });
-        console.log('[Memory] Stored new memory:', classification.type);
+        await storeMemory(supabase, user.id, message, userEmbedding, classification);
       }
     }
+
+    // Log access
+    await supabase.from('access_logs').insert({
+      user_id: user.id,
+      resource_type: 'conversation',
+      resource_id: conversationId,
+      action: 'create',
+      metadata: { 
+        message_length: message.length,
+        memories_used: memoryIds.length,
+        privacy_mode: privacyMode,
+      },
+    });
 
     // Update conversation timestamp
     await supabase
@@ -286,6 +346,7 @@ export async function POST(request) {
             content: m.content.slice(0, 50) + '...',
             type: m.type,
             influence: m.influence_percentage,
+            decay: Math.round(m.decay_factor * 100),
           })),
         })}\n\n`));
 
@@ -330,6 +391,11 @@ export async function POST(request) {
               embedding: assistantEmbedding,
               source_type: sourceType,
               memory_ids: memoryIds,
+              memory_influences: memories.map(m => ({
+                id: m.id,
+                content_preview: m.content.slice(0, 50),
+                influence_pct: m.influence_percentage,
+              })),
             });
         }
 
