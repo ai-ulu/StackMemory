@@ -78,6 +78,11 @@ import {
   EyeOff,
   Eye,
   Zap,
+  Share2,
+  Download,
+  Link as LinkIcon,
+  FileJson,
+  FileText,
   Database,
   Activity,
 } from 'lucide-react';
