@@ -802,22 +802,22 @@ export default function SettingsPage() {
           <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Change Password</CardTitle>
+                <CardTitle>Şifre Değiştir</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePasswordChange} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
+                    <Label htmlFor="newPassword">Yeni Şifre</Label>
                     <Input
                       id="newPassword"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder="En az 8 karakter"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword">Şifreyi Onayla</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -827,7 +827,7 @@ export default function SettingsPage() {
                   </div>
                   <Button type="submit" disabled={saving || !newPassword || !confirmPassword}>
                     {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Update Password
+                    Şifreyi Güncelle
                   </Button>
                 </form>
               </CardContent>
@@ -835,7 +835,7 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Account Info</CardTitle>
+                <CardTitle>Hesap Bilgileri</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -843,7 +843,7 @@ export default function SettingsPage() {
                   <Input value={user?.email || ''} disabled />
                 </div>
                 <div className="space-y-2">
-                  <Label>Account ID</Label>
+                  <Label>Hesap ID</Label>
                   <Input value={user?.id || ''} disabled className="font-mono text-sm" />
                 </div>
               </CardContent>
