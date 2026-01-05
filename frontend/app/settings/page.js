@@ -450,25 +450,25 @@ export default function SettingsPage() {
       </nav>
 
       <div className="container py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <h1 className="text-3xl font-bold mb-8">Ayarlar</h1>
 
         <Tabs defaultValue="memory" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="memory">
               <Brain className="w-4 h-4 mr-2" />
-              Memory
+              Hafıza
             </TabsTrigger>
             <TabsTrigger value="memories">
               <Database className="w-4 h-4 mr-2" />
-              My Memories
+              Hafızalarım
             </TabsTrigger>
             <TabsTrigger value="appearance">
               <Sun className="w-4 h-4 mr-2" />
-              Appearance
+              Görünüm
             </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="w-4 h-4 mr-2" />
-              Security
+              Güvenlik
             </TabsTrigger>
           </TabsList>
 
