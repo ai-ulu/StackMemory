@@ -17,7 +17,7 @@ export async function GET(request) {
       .eq('user_id', user.id)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+    if (error && error.code !== 'PGRST116') {
       console.error('Get settings error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -26,8 +26,14 @@ export async function GET(request) {
     const settings = data || {
       enabled: true,
       privacy_mode: false,
+      safe_mode: false,
       auto_save: true,
       show_resonance: true,
+      show_heatmap: true,
+      cross_language_memory: true,
+      preferred_language: 'en',
+      enable_decay: true,
+      decay_half_life_days: 90,
     };
 
     return NextResponse.json(settings);
@@ -48,18 +54,34 @@ export async function PUT(request) {
     }
 
     const body = await request.json();
-    const { enabled, privacy_mode, auto_save, show_resonance } = body;
+    const {
+      enabled,
+      privacy_mode,
+      safe_mode,
+      auto_save,
+      show_resonance,
+      show_heatmap,
+      cross_language_memory,
+      preferred_language,
+      enable_decay,
+      decay_half_life_days,
+    } = body;
 
-    const updates = {
-      user_id: user.id,
-    };
+    const updates = { user_id: user.id };
 
     if (enabled !== undefined) updates.enabled = enabled;
     if (privacy_mode !== undefined) updates.privacy_mode = privacy_mode;
+    if (safe_mode !== undefined) updates.safe_mode = safe_mode;
     if (auto_save !== undefined) updates.auto_save = auto_save;
     if (show_resonance !== undefined) updates.show_resonance = show_resonance;
+    if (show_heatmap !== undefined) updates.show_heatmap = show_heatmap;
+    if (cross_language_memory !== undefined) updates.cross_language_memory = cross_language_memory;
+    if (preferred_language) updates.preferred_language = preferred_language;
+    if (enable_decay !== undefined) updates.enable_decay = enable_decay;
+    if (decay_half_life_days !== undefined) {
+      updates.decay_half_life_days = Math.max(1, Math.min(365, decay_half_life_days));
+    }
 
-    // Upsert - insert or update
     const { data, error } = await supabase
       .from('memory_settings')
       .upsert(updates, { onConflict: 'user_id' })

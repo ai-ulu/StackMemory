@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GET - List all user memories
+// GET - List all user memories with filters
 export async function GET(request) {
   try {
     const supabase = await createClient();
@@ -14,10 +14,18 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const includeDeprecated = searchParams.get('includeDeprecated') === 'true';
     const includeShadow = searchParams.get('includeShadow') === 'true';
+    const type = searchParams.get('type');
+    const scope = searchParams.get('scope');
 
     let query = supabase
       .from('memories')
-      .select('id, content, type, confidence, status, truth_type, scope, created_at, updated_at, is_shadow, conflict_with')
+      .select(`
+        id, content, type, confidence, status, truth_type, scope,
+        language, version, decay_factor, last_accessed_at, access_count,
+        write_reason, write_intent, write_source,
+        is_shadow, conflict_with, requires_approval,
+        created_at, updated_at
+      `)
       .eq('user_id', user.id);
 
     if (!includeShadow) {
@@ -26,6 +34,14 @@ export async function GET(request) {
 
     if (!includeDeprecated) {
       query = query.neq('status', 'deprecated');
+    }
+
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    if (scope) {
+      query = query.eq('scope', scope);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -42,7 +58,7 @@ export async function GET(request) {
   }
 }
 
-// POST - Create new memory
+// POST - Create new memory with Write-Intent Guard
 export async function POST(request) {
   try {
     const supabase = await createClient();
@@ -52,8 +68,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check write permission
+    const { data: canWrite } = await supabase.rpc('can_write_memory', { user_uuid: user.id });
+    if (!canWrite) {
+      return NextResponse.json({ 
+        error: 'Write disabled. Check Safe Mode or Privacy Mode settings.' 
+      }, { status: 403 });
+    }
+
     const body = await request.json();
-    const { content, type = 'fact', confidence = 0.8, scope = 'global' } = body;
+    const { 
+      content, 
+      type = 'fact', 
+      confidence = 0.8, 
+      scope = 'private',
+      // Write-Intent Guard (REQUIRED)
+      write_reason,
+      write_intent = 'manual',
+      write_source = 'manual',
+    } = body;
 
     if (!content) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
@@ -62,6 +95,11 @@ export async function POST(request) {
     // Validate type
     if (!['identity', 'preference', 'fact'].includes(type)) {
       return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
+    }
+
+    // Validate write-intent
+    if (!['user_explicit', 'auto_capture', 'correction', 'merge'].includes(write_intent)) {
+      return NextResponse.json({ error: 'Invalid write_intent' }, { status: 400 });
     }
 
     // Generate embedding
@@ -91,6 +129,11 @@ export async function POST(request) {
         truth_type: 'user_claim',
         scope,
         embedding,
+        language: 'en',
+        // Write-Intent Guard
+        write_reason: write_reason || 'Manual memory creation',
+        write_intent,
+        write_source,
       })
       .select()
       .single();
@@ -99,6 +142,15 @@ export async function POST(request) {
       console.error('Create memory error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Log
+    await supabase.from('access_logs').insert({
+      user_id: user.id,
+      resource_type: 'memory',
+      resource_id: data.id,
+      action: 'create',
+      metadata: { type, scope, write_intent },
+    });
 
     return NextResponse.json(data);
   } catch (error) {
