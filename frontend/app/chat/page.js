@@ -944,6 +944,34 @@ export default function ChatPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Share & Export (only if conversation exists) */}
+              {activeConversation && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Paylaş & Dışa Aktar</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={shareConversation}>
+                      <LinkIcon className="w-4 h-4 mr-2" />
+                      Paylaşım Linki Oluştur
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => exportConversation('json')}>
+                      <FileJson className="w-4 h-4 mr-2" />
+                      JSON olarak indir
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportConversation('markdown')}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Markdown olarak indir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               {/* Privacy Mode Toggle */}
               <Tooltip>
                 <TooltipTrigger asChild>
