@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Slider } from '@/components/ui/slider';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import {
@@ -43,8 +57,222 @@ import {
   EyeOff,
   Activity,
   Sparkles,
-  AlertCircle,
+  Clock,
+  History,
+  ChevronRight,
+  RefreshCw,
+  AlertTriangle,
+  Lock,
+  Gauge,
+  Globe,
+  Timer,
 } from 'lucide-react';
+import { formatRelativeTime } from '@/lib/utils';
+
+// Memory card with version history
+function MemoryCard({ memory, onDelete, onRestore }) {
+  const [showVersions, setShowVersions] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+
+  const loadVersions = async () => {
+    if (versions.length > 0) return;
+    setLoadingVersions(true);
+    try {
+      const res = await fetch(`/api/memories/${memory.id}/versions`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersions(data);
+      }
+    } catch (e) {
+      console.error('Load versions error:', e);
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
+  const handleRestore = async (version) => {
+    try {
+      const res = await fetch(`/api/memories/${memory.id}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version }),
+      });
+      if (res.ok) {
+        toast.success(`Version ${version} restored`);
+        onRestore?.();
+      }
+    } catch (e) {
+      toast.error('Restore failed');
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'identity': return <User className="w-4 h-4 text-blue-400" />;
+      case 'preference': return <Sparkles className="w-4 h-4 text-pink-400" />;
+      case 'fact': return <Database className="w-4 h-4 text-green-400" />;
+      default: return <Brain className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'active': return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Active</Badge>;
+      case 'pending': return <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Pending</Badge>;
+      case 'deprecated': return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Deprecated</Badge>;
+      default: return null;
+    }
+  };
+
+  const decayPercentage = Math.round((memory.decay_factor || 1) * 100);
+
+  return (
+    <div className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {getTypeIcon(memory.type)}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm">{memory.content}</p>
+            
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {getStatusBadge(memory.status)}
+              <Badge variant="outline" className="text-xs">{memory.type}</Badge>
+              <Badge variant="outline" className="text-xs">{memory.scope}</Badge>
+              {memory.version > 1 && (
+                <Badge variant="outline" className="text-xs">
+                  <History className="w-3 h-3 mr-1" />
+                  v{memory.version}
+                </Badge>
+              )}
+            </div>
+
+            {/* Confidence & Decay */}
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20">Confidence</span>
+                <Progress value={memory.confidence * 100} className="h-1.5 flex-1" />
+                <span className="text-xs text-muted-foreground w-10">{Math.round(memory.confidence * 100)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20">Freshness</span>
+                <Progress 
+                  value={decayPercentage} 
+                  className="h-1.5 flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10">{decayPercentage}%</span>
+              </div>
+            </div>
+
+            {/* Write Intent Info */}
+            {memory.write_intent && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  {memory.write_intent} via {memory.write_source}
+                </span>
+              </div>
+            )}
+
+            {/* Access stats */}
+            <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                {memory.access_count || 0} accesses
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatRelativeTime(memory.last_accessed_at || memory.created_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Version History */}
+          <Collapsible open={showVersions} onOpenChange={(open) => {
+            setShowVersions(open);
+            if (open) loadVersions();
+          }}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <History className="w-4 h-4" />
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
+
+          {/* Delete */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Memory</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This memory will be shadow-deleted (hidden but retained for audit purposes).
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(memory.id)}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      {/* Version History Panel */}
+      <Collapsible open={showVersions}>
+        <CollapsibleContent>
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Version History
+            </h4>
+            {loadingVersions ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : versions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No previous versions</p>
+            ) : (
+              <div className="space-y-2">
+                {versions.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between p-2 rounded bg-muted/50 text-xs">
+                    <div>
+                      <span className="font-medium">v{v.version}</span>
+                      <span className="text-muted-foreground ml-2">
+                        {formatRelativeTime(v.created_at)}
+                      </span>
+                      <span className="text-muted-foreground ml-2">
+                        ({v.change_type})
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      onClick={() => handleRestore(v.version)}
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Restore
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -63,13 +291,20 @@ export default function SettingsPage() {
   const [memorySettings, setMemorySettings] = useState({
     enabled: true,
     privacy_mode: false,
+    safe_mode: false,
     auto_save: true,
     show_resonance: true,
+    show_heatmap: true,
+    cross_language_memory: true,
+    preferred_language: 'en',
+    enable_decay: true,
+    decay_half_life_days: 90,
   });
   
-  // Memories list
+  // Memories
   const [memories, setMemories] = useState([]);
   const [loadingMemories, setLoadingMemories] = useState(false);
+  const [memoryFilter, setMemoryFilter] = useState('all');
 
   useEffect(() => {
     setMounted(true);
@@ -111,10 +346,10 @@ export default function SettingsPage() {
         body: JSON.stringify(memorySettings),
       });
       if (res.ok) {
-        toast.success('Ayarlar kaydedildi');
+        toast.success('Settings saved');
       }
     } catch (error) {
-      toast.error('Ayarlar kaydedilemedi');
+      toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -140,10 +375,10 @@ export default function SettingsPage() {
       const res = await fetch(`/api/memories/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMemories(prev => prev.filter(m => m.id !== id));
-        toast.success('Hafıza silindi (gölge olarak saklandı)');
+        toast.success('Memory shadow-deleted');
       }
     } catch (error) {
-      toast.error('Hafıza silinemedi');
+      toast.error('Delete failed');
     }
   };
 
@@ -151,49 +386,41 @@ export default function SettingsPage() {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      toast.error('Şifreler eşleşmiyor');
+      toast.error('Passwords do not match');
       return;
     }
 
     if (newPassword.length < 8) {
-      toast.error('Şifre en az 8 karakter olmalı');
+      toast.error('Password must be at least 8 characters');
       return;
     }
 
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-
-      toast.success('Şifre başarıyla güncellendi');
+      toast.success('Password updated');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      toast.error('Şifre güncellenemedi: ' + error.message);
+      toast.error('Failed: ' + error.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const getMemoryTypeIcon = (type) => {
-    switch (type) {
-      case 'identity': return <User className="w-4 h-4 text-blue-400" />;
-      case 'preference': return <Sparkles className="w-4 h-4 text-pink-400" />;
-      case 'fact': return <Database className="w-4 h-4 text-green-400" />;
-      default: return <Brain className="w-4 h-4" />;
-    }
-  };
+  const filteredMemories = memories.filter(m => {
+    if (memoryFilter === 'all') return true;
+    return m.type === memoryFilter;
+  });
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'active': return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Aktif</Badge>;
-      case 'pending': return <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Beklemede</Badge>;
-      case 'deprecated': return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Devre Dışı</Badge>;
-      default: return null;
-    }
+  const memoryStats = {
+    total: memories.length,
+    identity: memories.filter(m => m.type === 'identity').length,
+    preference: memories.filter(m => m.type === 'preference').length,
+    fact: memories.filter(m => m.type === 'fact').length,
+    avgConfidence: memories.length ? (memories.reduce((sum, m) => sum + m.confidence, 0) / memories.length * 100).toFixed(0) : 0,
+    avgDecay: memories.length ? (memories.reduce((sum, m) => sum + (m.decay_factor || 1), 0) / memories.length * 100).toFixed(0) : 100,
   };
 
   if (loading) {
@@ -207,11 +434,11 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <nav className="border-b">
+      <nav className="border-b sticky top-0 bg-background/80 backdrop-blur z-10">
         <div className="container flex h-16 items-center gap-4">
           <Link href="/chat" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span>Sohbete Dön</span>
+            <span>Back to Chat</span>
           </Link>
           <div className="flex items-center gap-2 ml-auto">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
@@ -223,48 +450,47 @@ export default function SettingsPage() {
       </nav>
 
       <div className="container py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Ayarlar</h1>
+        <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
         <Tabs defaultValue="memory" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="memory">
               <Brain className="w-4 h-4 mr-2" />
-              Hafıza
+              Memory
             </TabsTrigger>
             <TabsTrigger value="memories">
               <Database className="w-4 h-4 mr-2" />
-              Hafızalarım
+              My Memories
             </TabsTrigger>
             <TabsTrigger value="appearance">
               <Sun className="w-4 h-4 mr-2" />
-              Görünüm
+              Appearance
             </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="w-4 h-4 mr-2" />
-              Güvenlik
+              Security
             </TabsTrigger>
           </TabsList>
 
           {/* Memory Settings Tab */}
-          <TabsContent value="memory">
+          <TabsContent value="memory" className="space-y-6">
+            {/* Core Controls */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="w-5 h-5" />
-                  Hafıza Ayarları
+                  Memory Controls
                 </CardTitle>
                 <CardDescription>
-                  Memory-First Architecture ayarlarını yönetin
+                  Core memory system settings
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Memory Enabled */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Hafıza Sistemi</Label>
-                    <p className="text-sm text-muted-foreground">
-                      AI'ın sizi hatırlamasını sağlar
-                    </p>
+                    <Label>Memory System</Label>
+                    <p className="text-sm text-muted-foreground">Enable AI to remember you</p>
                   </div>
                   <Switch
                     checked={memorySettings.enabled}
@@ -274,16 +500,16 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Privacy Mode */}
+                <Separator />
+
+                {/* Privacy Mode (Stealth) */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="flex items-center gap-2">
                       <EyeOff className="w-4 h-4 text-amber-500" />
-                      Gizlilik Modu (Stealth)
+                      Privacy Mode (Stealth)
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Aktifken hiçbir veri okunmaz veya yazılmaz
-                    </p>
+                    <p className="text-sm text-muted-foreground">No read, no write, no resonance</p>
                   </div>
                   <Switch
                     checked={memorySettings.privacy_mode}
@@ -293,13 +519,28 @@ export default function SettingsPage() {
                   />
                 </div>
 
+                {/* Safe Mode */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-blue-500" />
+                      Safe Mode
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Read allowed, write fully disabled</p>
+                  </div>
+                  <Switch
+                    checked={memorySettings.safe_mode}
+                    onCheckedChange={(checked) => 
+                      setMemorySettings(prev => ({ ...prev, safe_mode: checked }))
+                    }
+                  />
+                </div>
+
                 {/* Auto Save */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Otomatik Kayıt</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Önemli bilgileri otomatik olarak hafızaya al
-                    </p>
+                    <Label>Auto Capture</Label>
+                    <p className="text-sm text-muted-foreground">Automatically save important info</p>
                   </div>
                   <Switch
                     checked={memorySettings.auto_save}
@@ -308,17 +549,23 @@ export default function SettingsPage() {
                     }
                   />
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Display Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Display
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 {/* Show Resonance */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-purple-500" />
-                      Neural Resonance Gösterimi
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Yanıtlarda hangi hafızaların kullanıldığını göster
-                    </p>
+                    <Label>Neural Resonance</Label>
+                    <p className="text-sm text-muted-foreground">Show which memories influenced response</p>
                   </div>
                   <Switch
                     checked={memorySettings.show_resonance}
@@ -328,21 +575,130 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button onClick={saveMemorySettings} disabled={saving}>
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Kaydediliyor...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Kaydet
-                    </>
-                  )}
-                </Button>
+                {/* Show Heatmap */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Memory Heatmap</Label>
+                    <p className="text-sm text-muted-foreground">Visualize influence percentages</p>
+                  </div>
+                  <Switch
+                    checked={memorySettings.show_heatmap}
+                    onCheckedChange={(checked) => 
+                      setMemorySettings(prev => ({ ...prev, show_heatmap: checked }))
+                    }
+                  />
+                </div>
               </CardContent>
             </Card>
+
+            {/* Decay Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Timer className="w-5 h-5" />
+                  Memory Decay
+                </CardTitle>
+                <CardDescription>
+                  Unused memories gradually lose influence
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Decay</Label>
+                    <p className="text-sm text-muted-foreground">Fresher memories have more influence</p>
+                  </div>
+                  <Switch
+                    checked={memorySettings.enable_decay}
+                    onCheckedChange={(checked) => 
+                      setMemorySettings(prev => ({ ...prev, enable_decay: checked }))
+                    }
+                  />
+                </div>
+
+                {memorySettings.enable_decay && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Half-life (days)</Label>
+                      <span className="text-sm text-muted-foreground">
+                        {memorySettings.decay_half_life_days} days
+                      </span>
+                    </div>
+                    <Slider
+                      value={[memorySettings.decay_half_life_days]}
+                      onValueChange={([value]) => 
+                        setMemorySettings(prev => ({ ...prev, decay_half_life_days: value }))
+                      }
+                      min={7}
+                      max={365}
+                      step={1}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Memories lose 50% influence after {memorySettings.decay_half_life_days} days of no access
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Language */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Language
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Cross-Language Memory</Label>
+                    <p className="text-sm text-muted-foreground">Share semantic memories across languages</p>
+                  </div>
+                  <Switch
+                    checked={memorySettings.cross_language_memory}
+                    onCheckedChange={(checked) => 
+                      setMemorySettings(prev => ({ ...prev, cross_language_memory: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>Preferred Language</Label>
+                  <Select
+                    value={memorySettings.preferred_language}
+                    onValueChange={(value) => 
+                      setMemorySettings(prev => ({ ...prev, preferred_language: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="tr">Türkçe</SelectItem>
+                      <SelectItem value="de">Deutsch</SelectItem>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button onClick={saveMemorySettings} disabled={saving} className="w-full">
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Settings
+                </>
+              )}
+            </Button>
           </TabsContent>
 
           {/* Memories List Tab */}
@@ -352,80 +708,64 @@ export default function SettingsPage() {
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Database className="w-5 h-5" />
-                    Hafızalarım
+                    My Memories
                   </span>
-                  <Badge variant="outline">{memories.length} kayıt</Badge>
+                  <div className="flex items-center gap-2">
+                    <Select value={memoryFilter} onValueChange={setMemoryFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Filter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="identity">Identity</SelectItem>
+                        <SelectItem value="preference">Preference</SelectItem>
+                        <SelectItem value="fact">Fact</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Badge variant="outline">{filteredMemories.length}</Badge>
+                  </div>
                 </CardTitle>
                 <CardDescription>
-                  AI'ın sizin hakkınızda hatırladıkları
+                  View, manage, and restore memory versions
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-2xl font-bold">{memoryStats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-2xl font-bold">{memoryStats.avgConfidence}%</p>
+                    <p className="text-xs text-muted-foreground">Avg Confidence</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-2xl font-bold">{memoryStats.avgDecay}%</p>
+                    <p className="text-xs text-muted-foreground">Avg Freshness</p>
+                  </div>
+                </div>
+
                 {loadingMemories ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
-                ) : memories.length === 0 ? (
+                ) : filteredMemories.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Henüz hafıza kaydı yok</p>
-                    <p className="text-sm">AI ile sohbet ettikçe burada görünecek</p>
+                    <p>No memories yet</p>
+                    <p className="text-sm">Chat with AI to build your memory</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[500px]">
                     <div className="space-y-3">
-                      {memories.map((memory) => (
-                        <div
+                      {filteredMemories.map((memory) => (
+                        <MemoryCard
                           key={memory.id}
-                          className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              {getMemoryTypeIcon(memory.type)}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm">{memory.content}</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  {getStatusBadge(memory.status)}
-                                  <Badge variant="outline" className="text-xs">
-                                    {memory.type}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    Güven: %{Math.round(memory.confidence * 100)}
-                                  </span>
-                                </div>
-                                <Progress 
-                                  value={memory.confidence * 100} 
-                                  className="h-1 mt-2 w-32" 
-                                />
-                              </div>
-                            </div>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Hafızayı Sil</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Bu hafıza silinecek ancak gölge olarak saklanacak (Shadow Memory).
-                                    Bir daha asla kullanılmayacak.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>İptal</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteMemory(memory.id)}
-                                    className="bg-destructive hover:bg-destructive/90"
-                                  >
-                                    Sil
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </div>
+                          memory={memory}
+                          onDelete={deleteMemory}
+                          onRestore={loadMemories}
+                        />
                       ))}
                     </div>
                   </ScrollArea>
@@ -438,18 +778,14 @@ export default function SettingsPage() {
           <TabsContent value="appearance">
             <Card>
               <CardHeader>
-                <CardTitle>Görünüm</CardTitle>
-                <CardDescription>
-                  Uygulamanın görünümünü özelleştirin
-                </CardDescription>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>Customize the look and feel</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Koyu Mod</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Koyu temayı etkinleştirin
-                    </p>
+                    <Label>Dark Mode</Label>
+                    <p className="text-sm text-muted-foreground">Enable dark theme</p>
                   </div>
                   {mounted && (
                     <Switch
@@ -463,57 +799,43 @@ export default function SettingsPage() {
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security">
+          <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Şifre Değiştir</CardTitle>
-                <CardDescription>
-                  Hesabınızın şifresini güncelleyin
-                </CardDescription>
+                <CardTitle>Change Password</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePasswordChange} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">Yeni Şifre</Label>
+                    <Label htmlFor="newPassword">New Password</Label>
                     <Input
                       id="newPassword"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="En az 8 karakter"
+                      placeholder="At least 8 characters"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Yeni Şifre (Tekrar)</Label>
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Şifreyi tekrar girin"
                     />
                   </div>
                   <Button type="submit" disabled={saving || !newPassword || !confirmPassword}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Kaydediliyor...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Şifreyi Güncelle
-                      </>
-                    )}
+                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Update Password
                   </Button>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Account Info */}
-            <Card className="mt-6">
+            <Card>
               <CardHeader>
-                <CardTitle>Hesap Bilgileri</CardTitle>
+                <CardTitle>Account Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -521,7 +843,7 @@ export default function SettingsPage() {
                   <Input value={user?.email || ''} disabled />
                 </div>
                 <div className="space-y-2">
-                  <Label>Hesap ID</Label>
+                  <Label>Account ID</Label>
                   <Input value={user?.id || ''} disabled className="font-mono text-sm" />
                 </div>
               </CardContent>
