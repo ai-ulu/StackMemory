@@ -12,12 +12,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -41,6 +45,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
@@ -57,6 +66,7 @@ import {
   Check,
   X,
   ChevronDown,
+  ChevronRight,
   Loader2,
   Bot,
   User,
@@ -64,15 +74,83 @@ import {
   Sun,
   Copy,
   MoreVertical,
+  Paperclip,
+  EyeOff,
+  Eye,
+  Zap,
+  Database,
+  Activity,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { formatRelativeTime, generateTitle, cn } from '@/lib/utils';
 import { AVAILABLE_MODELS } from '@/lib/models';
 import ReactMarkdown from 'react-markdown';
 
-// Message component with markdown support
-function Message({ message, isUser }) {
+// Neural Resonance Panel - shows memory influences
+function NeuralResonancePanel({ memories, isOpen, onToggle }) {
+  if (!memories || memories.length === 0) return null;
+
+  const totalInfluence = memories.reduce((sum, m) => sum + (m.influence || 0), 0);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle}>
+      <CollapsibleTrigger asChild>
+        <button className="flex items-center gap-2 text-xs text-amber-500 hover:text-amber-400 transition-colors mb-2">
+          <Brain className="w-3 h-3" />
+          <span>{memories.length} hafıza kullanıldı</span>
+          <ChevronRight className={cn("w-3 h-3 transition-transform", isOpen && "rotate-90")} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3 space-y-2">
+          <div className="flex items-center justify-between text-xs text-amber-500 mb-2">
+            <span className="font-medium">Neural Resonance</span>
+            <span>Toplam Etki: %{totalInfluence}</span>
+          </div>
+          {memories.map((mem, idx) => (
+            <div key={mem.id || idx} className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5">
+                {mem.type === 'identity' && <User className="w-3 h-3 text-blue-400" />}
+                {mem.type === 'preference' && <Sparkles className="w-3 h-3 text-pink-400" />}
+                {mem.type === 'fact' && <Database className="w-3 h-3 text-green-400" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground truncate">{mem.content}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Progress value={mem.influence || 0} className="h-1 flex-1" />
+                  <span className="text-[10px] text-muted-foreground">%{mem.influence || 0}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// Source Badge - shows response source
+function SourceBadge({ source }) {
+  const config = {
+    memory: { icon: Brain, label: 'Hafıza', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+    api: { icon: Zap, label: 'API', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+    mixed: { icon: Activity, label: 'Karma', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
+  };
+
+  const { icon: Icon, label, color } = config[source] || config.api;
+
+  return (
+    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", color)}>
+      <Icon className="w-2.5 h-2.5 mr-1" />
+      {label}
+    </Badge>
+  );
+}
+
+// Message component with markdown support and source transparency
+function Message({ message, isUser, showResonance }) {
   const [copied, setCopied] = useState(false);
+  const [resonanceOpen, setResonanceOpen] = useState(false);
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -103,13 +181,19 @@ function Message({ message, isUser }) {
           <span className="font-medium text-sm">
             {isUser ? 'Sen' : 'AI-ULU'}
           </span>
-          {message.memories > 0 && (
-            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/20">
-              <Brain className="w-3 h-3 mr-1" />
-              {message.memories} hatıra
-            </Badge>
+          {!isUser && message.source && (
+            <SourceBadge source={message.source} />
           )}
         </div>
+        
+        {/* Neural Resonance Panel for assistant messages */}
+        {!isUser && showResonance && message.memories && message.memories.length > 0 && (
+          <NeuralResonancePanel 
+            memories={message.memories} 
+            isOpen={resonanceOpen}
+            onToggle={setResonanceOpen}
+          />
+        )}
         
         <div className="prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown
@@ -162,6 +246,23 @@ function TypingIndicator() {
         <div className="typing-dot" />
         <div className="typing-dot" />
       </div>
+    </div>
+  );
+}
+
+// Skeleton loader for conversations
+function ConversationSkeleton() {
+  return (
+    <div className="space-y-2 p-2">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex items-center gap-2 px-3 py-2.5">
+          <Skeleton className="w-4 h-4 rounded" />
+          <div className="flex-1 space-y-1">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -310,6 +411,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
@@ -317,8 +419,13 @@ export default function ChatPage() {
   const [conversationToDelete, setConversationToDelete] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
+  // Memory settings
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [showResonance, setShowResonance] = useState(true);
+  
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -343,13 +450,42 @@ export default function ChatPage() {
       }
       setUser(user);
       await loadConversations();
+      await loadMemorySettings();
       setIsLoading(false);
     };
     init();
   }, []);
 
+  // Load memory settings
+  const loadMemorySettings = async () => {
+    try {
+      const res = await fetch('/api/memory-settings');
+      if (res.ok) {
+        const data = await res.json();
+        setPrivacyMode(data.privacy_mode || false);
+        setShowResonance(data.show_resonance !== false);
+      }
+    } catch (error) {
+      console.error('Load memory settings error:', error);
+    }
+  };
+
+  // Save memory settings
+  const saveMemorySettings = async (settings) => {
+    try {
+      await fetch('/api/memory-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+    } catch (error) {
+      console.error('Save memory settings error:', error);
+    }
+  };
+
   // Load conversations
   const loadConversations = async () => {
+    setIsLoadingConversations(true);
     try {
       const res = await fetch('/api/conversations');
       if (res.ok) {
@@ -358,6 +494,8 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Load conversations error:', error);
+    } finally {
+      setIsLoadingConversations(false);
     }
   };
 
@@ -484,7 +622,8 @@ export default function ChatPage() {
       id: Date.now() + 1,
       role: 'assistant',
       content: '',
-      memories: 0,
+      memories: [],
+      source: 'api',
     };
     setMessages(prev => [...prev, assistantMessage]);
 
@@ -496,6 +635,7 @@ export default function ChatPage() {
           message: messageContent,
           conversationId: convId,
           model: selectedModel,
+          privacyMode,
         }),
       });
 
@@ -506,7 +646,7 @@ export default function ChatPage() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
-      let memories = 0;
+      let sourceInfo = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -523,17 +663,23 @@ export default function ChatPage() {
             try {
               const parsed = JSON.parse(data);
               
-              if (parsed.memories) {
-                memories = parsed.memories;
+              // Handle source info
+              if (parsed.source) {
+                sourceInfo = parsed;
                 setMessages(prev => 
                   prev.map(m => 
                     m.id === assistantMessage.id 
-                      ? { ...m, memories } 
+                      ? { 
+                          ...m, 
+                          source: parsed.source,
+                          memories: parsed.memories || [],
+                        } 
                       : m
                   )
                 );
               }
               
+              // Handle content
               if (parsed.content) {
                 fullContent += parsed.content;
                 setMessages(prev =>
@@ -576,6 +722,20 @@ export default function ChatPage() {
     }
   };
 
+  // Handle file upload click
+  const handleFileClick = () => {
+    toast.info('Dosya yükleme yakında aktif olacak!');
+    // fileInputRef.current?.click();
+  };
+
+  // Toggle privacy mode
+  const togglePrivacyMode = () => {
+    const newValue = !privacyMode;
+    setPrivacyMode(newValue);
+    saveMemorySettings({ privacy_mode: newValue });
+    toast.success(newValue ? 'Gizlilik Modu aktif - Hafıza devre dışı' : 'Gizlilik Modu kapatıldı');
+  };
+
   // Sign out
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -615,27 +775,31 @@ export default function ChatPage() {
 
       {/* Conversations List */}
       <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1 pb-4">
-          {conversations.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              Henüz sohbet yok
-            </p>
-          ) : (
-            conversations.map(conv => (
-              <ConversationItem
-                key={conv.id}
-                conv={conv}
-                isActive={activeConversation?.id === conv.id}
-                onClick={loadConversation}
-                onDelete={(id) => {
-                  setConversationToDelete(id);
-                  setDeleteDialogOpen(true);
-                }}
-                onRename={renameConversation}
-              />
-            ))
-          )}
-        </div>
+        {isLoadingConversations ? (
+          <ConversationSkeleton />
+        ) : (
+          <div className="space-y-1 pb-4">
+            {conversations.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                Henüz sohbet yok
+              </p>
+            ) : (
+              conversations.map(conv => (
+                <ConversationItem
+                  key={conv.id}
+                  conv={conv}
+                  isActive={activeConversation?.id === conv.id}
+                  onClick={loadConversation}
+                  onDelete={(id) => {
+                    setConversationToDelete(id);
+                    setDeleteDialogOpen(true);
+                  }}
+                  onRename={renameConversation}
+                />
+              ))
+            )}
+          </div>
+        )}
       </ScrollArea>
 
       {/* User Profile */}
@@ -678,140 +842,189 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="h-screen flex bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-72 border-r bg-sidebar flex-col">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile Sidebar */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" className="w-72 p-0">
+    <TooltipProvider>
+      <div className="h-screen flex bg-background">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex w-72 border-r bg-sidebar flex-col">
           <SidebarContent />
-        </SheetContent>
-      </Sheet>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <header className="h-14 border-b flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-            </Sheet>
-            
-            <div className="flex items-center gap-2">
-              <Brain className="w-6 h-6 text-primary" />
-              <span className="font-semibold">
-                {activeConversation?.title || 'Yeni Sohbet'}
-              </span>
-            </div>
-          </div>
+        {/* Mobile Sidebar */}
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="left" className="w-72 p-0">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
 
-          <div className="flex items-center gap-2">
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABLE_MODELS.map(model => (
-                  <SelectItem key={model.id} value={model.id}>
-                    <div>
-                      <p className="font-medium">{model.name}</p>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </header>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            {messages.length === 0 ? (
-              <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
-            ) : (
-              <div className="divide-y divide-border/50">
-                {messages.map((msg, idx) => (
-                  <Message
-                    key={msg.id || idx}
-                    message={msg}
-                    isUser={msg.role === 'user'}
-                  />
-                ))}
-                {isStreaming && messages[messages.length - 1]?.content === '' && (
-                  <TypingIndicator />
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </ScrollArea>
-        </div>
-
-        {/* Input Area */}
-        <div className="border-t p-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              <Textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Mesajınızı yazın..."
-                className="min-h-[56px] max-h-[200px] pr-14 resize-none"
-                disabled={isSending}
-              />
-              <Button
-                onClick={() => sendMessage()}
-                disabled={!inputValue.trim() || isSending}
-                size="icon"
-                className="absolute right-2 bottom-2 h-10 w-10 bg-gradient-to-r from-primary to-violet-600 hover:opacity-90"
-              >
-                {isSending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col min-w-0">
+          {/* Top Bar */}
+          <header className="h-14 border-b flex items-center justify-between px-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
+                <Menu className="w-5 h-5" />
               </Button>
+              
+              <div className="flex items-center gap-2">
+                <Brain className="w-6 h-6 text-primary" />
+                <span className="font-semibold">
+                  {activeConversation?.title || 'Yeni Sohbet'}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-              <span>
-                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Cmd</kbd>
-                {' + '}
-                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>
-                {' ile gönder'}
-              </span>
-              <span>{inputValue.length} karakter</span>
+
+            <div className="flex items-center gap-2">
+              {/* Privacy Mode Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={privacyMode ? "default" : "ghost"}
+                    size="icon"
+                    onClick={togglePrivacyMode}
+                    className={privacyMode ? "bg-amber-500 hover:bg-amber-600" : ""}
+                  >
+                    {privacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {privacyMode ? 'Gizlilik Modu Aktif (Hafıza kapalı)' : 'Gizlilik Modu Kapalı'}
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Model Selector */}
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABLE_MODELS.map(model => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div>
+                        <p className="font-medium">{model.name}</p>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </header>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              {messages.length === 0 ? (
+                <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {messages.map((msg, idx) => (
+                    <Message
+                      key={msg.id || idx}
+                      message={msg}
+                      isUser={msg.role === 'user'}
+                      showResonance={showResonance}
+                    />
+                  ))}
+                  {isStreaming && messages[messages.length - 1]?.content === '' && (
+                    <TypingIndicator />
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t p-4">
+            <div className="max-w-3xl mx-auto">
+              {/* Privacy Mode Warning */}
+              {privacyMode && (
+                <div className="flex items-center gap-2 text-xs text-amber-500 mb-2">
+                  <EyeOff className="w-3 h-3" />
+                  <span>Gizlilik Modu aktif - Bu sohbet hafızaya kaydedilmeyecek</span>
+                </div>
+              )}
+              
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Mesajınızı yazın..."
+                  className="min-h-[56px] max-h-[200px] pr-24 resize-none"
+                  disabled={isSending}
+                />
+                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  {/* File Upload Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={handleFileClick}
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Dosya Ekle (Yakında)</TooltipContent>
+                  </Tooltip>
+                  
+                  {/* Send Button */}
+                  <Button
+                    onClick={() => sendMessage()}
+                    disabled={!inputValue.trim() || isSending}
+                    size="icon"
+                    className="h-10 w-10 bg-gradient-to-r from-primary to-violet-600 hover:opacity-90"
+                  >
+                    {isSending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".txt,.pdf,.doc,.docx,.md,.json,.csv"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Cmd</kbd>
+                  {' + '}
+                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>
+                  {' ile gönder'}
+                </span>
+                <span>{inputValue.length} karakter</span>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sohbeti Sil</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm mesajlar silinecektir.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteConversation(conversationToDelete)}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sohbeti Sil</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm mesajlar silinecektir.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteConversation(conversationToDelete)}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Sil
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }
