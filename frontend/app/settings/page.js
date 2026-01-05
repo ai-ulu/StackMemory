@@ -557,15 +557,15 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="w-5 h-5" />
-                  Display
+                  Görünüm
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Show Resonance */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Neural Resonance</Label>
-                    <p className="text-sm text-muted-foreground">Show which memories influenced response</p>
+                    <Label>Nöral Rezonans</Label>
+                    <p className="text-sm text-muted-foreground">Hangi hafızaların yanıtı etkilediğini göster</p>
                   </div>
                   <Switch
                     checked={memorySettings.show_resonance}
@@ -578,8 +578,8 @@ export default function SettingsPage() {
                 {/* Show Heatmap */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Memory Heatmap</Label>
-                    <p className="text-sm text-muted-foreground">Visualize influence percentages</p>
+                    <Label>Hafıza Isı Haritası</Label>
+                    <p className="text-sm text-muted-foreground">Etki yüzdelerini görselleştir</p>
                   </div>
                   <Switch
                     checked={memorySettings.show_heatmap}
@@ -596,17 +596,17 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Timer className="w-5 h-5" />
-                  Memory Decay
+                  Hafıza Çürümesi
                 </CardTitle>
                 <CardDescription>
-                  Unused memories gradually lose influence
+                  Kullanılmayan hafızalar zamanla etki kaybeder
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Enable Decay</Label>
-                    <p className="text-sm text-muted-foreground">Fresher memories have more influence</p>
+                    <Label>Çürümeyi Etkinleştir</Label>
+                    <p className="text-sm text-muted-foreground">Taze hafızalar daha fazla etkiye sahip</p>
                   </div>
                   <Switch
                     checked={memorySettings.enable_decay}
@@ -619,9 +619,9 @@ export default function SettingsPage() {
                 {memorySettings.enable_decay && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label>Half-life (days)</Label>
+                      <Label>Yarı Ömür (gün)</Label>
                       <span className="text-sm text-muted-foreground">
-                        {memorySettings.decay_half_life_days} days
+                        {memorySettings.decay_half_life_days} gün
                       </span>
                     </div>
                     <Slider
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                       step={1}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Memories lose 50% influence after {memorySettings.decay_half_life_days} days of no access
+                      Hafızalar {memorySettings.decay_half_life_days} gün erişim olmazsa %50 etki kaybeder
                     </p>
                   </div>
                 )}
@@ -646,7 +646,7 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="w-5 h-5" />
-                  Language
+                  Dil
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
