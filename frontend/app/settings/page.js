@@ -652,8 +652,8 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Cross-Language Memory</Label>
-                    <p className="text-sm text-muted-foreground">Share semantic memories across languages</p>
+                    <Label>Diller Arası Hafıza</Label>
+                    <p className="text-sm text-muted-foreground">Semantik hafızaları diller arasında paylaş</p>
                   </div>
                   <Switch
                     checked={memorySettings.cross_language_memory}
@@ -664,7 +664,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label>Preferred Language</Label>
+                  <Label>Tercih Edilen Dil</Label>
                   <Select
                     value={memorySettings.preferred_language}
                     onValueChange={(value) => 
@@ -690,12 +690,12 @@ export default function SettingsPage() {
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Kaydediliyor...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Save Settings
+                  Ayarları Kaydet
                 </>
               )}
             </Button>
@@ -708,16 +708,16 @@ export default function SettingsPage() {
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Database className="w-5 h-5" />
-                    My Memories
+                    Hafızalarım
                   </span>
                   <div className="flex items-center gap-2">
                     <Select value={memoryFilter} onValueChange={setMemoryFilter}>
                       <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Filter" />
+                        <SelectValue placeholder="Filtre" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="identity">Identity</SelectItem>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="identity">Kimlik</SelectItem>
                         <SelectItem value="preference">Preference</SelectItem>
                         <SelectItem value="fact">Fact</SelectItem>
                       </SelectContent>
