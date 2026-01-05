@@ -586,6 +586,71 @@ export default function ChatPage() {
     }
   };
 
+  // Share conversation
+  const shareConversation = async () => {
+    if (!activeConversation?.id) return;
+    
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: activeConversation.id,
+          expiresIn: 7 * 24 * 60 * 60, // 7 days
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        await navigator.clipboard.writeText(data.share_url);
+        toast.success('Paylaşım linki kopyalandı!');
+      } else {
+        throw new Error('Failed to create share link');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      toast.error('Paylaşım linki oluşturulamadı');
+    }
+  };
+
+  // Export conversation
+  const exportConversation = async (format = 'json') => {
+    if (!activeConversation?.id) return;
+    
+    try {
+      const res = await fetch(`/api/conversations/${activeConversation.id}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format }),
+      });
+      
+      if (res.ok) {
+        if (format === 'json') {
+          const data = await res.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${activeConversation.title}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${activeConversation.title}.md`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        toast.success('Sohbet indirildi!');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Dışa aktarma başarısız');
+    }
+  };
+
   // Send message
   const sendMessage = async (content = inputValue) => {
     if (!content.trim() || isSending) return;
