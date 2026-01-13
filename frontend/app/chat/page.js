@@ -143,12 +143,24 @@ function SourceBadge({ source }) {
   };
 
   const { icon: Icon, label, color } = config[source] || config.api;
+  const tooltip = source === 'memory' || source === 'mixed' 
+    ? 'Geçmiş konuşmalardan öğrenildi' 
+    : 'Anlık yanıt';
 
   return (
-    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", color)}>
-      <Icon className="w-2.5 h-2.5 mr-1" />
-      {label}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 cursor-help", color)}>
+            <Icon className="w-2.5 h-2.5 mr-1" />
+            {label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
