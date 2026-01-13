@@ -369,10 +369,9 @@ export async function POST(request) {
           memory_used: memories.length > 0,
           memories: memories.map(m => ({
             id: m.id,
-            content: m.content.slice(0, 50) + '...',
+            content: (m.content || '').slice(0, 50) + '...',
             type: m.type,
-            influence: m.influence_percentage,
-            decay: Math.round(m.decay_factor * 100),
+            influence: m.influence_percentage || 50,
           })),
         })}\n\n`));
 
