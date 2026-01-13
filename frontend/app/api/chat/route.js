@@ -405,24 +405,22 @@ export async function POST(request) {
           }
         }
 
-        // Save assistant response to database
+        // Save assistant response to database (graceful)
         if (fullResponse) {
-          const assistantEmbedding = await generateEmbedding(fullResponse);
-          await supabase
-            .from('messages')
-            .insert({
-              conversation_id: conversationId,
-              role: 'assistant',
-              content: fullResponse,
-              embedding: assistantEmbedding,
-              source_type: sourceType,
-              memory_ids: memoryIds,
-              memory_influences: memories.map(m => ({
-                id: m.id,
-                content_preview: m.content.slice(0, 50),
-                influence_pct: m.influence_percentage,
-              })),
-            });
+          try {
+            const assistantEmbedding = await generateEmbedding(fullResponse);
+            await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conversationId,
+                role: 'assistant',
+                content: fullResponse,
+                embedding: assistantEmbedding,
+                source_type: sourceType,
+              });
+          } catch (e) {
+            console.log('Assistant message save skipped:', e.message);
+          }
         }
 
         await writer.close();
