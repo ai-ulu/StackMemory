@@ -1,11 +1,11 @@
 {
   "name": "AI-ULU",
   "short_name": "AI-ULU",
-  "description": "Your Personal AI Memory Assistant - Remember Everything, Effortlessly",
+  "description": "Hafıza Öncelikli Yapay Zeka Asistanınız",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0b",
-  "theme_color": "#3b82f6",
+  "theme_color": "#0a0a0b",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -22,12 +22,17 @@
     }
   ],
   "categories": ["productivity", "utilities"],
-  "screenshots": [],
   "shortcuts": [
     {
-      "name": "New Chat",
-      "short_name": "New",
+      "name": "Yeni Sohbet",
+      "short_name": "Yeni",
       "url": "/chat",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Ayarlar",
+      "short_name": "Ayarlar",
+      "url": "/settings",
       "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
     }
   ]
