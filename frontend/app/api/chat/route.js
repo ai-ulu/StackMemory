@@ -238,41 +238,30 @@ export async function POST(request) {
     // Check write permission
     const canWrite = await canWriteMemory(supabase, user.id);
 
-    // Generate embedding for user message
+    // Generate embedding for user message (don't fail if embedding fails)
     const userEmbedding = await generateEmbedding(message);
 
-    // Search for relevant memories (if not in privacy mode and write enabled)
+    // Search for relevant memories (if not in privacy mode)
     let memories = [];
     let memoryIds = [];
-    if (!privacyMode && userEmbedding) {
-      memories = await searchMemories(supabase, userEmbedding, user.id, true, 5);
+    if (!privacyMode) {
+      memories = await searchMemories(supabase, userEmbedding, user.id, 3);
       memoryIds = memories.map(m => m.id);
     }
-
-    // Search for similar past messages
-    const similarMessages = await searchSimilarMessages(supabase, userEmbedding, user.id, 3);
 
     // Get recent conversation messages
     const recentMessages = await getRecentMessages(supabase, conversationId, 15);
 
-    // Build system prompt with memories (SOURCE TRANSPARENCY)
+    // Build system prompt with memories
     let systemPrompt = SYSTEM_PROMPT_BASE;
 
     if (memories.length > 0) {
-      systemPrompt += `\n\n📚 RETRIEVED MEMORIES (ranked by relevance):\n`;
+      systemPrompt += `\n\n🧠 HATIRLADIKLARIM:\n`;
       memories.forEach((mem, idx) => {
-        const typeEmoji = mem.type === 'identity' ? '👤' : mem.type === 'preference' ? '❤️' : '📌';
-        const decayIndicator = mem.decay_factor < 0.5 ? ' (fading)' : '';
-        systemPrompt += `${idx + 1}. ${typeEmoji} [${mem.type.toUpperCase()}] (Score: ${mem.influence_percentage}%, Confidence: ${Math.round(mem.confidence * 100)}%${decayIndicator}): ${mem.content}\n`;
+        const typeLabel = mem.type === 'identity' ? 'Kimlik' : mem.type === 'preference' ? 'Tercih' : 'Bilgi';
+        systemPrompt += `${idx + 1}. [${typeLabel}] ${mem.content}\n`;
       });
-      systemPrompt += `\nUse these memories NATURALLY. When used, tag with [MEMORY].`;
-    }
-
-    if (similarMessages.length > 0) {
-      systemPrompt += `\n\n💬 SIMILAR PAST CONVERSATIONS:\n`;
-      similarMessages.forEach((msg, idx) => {
-        systemPrompt += `- ${msg.content.slice(0, 100)}...\n`;
-      });
+      systemPrompt += `\nBu bilgileri doğal bir şekilde kullan.`;
     }
 
     // Build messages array for API
@@ -285,17 +274,20 @@ export async function POST(request) {
     // Determine source type
     const sourceType = memories.length > 0 ? 'mixed' : 'api';
 
-    // Save user message to database
-    await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        role: 'user',
-        content: message,
-        embedding: userEmbedding,
-        source_type: 'api',
-        memory_ids: [],
-      });
+    // Save user message to database (graceful - don't fail if table doesn't exist)
+    try {
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          role: 'user',
+          content: message,
+          embedding: userEmbedding,
+          source_type: 'api',
+        });
+    } catch (e) {
+      console.log('Message save skipped:', e.message);
+    }
 
     // Store as memory if candidate (Write-Intent Guard)
     if (canWrite && !privacyMode) {
@@ -305,24 +297,32 @@ export async function POST(request) {
       }
     }
 
-    // Log access
-    await supabase.from('access_logs').insert({
-      user_id: user.id,
-      resource_type: 'conversation',
-      resource_id: conversationId,
-      action: 'create',
-      metadata: { 
-        message_length: message.length,
-        memories_used: memoryIds.length,
-        privacy_mode: privacyMode,
-      },
-    });
+    // Log access (graceful)
+    try {
+      await supabase.from('access_logs').insert({
+        user_id: user.id,
+        resource_type: 'conversation',
+        resource_id: conversationId,
+        action: 'create',
+        metadata: { 
+          message_length: message.length,
+          memories_used: memoryIds.length,
+          privacy_mode: privacyMode,
+        },
+      });
+    } catch (e) {
+      // Ignore access log errors
+    }
 
-    // Update conversation timestamp
-    await supabase
-      .from('conversations')
-      .update({ updated_at: new Date().toISOString(), model })
-      .eq('id', conversationId);
+    // Update conversation timestamp (graceful)
+    try {
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString(), model })
+        .eq('id', conversationId);
+    } catch (e) {
+      // Ignore update errors
+    }
 
     // Get model configuration
     const config = getModelConfig();
