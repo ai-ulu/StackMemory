@@ -15,8 +15,8 @@
   "/api/share/route": "app/api/share/route.js",
   "/login/page": "app/login/page.js",
   "/share/[token]/page": "app/share/[token]/page.js",
-  "/page": "app/page.js",
+  "/signup/page": "app/signup/page.js",
   "/chat/page": "app/chat/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/signup/page": "app/signup/page.js"
+  "/page": "app/page.js",
+  "/settings/page": "app/settings/page.js"
 }
