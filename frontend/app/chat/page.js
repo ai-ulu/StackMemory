@@ -792,6 +792,22 @@ export default function ChatPage() {
     }
   };
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Cmd/Ctrl + K = New chat
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setActiveConversation(null);
+        setMessages([]);
+        textareaRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   // Handle file upload click
   const handleFileClick = () => {
     toast.info('Dosya yükleme yakında aktif olacak!');
