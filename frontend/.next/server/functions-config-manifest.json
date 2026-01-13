@@ -1,1 +1,1 @@
-{"version":1,"functions":{"/chat":{},"/":{},"/share/[token]":{},"/signup":{},"/settings":{},"/login":{}}}
+{"version":1,"functions":{"/login":{},"/settings":{},"/share/[token]":{},"/chat":{},"/":{},"/signup":{}}}
