@@ -10,22 +10,17 @@ const openai = new OpenAI({
 });
 
 // Memory-First System Prompt (LOCKED)
-const SYSTEM_PROMPT_BASE = `You are AI-ULU, an AI assistant with **memory-first architecture**.
+const SYSTEM_PROMPT_BASE = `Sen AI-ULU, **hafıza öncelikli mimari** ile çalışan bir yapay zeka asistanısın.
 
-CORE RULES (NON-NEGOTIABLE):
-1. Memory integrity > Speed > Creativity
-2. Never guess when uncertain - say so
-3. Never silently mix memory and API outputs
-4. Source transparency is MANDATORY
+TEMEL KURALLAR:
+1. Hafıza bütünlüğü > Hız > Yaratıcılık
+2. Emin olmadığında tahmin yapma - bunu söyle
+3. Yardımcı, doğal ve profesyonel ol
+4. Türkçe yanıt ver
 
-SOURCE TAGGING:
-- Tag memory-sourced info with [MEMORY]
-- Tag API-sourced info with [API]
-- Tag pure reasoning with [INFERENCE]
+Kullanıcıyla doğal bir sohbet yürüt.`;
 
-Be helpful, natural, and professional.`;
-
-// Generate embedding for text
+// Generate embedding for text (with fallback)
 async function generateEmbedding(text) {
   try {
     const response = await openai.embeddings.create({
@@ -34,90 +29,117 @@ async function generateEmbedding(text) {
     });
     return response.data[0].embedding;
   } catch (error) {
-    console.error('Embedding error:', error);
+    console.error('Embedding error:', error.message);
     return null;
   }
 }
 
-// Search memories with decay and scope
-async function searchMemories(supabase, embedding, userId, includeTeam = true, limit = 5) {
+// Search memories with decay and scope (with graceful fallback)
+async function searchMemories(supabase, embedding, userId, limit = 3) {
   if (!embedding) return [];
   
   try {
+    // Try using the match_memories function
     const { data, error } = await supabase.rpc('match_memories', {
       query_embedding: embedding,
       match_threshold: 0.7,
       match_count: limit,
       user_id_filter: userId,
-      include_team: includeTeam,
+      include_team: false,
     });
 
     if (error) {
-      console.error('Memory search error:', error);
-      return [];
+      // Function doesn't exist or other error - try direct query
+      console.log('match_memories not available, using fallback');
+      return await searchMemoriesFallback(supabase, userId, limit);
     }
 
     // Track access for decay calculation
     for (const mem of (data || [])) {
-      await supabase.rpc('track_memory_access', { memory_uuid: mem.id });
+      try {
+        await supabase.rpc('track_memory_access', { memory_uuid: mem.id });
+      } catch (e) {
+        // Ignore tracking errors
+      }
     }
 
     return (data || []).map(mem => ({
       ...mem,
-      influence_percentage: Math.round(mem.final_score * 100),
+      influence_percentage: Math.round((mem.final_score || mem.similarity || 0.5) * 100),
     }));
   } catch (err) {
-    console.error('Memory search error:', err);
+    console.error('Memory search error:', err.message);
     return [];
   }
 }
 
-// Search similar messages
-async function searchSimilarMessages(supabase, embedding, userId, limit = 3) {
-  if (!embedding) return [];
-  
+// Fallback memory search without vector similarity
+async function searchMemoriesFallback(supabase, userId, limit = 3) {
   try {
-    const { data, error } = await supabase.rpc('match_messages', {
-      query_embedding: embedding,
-      match_threshold: 0.7,
-      match_count: limit,
-      user_id_filter: userId,
-    });
+    const { data, error } = await supabase
+      .from('memories')
+      .select('id, content, type, confidence, scope, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .eq('is_shadow', false)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    return data || [];
+    if (error) {
+      console.log('memories table not available');
+      return [];
+    }
+
+    return (data || []).map(mem => ({
+      ...mem,
+      influence_percentage: Math.round((mem.confidence || 0.8) * 100),
+      decay_factor: 1,
+    }));
   } catch (err) {
-    console.error('Message search error:', err);
     return [];
   }
 }
 
 // Get recent messages from conversation
 async function getRecentMessages(supabase, conversationId, limit = 15) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('role, content, created_at')
-    .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('role, content, created_at')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(limit);
 
-  return data || [];
+    if (error) {
+      console.log('messages table query error:', error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    return [];
+  }
 }
 
-// Check if user can write memory
+// Check if user can write memory (with fallback)
 async function canWriteMemory(supabase, userId) {
   try {
     const { data } = await supabase.rpc('can_write_memory', { user_uuid: userId });
     return data === true;
   } catch {
     // Fallback: check settings directly
-    const { data: settings } = await supabase
-      .from('memory_settings')
-      .select('enabled, privacy_mode, safe_mode')
-      .eq('user_id', userId)
-      .single();
-    
-    if (!settings) return true; // Default: allow
-    return settings.enabled && !settings.privacy_mode && !settings.safe_mode;
+    try {
+      const { data: settings } = await supabase
+        .from('memory_settings')
+        .select('enabled, privacy_mode, safe_mode')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!settings) return true; // Default: allow
+      return settings.enabled && !settings.privacy_mode && !settings.safe_mode;
+    } catch {
+      return true; // Default: allow if table doesn't exist
+    }
   }
 }
 
@@ -125,24 +147,29 @@ async function canWriteMemory(supabase, userId) {
 function classifyForMemory(content) {
   const lowerContent = content.toLowerCase();
   
-  // Garbage patterns
+  // Garbage patterns - don't store these
   const garbagePatterns = [
-    /^(ok|okay|yes|no|hi|hello|hey|thanks|thank you|sure|right|got it)$/i,
-    /^.{1,10}$/,
+    /^(ok|okay|yes|no|hi|hello|hey|thanks|thank you|sure|right|got it|tamam|evet|hayır|merhaba|teşekkürler|selam)$/i,
+    /^.{1,15}$/,
   ];
   
   if (garbagePatterns.some(p => p.test(content.trim()))) {
     return { shouldStore: false, type: 'garbage' };
   }
   
-  // Memory candidate patterns with intent
+  // Memory candidate patterns with intent (Turkish + English)
   const memoryPatterns = [
-    { pattern: /my name is|i am called|i'm called/i, type: 'identity', intent: 'user_explicit' },
-    { pattern: /i work|my job|profession|i do for/i, type: 'identity', intent: 'user_explicit' },
-    { pattern: /i live|i'm from|my city|my country/i, type: 'identity', intent: 'user_explicit' },
-    { pattern: /i (like|love|prefer|enjoy|hate|dislike)/i, type: 'preference', intent: 'user_explicit' },
-    { pattern: /my favorite|i always|i usually|i never/i, type: 'preference', intent: 'user_explicit' },
-    { pattern: /remember (that|this)|don't forget|keep in mind/i, type: 'fact', intent: 'user_explicit' },
+    // Identity patterns
+    { pattern: /benim adım|adım|ben .+ (olarak|oluyorum)|my name is|i am called/i, type: 'identity', intent: 'user_explicit' },
+    { pattern: /olarak çalışıyorum|işim|mesleğim|i work|my job|profession/i, type: 'identity', intent: 'user_explicit' },
+    { pattern: /yaşıyorum|şehrinde|ülkesinde|i live|i'm from|my city/i, type: 'identity', intent: 'user_explicit' },
+    
+    // Preference patterns
+    { pattern: /severim|sevmem|tercih|hoşlanırım|hoşlanmam|i (like|love|prefer|enjoy|hate|dislike)/i, type: 'preference', intent: 'user_explicit' },
+    { pattern: /favorim|her zaman|genellikle|asla|my favorite|i always|i usually|i never/i, type: 'preference', intent: 'user_explicit' },
+    
+    // Fact patterns
+    { pattern: /unutma|hatırla|aklında tut|remember|don't forget|keep in mind/i, type: 'fact', intent: 'user_explicit' },
   ];
   
   for (const { pattern, type, intent } of memoryPatterns) {
@@ -154,7 +181,7 @@ function classifyForMemory(content) {
   return { shouldStore: false, type: 'normal' };
 }
 
-// Store memory with Write-Intent Guard
+// Store memory with Write-Intent Guard (with fallback)
 async function storeMemory(supabase, userId, content, embedding, classification) {
   if (!classification.shouldStore) return null;
   
@@ -170,9 +197,8 @@ async function storeMemory(supabase, userId, content, embedding, classification)
         truth_type: 'user_claim',
         scope: 'private',
         embedding,
-        language: 'en', // TODO: detect language
-        // Write-Intent Guard fields (REQUIRED)
-        write_reason: 'User shared personal information during chat',
+        language: 'tr',
+        write_reason: 'Kullanıcı sohbet sırasında kişisel bilgi paylaştı',
         write_intent: classification.intent || 'auto_capture',
         write_source: 'chat',
       })
@@ -180,14 +206,14 @@ async function storeMemory(supabase, userId, content, embedding, classification)
       .single();
 
     if (error) {
-      console.error('Memory store error:', error);
+      console.log('Memory store skipped:', error.message);
       return null;
     }
 
-    console.log('[Memory] Stored new memory:', classification.type, data?.id);
+    console.log('[Memory] Stored:', classification.type, data?.id);
     return data;
   } catch (err) {
-    console.error('Memory store error:', err);
+    console.log('Memory store error:', err.message);
     return null;
   }
 }
