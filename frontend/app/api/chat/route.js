@@ -34,38 +34,78 @@ async function generateEmbedding(text) {
   }
 }
 
-// Search memories with decay and scope (with graceful fallback)
+// Quantum-Inspired Heuristic Scoring
+// H(x,ψ) = α(1-sim) + β*decay + γ*importance + δ*frequency
+function calculateHScore(memory, similarity) {
+  const α = 0.5;  // similarity weight
+  const β = 0.2;  // decay weight
+  const γ = 0.2;  // importance weight
+  const δ = 0.1;  // frequency weight
+
+  // Age decay (decoherence): exp(-λ * days)
+  const daysSinceAccess = memory.last_accessed_at 
+    ? (Date.now() - new Date(memory.last_accessed_at).getTime()) / (1000 * 60 * 60 * 24)
+    : (Date.now() - new Date(memory.created_at).getTime()) / (1000 * 60 * 60 * 24);
+  const λ = 0.02; // decay rate
+  const decayFactor = Math.exp(-λ * daysSinceAccess);
+
+  // Importance based on type
+  const importanceMap = { identity: 0.9, preference: 0.7, fact: 0.5 };
+  const importance = importanceMap[memory.type] || 0.5;
+
+  // Frequency boost (normalized)
+  const frequency = Math.min((memory.access_count || 1) / 10, 1);
+
+  // Calculate H score (lower is better)
+  const H = α * (1 - similarity) 
+          + β * (1 - decayFactor) 
+          + γ * (1 - importance) 
+          + δ * (1 - frequency);
+
+  return { H, decayFactor, importance };
+}
+
+// Search memories with quantum-inspired scoring
 async function searchMemories(supabase, embedding, userId, limit = 3) {
   if (!embedding) return [];
   
   try {
-    // Try using the match_memories function
     const { data, error } = await supabase.rpc('match_memories', {
       query_embedding: embedding,
       match_threshold: 0.7,
-      match_count: limit,
+      match_count: limit * 2, // Get more candidates for reranking
       user_id_filter: userId,
       include_team: false,
     });
 
     if (error) {
-      // Function doesn't exist or other error - try direct query
       console.log('match_memories not available, using fallback');
       return await searchMemoriesFallback(supabase, userId, limit);
     }
 
-    // Track access for decay calculation
-    for (const mem of (data || [])) {
+    // Apply quantum-inspired scoring and rerank
+    const scored = (data || []).map(mem => {
+      const sim = mem.similarity || 0.7;
+      const { H, decayFactor, importance } = calculateHScore(mem, sim);
+      return { ...mem, H, decayFactor, importance, similarity: sim };
+    });
+
+    // Sort by H score (ascending - lower is better)
+    scored.sort((a, b) => a.H - b.H);
+
+    // Take top N
+    const topMemories = scored.slice(0, limit);
+
+    // Track access for decay
+    for (const mem of topMemories) {
       try {
         await supabase.rpc('track_memory_access', { memory_uuid: mem.id });
-      } catch (e) {
-        // Ignore tracking errors
-      }
+      } catch (e) {}
     }
 
-    return (data || []).map(mem => ({
+    return topMemories.map(mem => ({
       ...mem,
-      influence_percentage: Math.round((mem.final_score || mem.similarity || 0.5) * 100),
+      influence_percentage: Math.round((1 - mem.H) * 100),
     }));
   } catch (err) {
     console.error('Memory search error:', err.message);
@@ -73,27 +113,33 @@ async function searchMemories(supabase, embedding, userId, limit = 3) {
   }
 }
 
-// Fallback memory search without vector similarity
+// Fallback with basic scoring
 async function searchMemoriesFallback(supabase, userId, limit = 3) {
   try {
     const { data, error } = await supabase
       .from('memories')
-      .select('id, content, type, confidence, scope, created_at')
+      .select('id, content, type, confidence, scope, created_at, last_accessed_at, access_count')
       .eq('user_id', userId)
       .eq('status', 'active')
-      .eq('is_shadow', false)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(limit * 2);
 
     if (error) {
       console.log('memories table not available');
       return [];
     }
 
-    return (data || []).map(mem => ({
+    // Apply basic scoring
+    const scored = (data || []).map(mem => {
+      const { H, decayFactor, importance } = calculateHScore(mem, mem.confidence || 0.8);
+      return { ...mem, H, decayFactor, importance };
+    });
+
+    scored.sort((a, b) => a.H - b.H);
+
+    return scored.slice(0, limit).map(mem => ({
       ...mem,
-      influence_percentage: Math.round((mem.confidence || 0.8) * 100),
-      decay_factor: 1,
+      influence_percentage: Math.round((1 - mem.H) * 100),
     }));
   } catch (err) {
     return [];
