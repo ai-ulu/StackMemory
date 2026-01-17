@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-ULU Memory</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">AI-ULU</span>
+      </div>
+      <div class="status" id="connectionStatus">
+        <span class="status-dot"></span>
+        <span class="status-text">Bağlanıyor...</span>
+      </div>
+    </header>
+
+    <!-- Auth Section (shown when not logged in) -->
+    <section id="authSection" class="section auth-section hidden">
+      <h2>Giriş Yapın</h2>
+      <p>Hafızanıza erişmek için AI-ULU hesabınızla giriş yapın.</p>
+      <button id="loginBtn" class="btn btn-primary">
+        <span>🔐</span> AI-ULU ile Giriş Yap
+      </button>
+      <div class="api-key-section">
+        <p class="divider">veya API anahtarı ile</p>
+        <input type="password" id="apiKeyInput" placeholder="API Anahtarınız" />
+        <button id="saveApiKeyBtn" class="btn btn-secondary">Kaydet</button>
+      </div>
+    </section>
+
+    <!-- Main Section (shown when logged in) -->
+    <section id="mainSection" class="section main-section hidden">
+      <!-- Quick Capture -->
+      <div class="capture-box">
+        <textarea id="captureInput" placeholder="Bir şey yazın veya sayfadan seçin..."></textarea>
+        <div class="capture-options">
+          <select id="memoryType">
+            <option value="fact">📚 Bilgi</option>
+            <option value="preference">💜 Tercih</option>
+            <option value="identity">👤 Kimlik</option>
+          </select>
+          <button id="captureBtn" class="btn btn-primary">
+            <span>💾</span> Kaydet
+          </button>
+        </div>
+      </div>
+
+      <!-- Page Capture -->
+      <div class="page-capture">
+        <button id="capturePageBtn" class="btn btn-outline">
+          <span>📄</span> Bu Sayfayı Kaydet
+        </button>
+        <button id="captureSelectionBtn" class="btn btn-outline">
+          <span>✂️</span> Seçili Metni Kaydet
+        </button>
+      </div>
+
+      <!-- Recent Memories -->
+      <div class="recent-section">
+        <h3>Son Kaydedilenler</h3>
+        <div id="recentMemories" class="recent-list">
+          <div class="loading">Yükleniyor...</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="totalMemories">-</span>
+          <span class="stat-label">Toplam</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="todayMemories">-</span>
+          <span class="stat-label">Bugün</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="extensionMemories">-</span>
+          <span class="stat-label">Extension</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="#" id="settingsLink">⚙️ Ayarlar</a>
+      <a href="#" id="dashboardLink">📊 Dashboard</a>
+      <a href="#" id="logoutLink" class="hidden">🚪 Çıkış</a>
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">
+    <span id="toastMessage"></span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
