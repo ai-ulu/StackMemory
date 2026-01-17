@@ -66,8 +66,10 @@ import {
   Gauge,
   Globe,
   Timer,
+  Network,
 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils';
+import { MemoryGraph } from '@/components/memory';
 
 // Memory card with version history
 function MemoryCard({ memory, onDelete, onRestore }) {
@@ -453,7 +455,7 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold mb-8">Ayarlar</h1>
 
         <Tabs defaultValue="memory" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="memory">
               <Brain className="w-4 h-4 mr-2" />
               Hafıza
@@ -461,6 +463,10 @@ export default function SettingsPage() {
             <TabsTrigger value="memories">
               <Database className="w-4 h-4 mr-2" />
               Hafızalarım
+            </TabsTrigger>
+            <TabsTrigger value="graph">
+              <Network className="w-4 h-4 mr-2" />
+              Graf
             </TabsTrigger>
             <TabsTrigger value="appearance">
               <Sun className="w-4 h-4 mr-2" />
@@ -772,6 +778,11 @@ export default function SettingsPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Memory Graph Tab */}
+          <TabsContent value="graph">
+            <MemoryGraph />
           </TabsContent>
 
           {/* Appearance Tab */}

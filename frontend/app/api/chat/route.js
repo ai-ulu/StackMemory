@@ -34,35 +34,41 @@ async function generateEmbedding(text) {
   }
 }
 
-// Quantum-Inspired Heuristic Scoring
-// H(x,ψ) = α(1-sim) + β*decay + γ*importance + δ*frequency
+// Quantum-Inspired Heuristic Scoring (AI-ULU v2.0)
+// H(x,ψ) = α·S + β·D + γ·I + δ·F
+// Referans: AI-ULU Teknik Blueprint - Algoritmik Detaylandırma
 function calculateHScore(memory, similarity) {
-  const α = 0.5;  // similarity weight
+  // v2.0 Optimized weights (A/B test ready)
+  const α = 0.4;  // similarity weight (reduced from 0.5)
   const β = 0.2;  // decay weight
-  const γ = 0.2;  // importance weight
+  const γ = 0.3;  // importance weight (increased from 0.2)
   const δ = 0.1;  // frequency weight
 
-  // Age decay (decoherence): exp(-λ * days)
+  // Age decay (decoherence): D(x) = e^(-λ·Δt)
   const daysSinceAccess = memory.last_accessed_at 
     ? (Date.now() - new Date(memory.last_accessed_at).getTime()) / (1000 * 60 * 60 * 24)
     : (Date.now() - new Date(memory.created_at).getTime()) / (1000 * 60 * 60 * 24);
-  const λ = 0.02; // decay rate
+  const λ = 0.02; // decay rate (configurable)
   const decayFactor = Math.exp(-λ * daysSinceAccess);
 
-  // Importance based on type
-  const importanceMap = { identity: 0.9, preference: 0.7, fact: 0.5 };
-  const importance = importanceMap[memory.type] || 0.5;
+  // Importance based on type (v2.0 values)
+  // Kimlik=1.0, Tercih=0.7, Bilgi=0.4
+  const importanceMap = { identity: 1.0, preference: 0.7, fact: 0.4 };
+  const importance = importanceMap[memory.type] || 0.4;
 
-  // Frequency boost (normalized)
-  const frequency = Math.min((memory.access_count || 1) / 10, 1);
+  // Frequency: F(x) = min(1, log(frequency) / log(F_max))
+  const F_max = 100; // Maximum expected frequency
+  const rawFrequency = memory.access_count || 1;
+  const frequency = Math.min(1, Math.log(rawFrequency + 1) / Math.log(F_max));
 
-  // Calculate H score (lower is better)
+  // Calculate H score (lower is better for retrieval priority)
+  // Using (1 - value) to convert "higher is better" to "lower is better"
   const H = α * (1 - similarity) 
           + β * (1 - decayFactor) 
           + γ * (1 - importance) 
           + δ * (1 - frequency);
 
-  return { H, decayFactor, importance };
+  return { H, decayFactor, importance, frequency };
 }
 
 // Search memories with quantum-inspired scoring
