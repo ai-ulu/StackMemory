@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST='{"components/memory/MemoryGraph.jsx -> react-force-graph-2d":{"id":5085,"files":["static/chunks/85.0e52a9a7f5748bc0.js"]}}';

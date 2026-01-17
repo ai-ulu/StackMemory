@@ -34,15 +34,17 @@ async function generateEmbedding(text) {
   }
 }
 
-// Quantum-Inspired Heuristic Scoring (AI-ULU v2.0)
-// H(x,ψ) = α·S + β·D + γ·I + δ·F
+// Quantum-Inspired Heuristic Scoring (AI-ULU v2.1)
+// H(x,ψ,E) = α·S + β·D + γ·I + δ·F + ε·E
+// Extended with Emotional Resonance parameter
 // Referans: AI-ULU Teknik Blueprint - Algoritmik Detaylandırma
-function calculateHScore(memory, similarity) {
-  // v2.0 Optimized weights (A/B test ready)
-  const α = 0.4;  // similarity weight (reduced from 0.5)
-  const β = 0.2;  // decay weight
-  const γ = 0.3;  // importance weight (increased from 0.2)
-  const δ = 0.1;  // frequency weight
+function calculateHScore(memory, similarity, emotionalContext = null) {
+  // v2.1 Optimized weights (A/B test ready)
+  const α = 0.35;  // similarity weight
+  const β = 0.15;  // decay weight
+  const γ = 0.25;  // importance weight
+  const δ = 0.10;  // frequency weight
+  const ε = 0.15;  // emotional resonance weight (NEW)
 
   // Age decay (decoherence): D(x) = e^(-λ·Δt)
   const daysSinceAccess = memory.last_accessed_at 
@@ -61,18 +63,57 @@ function calculateHScore(memory, similarity) {
   const rawFrequency = memory.access_count || 1;
   const frequency = Math.min(1, Math.log(rawFrequency + 1) / Math.log(F_max));
 
+  // Emotional Resonance: E(x, mood)
+  // Maps memory type to emotional states
+  // happy → preferences boost, stressed → identity boost, focused → facts boost
+  let emotionalResonance = 0.5; // neutral default
+  if (emotionalContext) {
+    const moodTypeMap = {
+      happy: { preference: 1.0, identity: 0.7, fact: 0.5 },
+      stressed: { identity: 1.0, preference: 0.5, fact: 0.7 },
+      focused: { fact: 1.0, identity: 0.6, preference: 0.4 },
+      curious: { fact: 0.9, preference: 0.8, identity: 0.6 },
+      nostalgic: { identity: 0.9, preference: 0.9, fact: 0.5 },
+      neutral: { identity: 0.7, preference: 0.7, fact: 0.7 },
+    };
+    const moodMap = moodTypeMap[emotionalContext] || moodTypeMap.neutral;
+    emotionalResonance = moodMap[memory.type] || 0.5;
+  }
+
   // Calculate H score (lower is better for retrieval priority)
   // Using (1 - value) to convert "higher is better" to "lower is better"
   const H = α * (1 - similarity) 
           + β * (1 - decayFactor) 
           + γ * (1 - importance) 
-          + δ * (1 - frequency);
+          + δ * (1 - frequency)
+          + ε * (1 - emotionalResonance);
 
-  return { H, decayFactor, importance, frequency };
+  return { H, decayFactor, importance, frequency, emotionalResonance };
 }
 
-// Search memories with quantum-inspired scoring
-async function searchMemories(supabase, embedding, userId, limit = 3) {
+// Detect emotional context from message
+function detectEmotionalContext(message) {
+  const lowerMessage = message.toLowerCase();
+  
+  const emotionPatterns = {
+    happy: /mutlu|sevinç|harika|süper|güzel|eğlen|keyif|neşe|happy|joy|great|awesome/i,
+    stressed: /stres|endişe|kaygı|gergin|sıkıntı|problem|sorun|stress|anxious|worried/i,
+    focused: /odaklan|çalış|öğren|araştır|analiz|focus|work|study|research/i,
+    curious: /merak|öğrenmek|nedir|nasıl|neden|curious|wonder|what|how|why/i,
+    nostalgic: /hatırla|geçmiş|eskiden|zamanlar|remember|past|used to/i,
+  };
+
+  for (const [mood, pattern] of Object.entries(emotionPatterns)) {
+    if (pattern.test(lowerMessage)) {
+      return mood;
+    }
+  }
+
+  return 'neutral';
+}
+
+// Search memories with quantum-inspired scoring + emotional resonance
+async function searchMemories(supabase, embedding, userId, limit = 3, emotionalContext = null) {
   if (!embedding) return [];
   
   try {
@@ -89,11 +130,11 @@ async function searchMemories(supabase, embedding, userId, limit = 3) {
       return await searchMemoriesFallback(supabase, userId, limit);
     }
 
-    // Apply quantum-inspired scoring and rerank
+    // Apply quantum-inspired scoring with emotional resonance and rerank
     const scored = (data || []).map(mem => {
       const sim = mem.similarity || 0.7;
-      const { H, decayFactor, importance } = calculateHScore(mem, sim);
-      return { ...mem, H, decayFactor, importance, similarity: sim };
+      const { H, decayFactor, importance, frequency, emotionalResonance } = calculateHScore(mem, sim, emotionalContext);
+      return { ...mem, H, decayFactor, importance, frequency, emotionalResonance, similarity: sim };
     });
 
     // Sort by H score (ascending - lower is better)
@@ -112,6 +153,7 @@ async function searchMemories(supabase, embedding, userId, limit = 3) {
     return topMemories.map(mem => ({
       ...mem,
       influence_percentage: Math.round((1 - mem.H) * 100),
+      emotionalMatch: emotionalContext ? Math.round(mem.emotionalResonance * 100) : null,
     }));
   } catch (err) {
     console.error('Memory search error:', err.message);
@@ -293,11 +335,14 @@ export async function POST(request) {
     // Generate embedding for user message (don't fail if embedding fails)
     const userEmbedding = await generateEmbedding(message);
 
+    // Detect emotional context from message (v2.1 Emotional Resonance)
+    const emotionalContext = detectEmotionalContext(message);
+
     // Search for relevant memories (if not in privacy mode)
     let memories = [];
     let memoryIds = [];
     if (!privacyMode) {
-      memories = await searchMemories(supabase, userEmbedding, user.id, 3);
+      memories = await searchMemories(supabase, userEmbedding, user.id, 3, emotionalContext);
       memoryIds = memories.map(m => m.id);
     }
 
@@ -307,11 +352,24 @@ export async function POST(request) {
     // Build system prompt with memories
     let systemPrompt = SYSTEM_PROMPT_BASE;
 
+    // Add emotional context hint if detected
+    if (emotionalContext !== 'neutral') {
+      const moodLabels = {
+        happy: 'Kullanıcı mutlu görünüyor',
+        stressed: 'Kullanıcı stresli görünüyor, sakin ve destekleyici ol',
+        focused: 'Kullanıcı odaklanmış, direkt ve net cevaplar ver',
+        curious: 'Kullanıcı meraklı, detaylı bilgi ver',
+        nostalgic: 'Kullanıcı geçmişi düşünüyor',
+      };
+      systemPrompt += `\n\n💭 DUYGUSAL BAĞLAM: ${moodLabels[emotionalContext] || ''}`;
+    }
+
     if (memories.length > 0) {
       systemPrompt += `\n\n🧠 HATIRLADIKLARIM:\n`;
       memories.forEach((mem, idx) => {
         const typeLabel = mem.type === 'identity' ? 'Kimlik' : mem.type === 'preference' ? 'Tercih' : 'Bilgi';
-        systemPrompt += `${idx + 1}. [${typeLabel}] ${mem.content}\n`;
+        const emotionalTag = mem.emotionalMatch ? ` (Duygusal uyum: %${mem.emotionalMatch})` : '';
+        systemPrompt += `${idx + 1}. [${typeLabel}]${emotionalTag} ${mem.content}\n`;
       });
       systemPrompt += `\nBu bilgileri doğal bir şekilde kullan.`;
     }
