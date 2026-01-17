@@ -871,6 +871,24 @@ export default function ChatPage() {
         </Button>
       </div>
 
+      {/* Quick Navigation */}
+      <div className="px-4 pb-2">
+        <div className="grid grid-cols-3 gap-2">
+          <Link href="/analytics" className="flex flex-col items-center p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+            <span className="text-lg">📊</span>
+            <span className="text-[10px] text-muted-foreground">Analitik</span>
+          </Link>
+          <Link href="/settings?tab=memories" className="flex flex-col items-center p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+            <span className="text-lg">🧠</span>
+            <span className="text-[10px] text-muted-foreground">Hafıza</span>
+          </Link>
+          <Link href="/settings?tab=graph" className="flex flex-col items-center p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+            <span className="text-lg">🕸️</span>
+            <span className="text-[10px] text-muted-foreground">Graf</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Conversations List */}
       <ScrollArea className="flex-1 px-2">
         {isLoadingConversations ? (
@@ -918,6 +936,21 @@ export default function ChatPage() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Navigasyon</DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link href="/analytics">
+                <span className="mr-2">📊</span>
+                Analitik Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings?tab=graph">
+                <span className="mr-2">🕸️</span>
+                Hafıza Grafiği
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Ayarlar</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
               {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
               {theme === 'dark' ? 'Açık Mod' : 'Koyu Mod'}
@@ -925,7 +958,7 @@ export default function ChatPage() {
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <Settings className="w-4 h-4 mr-2" />
-                Ayarlar
+                Tüm Ayarlar
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -1076,11 +1109,40 @@ export default function ChatPage() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Mesajınızı yazın..."
-                  className="min-h-[56px] max-h-[200px] pr-24 resize-none"
+                  placeholder="Mesajınızı yazın veya 🎤 ile konuşun..."
+                  className="min-h-[56px] max-h-[200px] pr-36 resize-none"
                   disabled={isSending}
                 />
                 <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  {/* Voice Input Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 hover:bg-red-500/10 hover:text-red-500"
+                        onClick={() => {
+                          if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                            const recognition = new SpeechRecognition();
+                            recognition.lang = 'tr-TR';
+                            recognition.onresult = (e) => {
+                              const transcript = e.results[0][0].transcript;
+                              setInputValue(prev => prev + (prev ? ' ' : '') + transcript);
+                            };
+                            recognition.start();
+                            toast.info('🎤 Dinliyorum...');
+                          } else {
+                            toast.error('Tarayıcınız ses girişini desteklemiyor');
+                          }
+                        }}
+                      >
+                        <span className="text-lg">🎤</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Sesle Giriş</TooltipContent>
+                  </Tooltip>
+
                   {/* File Upload Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1093,7 +1155,7 @@ export default function ChatPage() {
                         <Paperclip className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Dosya Ekle (Yakında)</TooltipContent>
+                    <TooltipContent>Dosya Ekle</TooltipContent>
                   </Tooltip>
                   
                   {/* Send Button */}
