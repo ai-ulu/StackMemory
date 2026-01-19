@@ -12,15 +12,19 @@ This is the "Universal AI Backbone" - one brain, everywhere.
 """
 
 import os
+import re
 import json
 import asyncio
 import logging
+import hashlib
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, asdict
+from collections import defaultdict
+import time
 
 # FastAPI for REST + WebSocket
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Depends
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -31,6 +35,153 @@ import httpx
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai-ulu-bridge")
+
+# =============================================================================
+# API Key Authentication & Rate Limiting
+# =============================================================================
+
+# Key scopes and their permissions
+KEY_SCOPES = {
+    'read': ['memory:read', 'search', 'query'],
+    'write': ['memory:read', 'memory:write', 'search', 'query', 'orchestrate'],
+    'full': ['memory:read', 'memory:write', 'memory:delete', 'search', 'query', 'orchestrate', 'export'],
+    'admin': ['*'],  # All permissions
+}
+
+# Rate limits per scope (requests per minute)
+RATE_LIMITS = {
+    'read': {'rpm': 60, 'daily': 1000},
+    'write': {'rpm': 30, 'daily': 500},
+    'full': {'rpm': 100, 'daily': 5000},
+    'admin': {'rpm': 200, 'daily': 10000},
+}
+
+# In-memory rate limit store (use Redis in production)
+rate_limit_store: Dict[str, Dict[str, int]] = defaultdict(lambda: {'count': 0, 'window': 0})
+
+def parse_api_key(key: str) -> Optional[Dict[str, Any]]:
+    """Parse API key to extract scope and validate format"""
+    if not key:
+        return None
+    
+    # Format: ulu_[scope]_[token]
+    match = re.match(r'^ulu_([a-z]+)_([A-Za-z0-9_-]+)$', key)
+    if not match:
+        # Also accept Bearer tokens
+        if key.startswith('Bearer '):
+            key = key[7:]
+            match = re.match(r'^ulu_([a-z]+)_([A-Za-z0-9_-]+)$', key)
+    
+    if not match:
+        return None
+    
+    scope, token = match.groups()
+    if scope not in KEY_SCOPES:
+        return None
+    
+    return {
+        'scope': scope,
+        'token': token,
+        'permissions': KEY_SCOPES[scope],
+        'key_hash': hashlib.sha256(key.encode()).hexdigest(),
+    }
+
+def has_permission(key_info: Dict, permission: str) -> bool:
+    """Check if key has required permission"""
+    if not key_info:
+        return False
+    
+    permissions = key_info.get('permissions', [])
+    
+    # Admin has all permissions
+    if '*' in permissions:
+        return True
+    
+    return permission in permissions
+
+def check_rate_limit(key_hash: str, scope: str) -> Dict[str, Any]:
+    """Check and update rate limit for a key"""
+    limits = RATE_LIMITS.get(scope, RATE_LIMITS['read'])
+    now = int(time.time())
+    window = now // 60  # 1 minute windows
+    
+    key = f"{key_hash}:{window}"
+    
+    if rate_limit_store[key]['window'] != window:
+        rate_limit_store[key] = {'count': 0, 'window': window}
+    
+    current_count = rate_limit_store[key]['count']
+    
+    if current_count >= limits['rpm']:
+        return {
+            'allowed': False,
+            'remaining': 0,
+            'reset_at': (window + 1) * 60,
+            'limit': limits['rpm'],
+        }
+    
+    rate_limit_store[key]['count'] += 1
+    
+    return {
+        'allowed': True,
+        'remaining': limits['rpm'] - current_count - 1,
+        'reset_at': (window + 1) * 60,
+        'limit': limits['rpm'],
+    }
+
+async def validate_api_key(authorization: Optional[str] = Header(None)) -> Optional[Dict[str, Any]]:
+    """
+    FastAPI dependency to validate API key from Authorization header.
+    Returns key info if valid, None if no key provided.
+    Raises HTTPException if key is invalid.
+    """
+    if not authorization:
+        return None
+    
+    # Remove 'Bearer ' prefix if present
+    key = authorization
+    if key.startswith('Bearer '):
+        key = key[7:]
+    
+    key_info = parse_api_key(key)
+    
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid API key format")
+    
+    # Check rate limit
+    rate_limit = check_rate_limit(key_info['key_hash'], key_info['scope'])
+    
+    if not rate_limit['allowed']:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Limit: {rate_limit['limit']}/min. Reset at: {rate_limit['reset_at']}",
+            headers={
+                'X-RateLimit-Limit': str(rate_limit['limit']),
+                'X-RateLimit-Remaining': '0',
+                'X-RateLimit-Reset': str(rate_limit['reset_at']),
+            }
+        )
+    
+    # Validate against AI-ULU backend (optional - for now trust the format)
+    # In production, you'd verify the key hash against the database
+    
+    return key_info
+
+def require_permission(permission: str):
+    """Decorator factory to require specific permission"""
+    async def permission_checker(key_info: Optional[Dict] = Depends(validate_api_key)):
+        if not key_info:
+            raise HTTPException(status_code=401, detail="API key required")
+        
+        if not has_permission(key_info, permission):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permission denied. Required: {permission}. Your scope: {key_info['scope']}"
+            )
+        
+        return key_info
+    
+    return permission_checker
 
 # =============================================================================
 # Configuration
@@ -195,6 +346,7 @@ async def health():
 @app.post("/v1/query", response_model=BridgeResponse)
 async def query(
     request: QueryRequest,
+    key_info: Optional[Dict] = Depends(validate_api_key),
     authorization: Optional[str] = Header(None),
 ):
     """
@@ -252,6 +404,7 @@ async def query(
 @app.post("/v1/memory", response_model=BridgeResponse)
 async def store_memory(
     request: MemoryRequest,
+    key_info: Dict = Depends(require_permission('memory:write')),
     authorization: Optional[str] = Header(None),
 ):
     """
