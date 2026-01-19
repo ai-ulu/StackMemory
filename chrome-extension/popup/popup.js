@@ -354,3 +354,75 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     checkAuth();
   }
 });
+
+// ==============================================
+// MCP HUB INTEGRATION - Query across all sources
+// ==============================================
+
+/**
+ * Query MCP Hub for intelligent multi-source answers
+ * This allows the extension to leverage:
+ * - Local AI-ULU memory
+ * - Web search (Brave)
+ * - GitHub code search
+ * - And other connected MCPs
+ */
+async function queryMCPHub(query) {
+  try {
+    const response = await fetch(`${CONFIG.apiUrl}/api/orchestrate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ 
+        query,
+        options: { timeout: 8000 }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Hub query failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('MCP Hub query error:', error);
+    return null;
+  }
+}
+
+/**
+ * Smart capture - uses MCP Hub to enrich content before saving
+ */
+async function smartCapture(content, type, url, title) {
+  // First, check if similar memory exists via hub
+  const hubResult = await queryMCPHub(`Do I have any memories about: ${content.slice(0, 200)}`);
+  
+  if (hubResult?.synthesized?.sources?.some(s => s.serverId === 'ai-ulu-memory')) {
+    // Similar memory exists - ask user if they want to update
+    const existingContent = hubResult.synthesized.answer;
+    if (existingContent.length > 50) {
+      showToast('Benzer hafiza mevcut', 'info');
+    }
+  }
+
+  // Proceed with normal capture
+  await captureMemory(content, type, url, title);
+}
+
+/**
+ * Add context menu query option
+ */
+function setupContextMenuQuery() {
+  // This would be in background.js for actual implementation
+  // Here we just add the UI handler
+}
+
+// Export for potential use in other extension scripts
+if (typeof window !== 'undefined') {
+  window.aiUluHub = {
+    query: queryMCPHub,
+    smartCapture,
+  };
+}
