@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-ulu"
+version = "1.0.0"
+description = "Universal Memory & Context Infrastructure for AI"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "AI-ULU Team", email = "hello@ai-ulu.com"}
+]
+keywords = [
+    "ai", "memory", "context", "langchain", "llm", 
+    "mcp", "agent", "chatgpt", "claude", "infrastructure"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+langchain = ["langchain>=0.1.0"]
+all = ["langchain>=0.1.0"]
+
+[project.urls]
+Homepage = "https://ai-ulu.com"
+Documentation = "https://docs.ai-ulu.com"
+Repository = "https://github.com/agiulucom42-del/emergent-ai-ulu.com"
+Changelog = "https://github.com/agiulucom42-del/emergent-ai-ulu.com/releases"
+
+[project.scripts]
+ulu = "ai_ulu.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ai_ulu*"]

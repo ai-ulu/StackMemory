@@ -1,0 +1,109 @@
+Metadata-Version: 2.4
+Name: ai-ulu
+Version: 1.0.0
+Summary: Universal Memory & Context Infrastructure for AI
+Author-email: AI-ULU Team <hello@ai-ulu.com>
+License: MIT
+Project-URL: Homepage, https://ai-ulu.com
+Project-URL: Documentation, https://docs.ai-ulu.com
+Project-URL: Repository, https://github.com/agiulucom42-del/emergent-ai-ulu.com
+Project-URL: Changelog, https://github.com/agiulucom42-del/emergent-ai-ulu.com/releases
+Keywords: ai,memory,context,langchain,llm,mcp,agent,chatgpt,claude,infrastructure
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Provides-Extra: langchain
+Requires-Dist: langchain>=0.1.0; extra == "langchain"
+Provides-Extra: all
+Requires-Dist: langchain>=0.1.0; extra == "all"
+
+# AI-ULU
+
+Universal Memory & Context Infrastructure for AI
+
+```
+One brain. Every AI. Everywhere.
+```
+
+## Install
+
+```bash
+pip install ai-ulu
+```
+
+## Quick Start
+
+### CLI
+
+```bash
+export AI_ULU_API_KEY=ulu_full_xxx...
+
+ulu ask "What's my favorite programming language?"
+ulu remember "I prefer dark mode" --type preference
+ulu search "projects"
+ulu chat
+```
+
+### Python SDK
+
+```python
+from ai_ulu import AIULU
+
+ulu = AIULU(api_key="ulu_full_xxx...")
+
+# Query
+result = ulu.ask("What do I like?")
+print(result.answer)
+
+# Store
+ulu.remember("I love Python", type="preference")
+
+# Search
+results = ulu.search("programming")
+for mem in results.memories:
+    print(mem.content)
+```
+
+### LangChain
+
+```python
+from ai_ulu.langchain import AIULUMemory, AIULURetriever
+
+# As conversation memory
+memory = AIULUMemory()
+
+# As retriever
+retriever = AIULURetriever()
+docs = retriever.get_relevant_documents("my preferences")
+```
+
+## API Keys
+
+Get your key at [ai-ulu.com/settings](https://ai-ulu.com/settings)
+
+| Scope | Permissions | Rate Limit |
+|-------|-------------|------------|
+| `read` | Query, Search | 60/min |
+| `write` | + Create, Update | 30/min |
+| `full` | + Delete | 100/min |
+
+## Links
+
+- [Documentation](https://docs.ai-ulu.com)
+- [GitHub](https://github.com/agiulucom42-del/emergent-ai-ulu.com)
+- [Discord](https://discord.gg/aiulu)
+
+## License
+
+MIT

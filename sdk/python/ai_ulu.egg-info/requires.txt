@@ -1,0 +1,6 @@
+
+[all]
+langchain>=0.1.0
+
+[langchain]
+langchain>=0.1.0
