@@ -1,0 +1,158 @@
+# AI-ULU Universal Deployment
+# Deploy the entire ecosystem with one command: docker-compose up
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Core Services
+  # ==========================================================================
+  
+  # Main Next.js Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Universal Bridge (REST + WebSocket + OpenAPI)
+  bridge:
+    build:
+      context: ./bridge
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - AI_ULU_API_URL=http://frontend:3000
+      - BRIDGE_PORT=8080
+    depends_on:
+      - frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # MCP Server (for Claude/Cursor)
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    environment:
+      - AI_ULU_API_URL=http://frontend:3000
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Bots (Optional - Enable as needed)
+  # ==========================================================================
+  
+  # Slack Bot
+  slack-bot:
+    build:
+      context: ./bots/slack
+      dockerfile: Dockerfile
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - AI_ULU_BRIDGE_URL=http://bridge:8080
+    depends_on:
+      - bridge
+    profiles:
+      - bots
+    restart: unless-stopped
+
+  # Discord Bot
+  discord-bot:
+    build:
+      context: ./bots/discord
+      dockerfile: Dockerfile
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - AI_ULU_BRIDGE_URL=http://bridge:8080
+    depends_on:
+      - bridge
+    profiles:
+      - bots
+    restart: unless-stopped
+
+  # Telegram Bot
+  telegram-bot:
+    build:
+      context: ./bots/telegram
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - AI_ULU_BRIDGE_URL=http://bridge:8080
+    depends_on:
+      - bridge
+    profiles:
+      - bots
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Infrastructure (Optional)
+  # ==========================================================================
+  
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - cache
+    restart: unless-stopped
+
+  # Monitoring (Prometheus + Grafana)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: ai-ulu-network

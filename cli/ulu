@@ -1,0 +1,334 @@
+#!/usr/bin/env python3
+"""
+AI-ULU CLI - Terminal Command Tool
+
+Usage:
+  ulu ask "What do I usually do on Mondays?"
+  ulu remember "I prefer dark mode in all apps" --type preference
+  ulu search "project deadlines" --limit 5
+  ulu chat  # Interactive chat mode
+  ulu status  # Check connection
+
+Installation:
+  chmod +x ulu
+  sudo ln -s $(pwd)/ulu /usr/local/bin/ulu
+  
+  Or: pip install ai-ulu-cli
+"""
+
+import os
+import sys
+import json
+import argparse
+import readline  # For better input handling
+from typing import Optional
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+from urllib.parse import urlencode
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# Can be overridden with environment variables
+API_URL = os.getenv("AI_ULU_API_URL", "http://localhost:3000")
+BRIDGE_URL = os.getenv("AI_ULU_BRIDGE_URL", "http://localhost:8080")
+API_KEY = os.getenv("AI_ULU_API_KEY", "")
+
+# Colors for terminal output
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+def colored(text: str, color: str) -> str:
+    """Add color to text if terminal supports it"""
+    if sys.stdout.isatty():
+        return f"{color}{text}{Colors.ENDC}"
+    return text
+
+# =============================================================================
+# API Client
+# =============================================================================
+
+def api_request(endpoint: str, method: str = "GET", data: Optional[dict] = None) -> dict:
+    """Make API request to AI-ULU Bridge"""
+    url = f"{BRIDGE_URL}{endpoint}"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "AI-ULU-CLI/1.0",
+    }
+    
+    if API_KEY:
+        headers["Authorization"] = f"Bearer {API_KEY}"
+    
+    body = json.dumps(data).encode() if data else None
+    
+    try:
+        req = Request(url, data=body, headers=headers, method=method)
+        with urlopen(req, timeout=30) as response:
+            return json.loads(response.read().decode())
+    except HTTPError as e:
+        return {"success": False, "error": f"HTTP {e.code}: {e.reason}"}
+    except URLError as e:
+        return {"success": False, "error": f"Connection error: {e.reason}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# =============================================================================
+# Commands
+# =============================================================================
+
+def cmd_ask(query: str, verbose: bool = False) -> None:
+    """Ask a question to AI-ULU"""
+    print(colored("\n🧠 AI-ULU", Colors.CYAN), colored("is thinking...", Colors.DIM))
+    
+    result = api_request("/v1/query", "POST", {"query": query, "source": "cli"})
+    
+    if result.get("success"):
+        data = result.get("data", {})
+        answer = data.get("answer", "No answer available")
+        
+        print(colored("\n📝 Answer:", Colors.GREEN))
+        print(f"   {answer}")
+        
+        if verbose:
+            sources = data.get("sources", [])
+            if sources:
+                print(colored("\n📚 Sources:", Colors.BLUE))
+                for src in sources:
+                    print(f"   - {src.get('name', 'Unknown')}")
+            
+            confidence = data.get("confidence", 0)
+            print(colored(f"\n📊 Confidence: {confidence:.0%}", Colors.DIM))
+    else:
+        print(colored(f"\n❌ Error: {result.get('error', 'Unknown error')}", Colors.RED))
+
+def cmd_remember(content: str, mem_type: str = "fact", verbose: bool = False) -> None:
+    """Save something to memory"""
+    print(colored("\n💾 Saving to memory...", Colors.CYAN))
+    
+    result = api_request("/v1/memory", "POST", {
+        "content": content,
+        "type": mem_type,
+        "source": "cli",
+    })
+    
+    if result.get("success"):
+        print(colored("✅ Saved successfully!", Colors.GREEN))
+        print(f"   Type: {colored(mem_type, Colors.BLUE)}")
+        print(f"   Content: {content[:100]}{'...' if len(content) > 100 else ''}")
+    else:
+        print(colored(f"❌ Error: {result.get('error', 'Unknown error')}", Colors.RED))
+
+def cmd_search(query: str, limit: int = 10, mem_type: Optional[str] = None) -> None:
+    """Search memories"""
+    print(colored(f"\n🔍 Searching for: {query}", Colors.CYAN))
+    
+    data = {"query": query, "limit": limit}
+    if mem_type:
+        data["type_filter"] = mem_type
+    
+    result = api_request("/v1/search", "POST", data)
+    
+    if result.get("success"):
+        memories = result.get("data", {}).get("memories", [])
+        
+        if not memories:
+            print(colored("   No memories found.", Colors.YELLOW))
+            return
+        
+        print(colored(f"\n📚 Found {len(memories)} memories:", Colors.GREEN))
+        
+        for i, mem in enumerate(memories, 1):
+            type_icon = {"identity": "👤", "preference": "💜", "fact": "📝"}.get(mem.get("type", ""), "📄")
+            content = mem.get("content", "")[:80]
+            print(f"   {i}. {type_icon} {content}{'...' if len(mem.get('content', '')) > 80 else ''}")
+    else:
+        print(colored(f"❌ Error: {result.get('error', 'Unknown error')}", Colors.RED))
+
+def cmd_chat() -> None:
+    """Interactive chat mode"""
+    print(colored("\n🧠 AI-ULU Interactive Chat", Colors.CYAN + Colors.BOLD))
+    print(colored("   Type 'exit' or 'quit' to end, '/help' for commands\n", Colors.DIM))
+    
+    session_id = f"cli-{os.getpid()}"
+    
+    while True:
+        try:
+            user_input = input(colored("You: ", Colors.GREEN)).strip()
+        except (EOFError, KeyboardInterrupt):
+            print(colored("\n\n👋 Goodbye!", Colors.CYAN))
+            break
+        
+        if not user_input:
+            continue
+        
+        if user_input.lower() in ("exit", "quit", "/exit", "/quit"):
+            print(colored("\n👋 Goodbye!", Colors.CYAN))
+            break
+        
+        if user_input == "/help":
+            print(colored("\nCommands:", Colors.BLUE))
+            print("  /remember <text>  - Save something to memory")
+            print("  /search <query>   - Search memories")
+            print("  /status           - Check connection")
+            print("  /exit             - Exit chat")
+            continue
+        
+        if user_input.startswith("/remember "):
+            content = user_input[10:]
+            cmd_remember(content)
+            continue
+        
+        if user_input.startswith("/search "):
+            query = user_input[8:]
+            cmd_search(query, limit=5)
+            continue
+        
+        if user_input == "/status":
+            cmd_status()
+            continue
+        
+        # Regular chat
+        result = api_request("/v1/chat", "POST", {
+            "query": user_input,
+            "session_id": session_id,
+            "source": "cli",
+        })
+        
+        if result.get("success"):
+            answer = result.get("data", {}).get("response", "...")
+            print(colored(f"AI-ULU: ", Colors.CYAN) + answer + "\n")
+        else:
+            print(colored(f"Error: {result.get('error', 'Unknown')}", Colors.RED))
+
+def cmd_status() -> None:
+    """Check connection status"""
+    print(colored("\n🔌 Checking AI-ULU connection...", Colors.CYAN))
+    
+    # Check bridge
+    try:
+        result = api_request("/health", "GET")
+        if result.get("status") == "healthy":
+            print(colored("   ✅ Bridge: Connected", Colors.GREEN))
+        else:
+            print(colored("   ❌ Bridge: Error", Colors.RED))
+    except:
+        print(colored("   ❌ Bridge: Not reachable", Colors.RED))
+    
+    # Show config
+    print(colored("\n⚙️  Configuration:", Colors.BLUE))
+    print(f"   API URL: {API_URL}")
+    print(f"   Bridge URL: {BRIDGE_URL}")
+    print(f"   API Key: {'✓ Set' if API_KEY else '✗ Not set'}")
+
+def cmd_orchestrate(query: str, verbose: bool = False) -> None:
+    """Full MCP Hub orchestration query"""
+    print(colored("\n🌐 AI-ULU MCP Hub", Colors.CYAN), colored("orchestrating...", Colors.DIM))
+    
+    result = api_request("/v1/orchestrate", "POST", {"query": query, "source": "cli"})
+    
+    if result.get("success"):
+        data = result.get("data", {})
+        synth = data.get("synthesized", {})
+        answer = synth.get("answer", "No answer available")
+        
+        print(colored("\n📝 Answer:", Colors.GREEN))
+        print(f"   {answer}")
+        
+        if verbose:
+            # Show execution details
+            execution = data.get("execution", {})
+            results = execution.get("results", [])
+            print(colored(f"\n🔌 Sources queried: {len(results)}", Colors.BLUE))
+            for r in results:
+                status = "✓" if r.get("success") else "✗"
+                print(f"   {status} {r.get('serverName', 'Unknown')} ({r.get('latency', 0)}ms)")
+    else:
+        print(colored(f"\n❌ Error: {result.get('error', 'Unknown error')}", Colors.RED))
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="ulu",
+        description="AI-ULU CLI - Your AI memory in the terminal",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  ulu ask "What's my favorite programming language?"
+  ulu remember "I prefer TypeScript over JavaScript" --type preference
+  ulu search "project" --limit 5
+  ulu orchestrate "Python best practices 2025" -v
+  ulu chat
+  ulu status
+
+Environment Variables:
+  AI_ULU_API_URL     Main API URL (default: http://localhost:3000)
+  AI_ULU_BRIDGE_URL  Bridge URL (default: http://localhost:8080)
+  AI_ULU_API_KEY     API key for authentication
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    
+    # ask command
+    ask_parser = subparsers.add_parser("ask", help="Ask a question")
+    ask_parser.add_argument("query", help="Your question")
+    ask_parser.add_argument("-v", "--verbose", action="store_true", help="Show details")
+    
+    # remember command
+    remember_parser = subparsers.add_parser("remember", help="Save to memory")
+    remember_parser.add_argument("content", help="Content to remember")
+    remember_parser.add_argument("-t", "--type", choices=["identity", "preference", "fact"], 
+                                  default="fact", help="Memory type")
+    remember_parser.add_argument("-v", "--verbose", action="store_true")
+    
+    # search command
+    search_parser = subparsers.add_parser("search", help="Search memories")
+    search_parser.add_argument("query", help="Search query")
+    search_parser.add_argument("-l", "--limit", type=int, default=10, help="Max results")
+    search_parser.add_argument("-t", "--type", choices=["identity", "preference", "fact"])
+    
+    # orchestrate command
+    orch_parser = subparsers.add_parser("orchestrate", help="MCP Hub query")
+    orch_parser.add_argument("query", help="Your query")
+    orch_parser.add_argument("-v", "--verbose", action="store_true")
+    
+    # chat command
+    subparsers.add_parser("chat", help="Interactive chat mode")
+    
+    # status command
+    subparsers.add_parser("status", help="Check connection")
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    if args.command == "ask":
+        cmd_ask(args.query, args.verbose)
+    elif args.command == "remember":
+        cmd_remember(args.content, args.type, args.verbose)
+    elif args.command == "search":
+        cmd_search(args.query, args.limit, args.type)
+    elif args.command == "orchestrate":
+        cmd_orchestrate(args.query, args.verbose)
+    elif args.command == "chat":
+        cmd_chat()
+    elif args.command == "status":
+        cmd_status()
+
+if __name__ == "__main__":
+    main()
