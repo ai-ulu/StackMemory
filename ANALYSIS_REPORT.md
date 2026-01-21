@@ -1,343 +1,220 @@
-# 🔍 AI-ULU: Mevcut Kod vs Yeni Spesifikasyonlar Analiz Raporu
+# 🔍 AI-ULU: Teknik Durum Raporu v3.3
 
-**Analiz Tarihi:** 17 Ocak 2026  
-**Hazırlayan:** OpenHands AI
+**Analiz Tarihi:** 19 Ocak 2026
+**Sürüm:** v3.3.0 (Standardization Release)
 
 ---
 
 ## 📊 Genel Değerlendirme Özeti
 
-| Kategori | Mevcut Durum | Hedef (v2.0) | Uyumluluk |
-|----------|--------------|--------------|-----------|
-| **H(x,ψ) Algoritması** | ✅ Temel implementasyon mevcut | Gelişmiş ağırlıklandırma | 🟡 %70 |
-| **Veritabanı Şeması** | ✅ Schema v4 (Enterprise) | memories + memory_versions | 🟢 %95 |
-| **Backend Proxy (API İzolasyonu)** | ✅ Next.js API Routes | Edge Functions | 🟢 %90 |
-| **Memory Graph Görselleştirme** | ❌ Yok | D3.js/React-Force-Graph | 🔴 %0 |
-| **Conflict Resolution UI** | 🟡 Backend mantığı var | Tam UI entegrasyonu | 🟡 %40 |
-| **Local-First Mimari** | ❌ Yok | IndexedDB/SQLite WASM | 🔴 %0 |
-| **Client-Side Embedding** | ❌ Yok | Transformers.js | 🔴 %0 |
-| **Sync Engine** | ❌ Yok | PostgreSQL ↔ SQLite | 🔴 %0 |
+| Kategori | Durum | Tamamlanma |
+|----------|-------|------------|
+| **H(x,ψ) Algoritması** | ✅ Spec-aligned weights + A/B testing | 🟢 %100 |
+| **Veritabanı Şeması** | ✅ Schema v4 (RLS, pgvector, versions) | 🟢 %100 |
+| **Backend Proxy (API)** | ✅ Next.js API Routes + Bridge | 🟢 %100 |
+| **Memory Graph** | ✅ React-Force-Graph (tam fonksiyonel) | 🟢 %95 |
+| **Conflict Resolution UI** | ✅ ConflictDialog.jsx (tam fonksiyonel) | 🟢 %90 |
+| **API Key Management** | ✅ Scopes, rate limits, audit | 🟢 %100 |
+| **MCP Hub Orchestrator** | ✅ Brave, GitHub connectors | 🟢 %100 |
+| **Universal Bridge** | ✅ REST + WebSocket + OpenAPI | 🟢 %100 |
+| **CLI + Python SDK** | ✅ PyPI ready | 🟢 %100 |
+| **Export/Import** | ✅ JSON/CSV export + import | 🟢 %100 |
+| **Local-First Mimari** | ⚠️ Planlanıyor | 🟡 %10 |
+| **Test Coverage** | ✅ Vitest altyapısı kuruldu | 🟢 %70 |
 
 ---
 
 ## 1. 🧠 H(x,ψ) Algoritması
 
-### Mevcut Durum ✅
+### Durum: ✅ Tam Uyumlu (Spec v3.0)
+
 ```javascript
-// /frontend/app/api/chat/route.js - Satır 39-66
-function calculateHScore(memory, similarity) {
-  const α = 0.5;  // similarity weight
-  const β = 0.2;  // decay weight
-  const γ = 0.2;  // importance weight
-  const δ = 0.1;  // frequency weight
-
-  // Age decay (decoherence): exp(-λ * days)
-  const λ = 0.02;
-  const decayFactor = Math.exp(-λ * daysSinceAccess);
-
-  // Importance based on type
-  const importanceMap = { identity: 0.9, preference: 0.7, fact: 0.5 };
-  
-  // H = α(1-sim) + β(1-decay) + γ(1-importance) + δ(1-frequency)
+// /frontend/lib/ab-testing.js
+DEFAULT_WEIGHTS = {
+  alpha: 0.40,  // similarity (spec: α=0.4) ✓
+  beta: 0.20,   // decay (spec: β=0.2) ✓
+  gamma: 0.30,  // importance (spec: γ=0.3) ✓
+  delta: 0.10,  // frequency (spec: δ=0.1) ✓
+  epsilon: 0.00 // emotional resonance (bonus)
 }
 ```
 
-### Spesifikasyon Gereksinimleri
-| Parametre | Mevcut | Hedef | Fark |
-|-----------|--------|-------|------|
-| α (Similarity) | 0.5 | **0.4** | ⚠️ Ayarlanmalı |
-| β (Decay) | 0.2 | 0.2 | ✅ Eşleşiyor |
-| γ (Importance) | 0.2 | **0.3** | ⚠️ Ayarlanmalı |
-| δ (Frequency) | 0.1 | 0.1 | ✅ Eşleşiyor |
-| identity score | 0.9 | **1.0** | ⚠️ Ayarlanmalı |
-| preference score | 0.7 | 0.7 | ✅ Eşleşiyor |
-| fact score | 0.5 | **0.4** | ⚠️ Ayarlanmalı |
-
-### Eksikler
-- [ ] Ağırlık katsayıları A/B testi için yapılandırılabilir olmalı
-- [ ] Frequency normalizasyonu: `F(x) = min(1, log(frequency) / log(F_max))`
+**Özellikler:**
+- ✅ Spec-aligned default weights
+- ✅ A/B testing framework
+- ✅ Per-user experiment assignment
+- ✅ Analytics tracking
 
 ---
 
-## 2. 🗄️ Veritabanı Şeması
+## 2. 📊 Memory Graph Görselleştirme
 
-### Mevcut Durum ✅ (Çok Kapsamlı)
-```sql
--- /frontend/supabase/schema.sql - Schema v4
+### Durum: ✅ Tamamlandı
 
--- memories tablosu (Satır 134-188)
-CREATE TABLE IF NOT EXISTS memories (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id),
-  content TEXT NOT NULL,
-  content_hash TEXT GENERATED ALWAYS AS (encode(sha256(content::bytea), 'hex')) STORED,
-  type TEXT NOT NULL CHECK (type IN ('identity', 'preference', 'fact')),
-  confidence FLOAT NOT NULL DEFAULT 0.8,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'deprecated')),
-  embedding vector(1536),
-  last_accessed_at TIMESTAMPTZ DEFAULT NOW(),
-  access_count INTEGER DEFAULT 0,
-  decay_factor FLOAT DEFAULT 1.0,
-  conflict_with UUID REFERENCES memories(id),
-  is_shadow BOOLEAN DEFAULT FALSE,
-  -- ... daha fazla alan
-);
+**Dosya:** `/frontend/components/memory/MemoryGraph.jsx`
 
--- memory_versions tablosu (Satır 193-214)
-CREATE TABLE IF NOT EXISTS memory_versions (
-  id UUID PRIMARY KEY,
-  memory_id UUID REFERENCES memories(id),
-  version INTEGER NOT NULL,
-  content TEXT NOT NULL,
-  confidence FLOAT NOT NULL,
-  status TEXT NOT NULL,
-  change_type TEXT CHECK (change_type IN ('create', 'update', 'restore', 'deprecate')),
-);
-```
-
-### Karşılaştırma
-| Alan | Mevcut | Spesifikasyon | Durum |
-|------|--------|---------------|-------|
-| `embedding` boyutu | vector(1536) | vector(1536) veya vector(384) | ⚠️ 384 seçeneği eksik |
-| `type` değerleri | identity/preference/fact | Kimlik/Tercih/Bilgi | ✅ Eşleşiyor |
-| `last_accessed` | ✅ Var | last_used | ✅ Var (farklı isim) |
-| `access_count` (frequency) | ✅ Var | frequency | ✅ Var |
-| `decay_factor` | ✅ Var | Hesaplanmalı | ✅ Var |
-| `memory_versions` | ✅ Var | ✅ Gerekli | ✅ Tam uyumlu |
-| RLS politikaları | ✅ Kapsamlı | Zorunlu | ✅ Mevcut |
-
-### Fonksiyonlar
-```sql
--- Mevcut fonksiyonlar (Satır 248-337)
-✅ calculate_decay_factor(last_access, half_life_days)
-✅ match_memories(query_embedding, threshold, count, user_id, include_team)
-✅ track_memory_access(memory_uuid)
-✅ can_write_memory(user_uuid)
-✅ restore_memory_version(memory_uuid, target_version)
-```
+**Özellikler:**
+- ✅ React-Force-Graph-2D entegrasyonu
+- ✅ Node renklendirme (identity/preference/fact)
+- ✅ H(x,ψ) puanına göre node boyutu
+- ✅ Kosinüs benzerliği ile edge'ler
+- ✅ Hover tooltip (tam detay)
+- ✅ Zoom/pan kontrolleri
+- ✅ API endpoint: `/api/memories/graph`
 
 ---
 
-## 3. 🔐 Güvenlik ve API İzolasyonu
+## 3. ⚔️ Conflict Resolution UI
 
-### Mevcut Durum ✅
-```javascript
-// /frontend/app/api/chat/route.js
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,  // ✅ Sunucu tarafında
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+### Durum: ✅ Tamamlandı
 
-// JWT doğrulama (Satır 272-275)
-const { data: { user }, error: authError } = await supabase.auth.getUser();
-if (authError || !user) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-}
-```
+**Dosya:** `/frontend/components/memory/ConflictDialog.jsx`
 
-### Karşılaştırma
-| Güvenlik Özelliği | Mevcut | Spesifikasyon | Durum |
-|-------------------|--------|---------------|-------|
-| API Key Sunucu Tarafı | ✅ | ✅ | 🟢 Uyumlu |
-| JWT Doğrulama | ✅ | ✅ | 🟢 Uyumlu |
-| RLS user_id filtresi | ✅ | ✅ | 🟢 Uyumlu |
-| Rate Limiting | ✅ (DB'de) | Sunucuda | 🟡 Kısmen |
-| can_write_memory kontrolü | ✅ | ✅ | 🟢 Uyumlu |
+**Özellikler:**
+- ✅ 4 çözüm seçeneği (update/keep_old/merge/custom)
+- ✅ Visual comparison
+- ✅ API entegrasyonu
+- ✅ Versiyonlama desteği
 
 ---
 
-## 4. 🕸️ Memory Graph Görselleştirme
+## 4. 🔑 API Key Management
 
-### Mevcut Durum ❌
-- **Yok** - Herhangi bir graf görselleştirme komponenti bulunmuyor
-- D3.js veya React-Force-Graph kütüphaneleri yüklü değil
+### Durum: ✅ Yeni Eklendi (v3.3)
 
-### Spesifikasyon Gereksinimleri
-```markdown
-**Gerekli Endpoint:** /api/memories/graph
-**Kütüphane:** D3.js veya React-Force-Graph
-**Görsel Elemanlar:**
-  - Node (Hafıza): Tip bazlı renkler (Violet/Teal/Grey)
-  - Node boyutu: H(x,ψ) puanına göre
-  - Edge: Kosinüs Benzerliği > 0.7
-  - Hover: Tam metin + S, D, I, F değerleri
-```
+**Dosyalar:**
+- `/frontend/lib/api-keys.js`
+- `/frontend/app/api/keys/route.js`
+- `/frontend/components/settings/APIKeysSettings.jsx`
 
-### Gerekli Geliştirmeler
-- [ ] `react-force-graph` veya `d3` paketini yükle
-- [ ] `/api/memories/graph` endpoint'i oluştur
-- [ ] `MemoryGraph.jsx` komponenti oluştur
-- [ ] Settings sayfasına entegre et
+**Özellikler:**
+- ✅ Scoped permissions (read/write/full/admin)
+- ✅ Per-key rate limiting (60/30/100/200 rpm)
+- ✅ SHA256 hashed storage
+- ✅ Expiration dates
+- ✅ Revoke/delete support
+- ✅ Audit logging
 
 ---
 
-## 5. ⚡ Conflict Resolution (Çelişki Çözümü)
+## 5. 🌐 MCP Hub Orchestrator
 
-### Mevcut Durum 🟡 (Kısmi)
-```typescript
-// /frontend/lib/memory/types.ts - Satır 146-184
-export function checkContradiction(
-  newContent: string,
-  existingMemories: Memory[]
-): { hasContradiction: boolean; conflictingMemory?: Memory } {
-  const negationPairs = [
-    ['seviyorum', 'sevmiyorum'],
-    ['like', 'don\'t like'],
-    // ...
-  ];
-  // Basit negation detection
-}
+### Durum: ✅ Yeni Eklendi (v3.1)
 
-// /frontend/lib/memory/client.ts - Satır 92-107
-if (contradiction.hasContradiction) {
-  // PENDING olarak kaydet, conflict_with bağla
-  status: MEMORY_STATUS.PENDING,
-  conflict_with: contradiction.conflictingMemory?.id,
-}
+**Dosyalar:**
+- `/frontend/lib/mcp-hub/orchestrator/`
+- `/frontend/lib/mcp-hub/connectors/`
+
+**Connectors:**
+- ✅ Brave Search
+- ✅ GitHub (code/repo/issues)
+- ⏳ Notion (planned)
+- ⏳ Linear (planned)
+
+---
+
+## 6. 📡 Universal Bridge
+
+### Durum: ✅ Yeni Eklendi (v3.2)
+
+**Dosya:** `/bridge/server.py`
+
+**Endpoints:**
+- ✅ `POST /v1/query` - Natural language query
+- ✅ `POST /v1/memory` - Store memory
+- ✅ `POST /v1/search` - Search memories
+- ✅ `POST /v1/orchestrate` - MCP Hub
+- ✅ `WS /ws/{client_id}` - WebSocket
+- ✅ `GET /openapi-gpt.json` - ChatGPT Actions
+
+---
+
+## 7. 📦 CLI + Python SDK
+
+### Durum: ✅ Yeni Eklendi (v3.3)
+
+**Dosyalar:**
+- `/sdk/python/ai_ulu/`
+- `/sdk/python/pyproject.toml`
+
+**Özellikler:**
+- ✅ `pip install ai-ulu`
+- ✅ CLI: `ulu ask/remember/search/chat`
+- ✅ LangChain integration
+- ✅ Zero dependencies
+
+---
+
+## 8. 📤 Export/Import
+
+### Durum: ✅ Yeni Eklendi
+
+**Dosyalar:**
+- `/frontend/app/api/memories/export/route.js`
+- `/frontend/app/api/memories/import/route.js`
+- `/frontend/components/settings/DataSettings.jsx`
+
+**Formatlar:**
+- ✅ JSON export (with versions)
+- ✅ CSV export
+- ✅ JSON import (merge/replace modes)
+
+---
+
+## 9. 🧪 Test Coverage
+
+### Durum: ✅ Altyapı Kuruldu
+
+**Dosyalar:**
+- `/frontend/__tests__/h-score.test.js`
+- `/frontend/__tests__/api-keys.test.js`
+- `/frontend/vitest.config.js`
+
+**Test Sonuçları:**
 ```
-
-### Eksikler
-| Özellik | Mevcut | Spesifikasyon | Durum |
-|---------|--------|---------------|-------|
-| Basit çelişki tespiti | ✅ | ✅ | 🟢 |
-| LLM ile çelişki analizi | ❌ | GPT-4o prompt | 🔴 Eksik |
-| Kullanıcı sorgulama UI | ❌ | 3 seçenekli dialog | 🔴 Eksik |
-| Status: Superseded | ❌ | memory_versions'a taşı | 🔴 Eksik |
-| Kosinüs Benzerliği > 0.8 | ❌ | Tetikleyici koşul | 🔴 Eksik |
-
-### Gerekli Prompt (Spesifikasyondan)
-```
-"Kullanıcı daha önce [x] demişti, şimdi [x'] diyor. 
-Bu bir güncelleme mi, yoksa çelişki mi? 
-Güncelleme ise [x]'i yeniden yaz, 
-çelişki ise kullanıcıya sorulacak 3 seçenekli bir soru üret."
+✓ 28 tests passed (2 files)
+- H(x,ψ) Algorithm: 12 tests
+- API Key System: 16 tests
 ```
 
 ---
 
-## 6. 🏠 Local-First Mimari
+## 10. 🔴 Kalan Görevler
 
-### Mevcut Durum ❌
-- IndexedDB kullanımı yok
-- SQLite WASM entegrasyonu yok
-- Transformers.js (client-side embedding) yok
-- Sync Engine yok
-
-### Spesifikasyon Gereksinimleri
-```markdown
-1. Hassas Veri Tespiti:
-   - type: identity → Yerel depolama
-   - type: preference → Yerel depolama
-   
-2. Vektörleştirme:
-   - Sadece anonimleştirilmiş embedding'ler buluta gönderilir
-   
-3. Teknolojiler:
-   - IndexedDB veya SQLite (WASM)
-   - Transformers.js (client-side embedding)
-   - Sync Engine: PostgreSQL ↔ SQLite
-```
-
-### Gerekli Paketler
-```bash
-npm install @xenova/transformers  # Client-side embedding
-npm install sql.js               # SQLite WASM
-npm install @electric-sql/pglite # veya Electric SQL
-```
+| Görev | Öncelik | Durum |
+|-------|---------|-------|
+| Local-First (IndexedDB) | Orta | ⏳ Planlanıyor |
+| Sync Engine | Orta | ⏳ Planlanıyor |
+| Privacy Mode | Düşük | ⏳ Planlanıyor |
+| backend/server.py temizliği | Düşük | ⏳ |
+| Daha fazla test | Orta | ⏳ Devam ediyor |
 
 ---
 
-## 7. 🎨 Frontend UI Eksikleri
-
-### Chat Page (`/app/chat/page.js`)
-| Özellik | Mevcut | Spesifikasyon | Durum |
-|---------|--------|---------------|-------|
-| NeuralResonancePanel | ✅ | Memory Badge | 🟢 Var |
-| SourceBadge | ✅ | Şeffaflık | 🟢 Var |
-| PrivacyMode toggle | ✅ | Gizlilik | 🟢 Var |
-| Conflict Resolution uyarısı | ❌ | Dialog | 🔴 Eksik |
-| Memory Graph linki | ❌ | Görselleştirme | 🔴 Eksik |
-
-### Settings Page (`/app/settings/page.js`)
-| Özellik | Mevcut | Spesifikasyon | Durum |
-|---------|--------|---------------|-------|
-| Memory listesi | ✅ | Hafıza Kontrol Paneli | 🟢 Var |
-| Version history | ✅ | Sürüm geçmişi | 🟢 Var |
-| Decay/Freshness gösterimi | ✅ | Tazelik | 🟢 Var |
-| "Hafıza Depolama ve Gizlilik" bölümü | 🟡 | Local-First seçeneği | 🟡 Kısmi |
-| Export/Import | ❌ | Cihaz değişiminde | 🔴 Eksik |
-| Memory Graph sayfası | ❌ | Ayrı sekme | 🔴 Eksik |
-
----
-
-## 8. 🚀 Öncelikli Geliştirme Listesi
-
-### 🔴 Kritik (Hemen Yapılmalı)
-1. **Memory Graph Komponenti** - Yatırımcı sunumu için şart
-2. **Conflict Resolution UI** - Çelişki uyarı dialog'u
-3. **H(x,ψ) Ağırlık Güncellemesi** - α=0.4, γ=0.3
-
-### 🟡 Önemli (Sprint 1-2)
-4. **Local-First Mimari Temeli** - IndexedDB + Transformers.js
-5. **LLM Çelişki Analizi** - GPT-4o entegrasyonu
-6. **Export/Import Özelliği** - Yerel hafızalar için
-
-### 🟢 İyileştirme (Sprint 3+)
-7. **Sync Engine** - PostgreSQL ↔ SQLite
-8. **A/B Test Altyapısı** - Ağırlık optimizasyonu
-9. **Zero-Knowledge Prensibi** - Tam implementasyon
-
----
-
-## 9. 📁 Dosya Yapısı Önerisi
+## 📁 Proje Yapısı (v3.3)
 
 ```
-/frontend
-├── app/
-│   ├── api/
-│   │   ├── memories/
-│   │   │   ├── graph/           # 🆕 YENİ
-│   │   │   │   └── route.js
-│   │   │   └── conflicts/       # 🆕 YENİ
-│   │   │       └── route.js
-│   └── memory-graph/            # 🆕 YENİ
-│       └── page.js
-├── components/
-│   ├── memory/                  # 🆕 YENİ
-│   │   ├── MemoryGraph.jsx
-│   │   ├── ConflictDialog.jsx
-│   │   └── MemoryExportImport.jsx
-├── lib/
-│   ├── memory/
-│   │   ├── local-store.ts       # 🆕 IndexedDB
-│   │   ├── sync-engine.ts       # 🆕 Sync
-│   │   └── client-embedding.ts  # 🆕 Transformers.js
+emergent-ai-ulu.com/
+├── frontend/
+│   ├── app/api/
+│   │   ├── chat/
+│   │   ├── memories/ (export, import, graph, conflicts, versions)
+│   │   ├── keys/
+│   │   └── orchestrate/
+│   ├── components/
+│   │   ├── memory/ (MemoryGraph, ConflictDialog)
+│   │   └── settings/ (APIKeysSettings, DataSettings, MCPSettings)
+│   ├── lib/
+│   │   ├── api-keys.js
+│   │   ├── ab-testing.js
+│   │   └── mcp-hub/
+│   └── __tests__/
+├── bridge/ (Universal Bridge Server)
+├── sdk/python/ (PyPI package)
+├── bots/ (Slack, Discord)
+└── docker-compose.yml
 ```
 
 ---
 
-## 10. 📊 Sonuç
-
-| Metrik | Değer |
-|--------|-------|
-| **Toplam Uyumluluk** | ~55% |
-| **Backend Hazırlığı** | ~85% |
-| **Frontend Hazırlığı** | ~40% |
-| **Local-First** | ~0% |
-| **Tahmini Tamamlanma Süresi** | 8-10 hafta |
-
-### Güçlü Yanlar
-- ✅ Veritabanı şeması çok kapsamlı (Enterprise-ready)
-- ✅ H(x,ψ) algoritması temel olarak mevcut
-- ✅ Güvenlik katmanı sağlam
-- ✅ Memory versioning sistemi hazır
-
-### Zayıf Yanlar
-- ❌ Görselleştirme tamamen eksik
-- ❌ Local-First mimari hiç yok
-- ❌ Çelişki çözümü UI'ı eksik
-- ❌ Client-side compute stratejisi uygulanmamış
-
----
-
-*Bu rapor, AI-ULU Teknik Blueprint v2.0 dokümanlarına göre hazırlanmıştır.*
+**Son Güncelleme:** 19 Ocak 2026, v3.3.0

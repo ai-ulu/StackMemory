@@ -5,13 +5,14 @@
  * to optimize memory retrieval quality.
  */
 
-// Default algorithm weights (v2.1)
+// Default algorithm weights (v3.0 - Spec Aligned)
+// Reference: AI-ULU Teknik Blueprint - Algoritmik Detaylandırma
 export const DEFAULT_WEIGHTS = {
-  alpha: 0.35,  // similarity
-  beta: 0.15,   // decay
-  gamma: 0.25,  // importance
-  delta: 0.10,  // frequency
-  epsilon: 0.15 // emotional resonance
+  alpha: 0.40,  // similarity (spec: α=0.4)
+  beta: 0.20,   // decay (spec: β=0.2)
+  gamma: 0.30,  // importance (spec: γ=0.3)
+  delta: 0.10,  // frequency (spec: δ=0.1)
+  epsilon: 0.00 // emotional resonance (bonus - disabled by default for spec compliance)
 };
 
 // Active experiments
@@ -26,31 +27,31 @@ export const EXPERIMENTS = {
     traffic: 0.2, // 20% of users
   },
 
-  // Experiment: Emotional resonance emphasis
+  // Experiment: Emotional resonance (v2.x legacy feature)
   'emotional-heavy': {
-    name: 'Emotional Resonance Heavy',
-    description: 'Test stronger emotional context influence',
-    weights: { ...DEFAULT_WEIGHTS, epsilon: 0.25, alpha: 0.25 },
+    name: 'Emotional Resonance',
+    description: 'Test emotional context influence (v2.x feature)',
+    weights: { alpha: 0.30, beta: 0.15, gamma: 0.25, delta: 0.10, epsilon: 0.20 },
     active: true,
-    traffic: 0.1,
+    traffic: 0.10,
   },
 
   // Experiment: Recency bias
   'recency-boost': {
     name: 'Recency Boost',
     description: 'Test if recent memories should be prioritized more',
-    weights: { ...DEFAULT_WEIGHTS, beta: 0.25, gamma: 0.15 },
+    weights: { alpha: 0.35, beta: 0.30, gamma: 0.25, delta: 0.10, epsilon: 0.00 },
     active: true,
-    traffic: 0.1,
+    traffic: 0.10,
   },
 
-  // Control group
+  // Control group (Spec Aligned v3.0)
   'control': {
-    name: 'Control',
-    description: 'Default weights (v2.1)',
+    name: 'Control (Spec v3.0)',
+    description: 'Default weights aligned with AI-ULU Blueprint spec',
     weights: DEFAULT_WEIGHTS,
     active: true,
-    traffic: 0.6,
+    traffic: 0.60,
   },
 };
 
