@@ -10,7 +10,7 @@
 * [ ] Gereksiz **SELECT *** kullanımı yok mu?
 * [ ] Sık kullanılan sorgular için **doğru index** var mı?
 * [ ] Composite index gerekiyor mu?
-* [ ] Pagination **OFFSET** ile mi? (büyük tabloda tehlikeli)
+* [ ] Pagination **OFFSET** ile mi? (büyük tabloda tehlikeli) -> Cursor-based pagination için **ORDER BY unique** mi?
 * [ ] Keyset pagination doğru mu?
 * [ ] Soft delete (`deleted_at`) filtreleniyor mu?
 * [ ] Transaction sınırları net mi?
@@ -30,7 +30,7 @@
 * [ ] Cache gerçekten işe yarıyor mu?
 * [ ] Hot-key riski var mı?
 * [ ] Cache TTL mantıklı mı?
-* [ ] Cache invalidation doğru çalışıyor mu?
+* [ ] Cache invalidation doğru çalışıyor mu? -> **Cache warming** stratejisi var mı?
 * [ ] Profiling yapılmadan optimize edildi mi? ❌
 
 ---
@@ -62,7 +62,7 @@
 * [ ] Timeout tanımlı mı?
 * [ ] Retry var mı ama **limitli mi**?
 * [ ] Retry + backoff + jitter var mı?
-* [ ] Circuit breaker var mı?
+* [ ] Circuit breaker var mı? -> **Half-open state** test edildi mi?
 * [ ] Servis bağımlılığı koparsa ne olur?
 * [ ] Event sırası bozulursa sistem ayakta kalır mı?
 * [ ] At-least-once mesajı iki kez işleyebilir mi?
@@ -126,12 +126,12 @@
 
 * [ ] Unit + integration test var mı?
 * [ ] E2E kritik akışlar test edildi mi?
-* [ ] Flaky test var mı?
-* [ ] Feature flag ile deploy edildi mi?
+* [ ] Flaky test var mı? -> Test data isolation (her test kendi verisini mi oluşturuyor?)
+* [ ] Feature flag ile deploy edildi mi? -> Flag cleanup (tech debt) planı var mı?
 * [ ] Rollback planı hazır mı?
 * [ ] Prod ile stage config aynı mı?
-* [ ] Migration + uygulama uyumu test edildi mi?
-* [ ] Healthcheck doğru çalışıyor mu?
+* [ ] Migration sırası doğru mu?
+* [ ] Healthcheck doğru çalışıyor mu? -> **Liveness vs Readiness probe** ayrımı net mi?
 
 ---
 
@@ -143,6 +143,72 @@
 * [ ] Metric (latency, error rate) var mı?
 * [ ] Alert’ler gerçekten anlamlı mı?
 * [ ] Alarm fırtınası var mı?
+
+---
+
+## 1️⃣2️⃣ Infrastructure & DevOps
+
+* [ ] Container image'ları tarandı mı? (Trivy/Snyk)
+* [ ] Pod security context (non-root, read-only FS) ayarlı mı?
+* [ ] Resource limit (CPU/memory) tanımlı mı?
+* [ ] HPA/VPA cluster kapasitesini aşar mı?
+* [ ] Secrets rotation mekanizması var mı?
+* [ ] ConfigMap/Secret değişince hot-reload oluyor mu?
+* [ ] Blue-green veya canary deployment var mı?
+* [ ] Infrastructure as Code (IaC) drift kontrolü var mı?
+
+---
+
+## 1️⃣3️⃣ Veri Yönetimi & Compliance
+
+* [ ] PII (Kişisel Veri) masking/anonymization var mı?
+* [ ] GDPR/KVKK "right to be forgotten" implemente edildi mi?
+* [ ] Veri saklama süresi (retention policy) otomatik mi?
+* [ ] Cross-region veri replikasyonu yasal mı?
+* [ ] Backup şifreli mi ve restore test edildi mi?
+* [ ] RTO/RPO hedefleri tanımlı mı?
+
+---
+
+## 1️⃣4️⃣ API & Entegrasyon İleri Seviye
+
+* [ ] API deprecation takvimi ve sunset policy var mı?
+* [ ] OpenAPI/Swagger dokümantasyonu güncel mi?
+* [ ] Idempotency key TTL'si yeterli mi?
+* [ ] GraphQL query depth/complexity limiti var mı?
+* [ ] Webhook retry exponential backoff doğru mu?
+* [ ] Third-party API rate limit'leri cache'leniyor mu?
+
+---
+
+## 1️⃣5️⃣ Maliyet & Optimizasyon
+
+* [ ] Cloud resource tagging (cost center) yapılmış mı?
+* [ ] Unused resource (EIP, disk, snapshot) temizliği var mı?
+* [ ] Data transfer cost (cross-AZ/region) optimize edildi mi?
+* [ ] Log retention gereksiz uzun mu?
+* [ ] Auto-shutdown (dev/test ortamları) var mı?
+
+---
+
+## 1️⃣6️⃣ Güvenlik Derinlemesine
+
+* [ ] Dependency confusion attack önlemi var mı? (private registry)
+* [ ] SAST/DAST scan pipeline'da var mı?
+* [ ] Secrets git history'den temizlendi mi? (git-leaks)
+* [ ] Container runtime security (Falco/Sysdig) var mı?
+* [ ] Network policy (pod-to-pod) kısıtlı mı?
+* [ ] Supply chain security (SBOM oluşturuluyor mu?)
+
+---
+
+## 💡 "Sinsice" Eksikler (Çoğu Proje Atlar)
+
+* [ ] **Chaos Engineering:** "Bir pod'u öldürünce ne olur?" testi yapıldı mı?
+* [ ] **Data Integrity:** Checksum/hash ile veri bütünlüğü kontrolü var mı?
+* [ ] **Clock Skew:** Distributed sistemlerde zaman senkronizasyonu (NTP) problemi var mı?
+* [ ] **Thundering Herd:** Cache miss anında DB'ye yığılma önlendi mi?
+* [ ] **Retry Storm:** Bir servis down olduğunda diğerleri onu retry ile mi bombalıyor?
 
 ---
 
