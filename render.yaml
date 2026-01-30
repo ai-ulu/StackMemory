@@ -1,0 +1,70 @@
+services:
+  # Main Next.js Application
+  - type: web
+    name: ai-ulu-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # Universal Bridge (FastAPI)
+  - type: web
+    name: ai-ulu-bridge
+    runtime: python
+    rootDir: bridge
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: AI_ULU_API_URL
+        fromService:
+          name: ai-ulu-frontend
+          type: web
+          property: url
+
+  # Slack Bot
+  - type: worker
+    name: ai-ulu-slack-bot
+    runtime: python
+    rootDir: bots/slack
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: AI_ULU_BRIDGE_URL
+        fromService:
+          name: ai-ulu-bridge
+          type: web
+          property: url
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+
+  # Discord Bot
+  - type: worker
+    name: ai-ulu-discord-bot
+    runtime: python
+    rootDir: bots/discord
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: AI_ULU_BRIDGE_URL
+        fromService:
+          name: ai-ulu-bridge
+          type: web
+          property: url
+      - key: DISCORD_TOKEN
+        sync: false
+
+# Infrastructure
+keyValues:
+  - name: ai-ulu-redis
+    plan: free
