@@ -1,104 +1,105 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
-
-/**
- * Stripe Webhook Handler
- * 
- * Handles subscription lifecycle events.
- */
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { stripe } from '@/lib/stripe';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request) {
+  const body = await request.text();
+  const signature = headers().get('stripe-signature');
+
+  let event;
+
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
-    }
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+  }
 
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const supabase = await createClient();
 
-    const body = await request.text();
-    const headersList = headers();
-    const sig = headersList.get('stripe-signature');
-
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err.message);
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-    }
-
-    // Handle events
+  try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.metadata?.userId;
-        const subscriptionId = session.subscription;
+        const userId = session.metadata.userId;
+        const customerId = session.customer;
 
-        if (userId && subscriptionId) {
-          // Get subscription details
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const priceId = subscription.items.data[0]?.price.id;
-          
-          // Determine plan
-          let plan = 'pro';
-          if (priceId?.includes('enterprise')) plan = 'enterprise';
+        // Update user with Stripe customer ID
+        await supabase
+          .from('profiles')
+          .update({
+            stripe_customer_id: customerId,
+            subscription_status: 'active',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId);
 
-          // Update user profile
-          await supabaseAdmin
-            .from('profiles')
-            .update({
-              plan,
-              stripe_subscription_id: subscriptionId,
-              subscription_status: 'active',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-
-          console.log(`User ${userId} upgraded to ${plan}`);
-        }
+        console.log(`Checkout completed for user ${userId}`);
         break;
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-        const userId = subscription.metadata?.userId;
+        const customerId = subscription.customer;
 
-        if (userId) {
-          await supabaseAdmin
+        // Get user by customer ID
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+
+        if (profile) {
+          await supabase
             .from('profiles')
             .update({
               subscription_status: subscription.status,
+              subscription_id: subscription.id,
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', userId);
+            .eq('id', profile.id);
+
+          console.log(`Subscription ${subscription.status} for user ${profile.id}`);
         }
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
-        const userId = subscription.metadata?.userId;
+        const customerId = subscription.customer;
 
-        if (userId) {
-          await supabaseAdmin
+        // Get user by customer ID
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+
+        if (profile) {
+          await supabase
             .from('profiles')
             .update({
-              plan: 'free',
-              stripe_subscription_id: null,
               subscription_status: 'canceled',
+              subscription_id: null,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', userId);
+            .eq('id', profile.id);
 
-          console.log(`User ${userId} subscription canceled, downgraded to free`);
+          console.log(`Subscription canceled for user ${profile.id}`);
         }
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        console.log(`Payment succeeded for invoice ${invoice.id}`);
         break;
       }
 
@@ -106,23 +107,15 @@ export async function POST(request) {
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
-        // Find user by customer ID
-        const { data: profile } = await supabaseAdmin
+        // Get user by customer ID
+        const { data: profile } = await supabase
           .from('profiles')
           .select('id, email')
           .eq('stripe_customer_id', customerId)
           .single();
 
         if (profile) {
-          await supabaseAdmin
-            .from('profiles')
-            .update({
-              subscription_status: 'past_due',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', profile.id);
-
-          // TODO: Send email notification
+          // TODO: Send payment failed email
           console.log(`Payment failed for user ${profile.id}`);
         }
         break;
@@ -134,9 +127,10 @@ export async function POST(request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Webhook handler error:', error);
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 500 }
+    );
   }
 }
-
-// Next.js 14 App Router handles raw body automatically for webhooks
