@@ -11,7 +11,9 @@ Remember Everything. Effortlessly.
 [![Production Ready](https://img.shields.io/badge/production-ready-success)](https://github.com/ai-ulu/emergent-ai-ulu.com)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](docker-compose.yml)
-[![Tests](https://img.shields.io/badge/tests-31%20passing-success)](frontend/e2e)
+[![Tests](https://img.shields.io/badge/tests-40%20passing-success)](frontend/e2e)
+[![E2EE](https://img.shields.io/badge/E2EE-enabled-green)](backend/lib/encryption.py)
+[![Security](https://img.shields.io/badge/security-RSA--2048%20%2B%20AES--256-brightgreen)](frontend/lib/encryption.ts)
 
 [🚀 Try Free](https://ai-ulu.com/signup) · [📚 Docs](https://docs.ai-ulu.com) · [💬 Discord](https://discord.gg/aiulu) · [🐦 Twitter](https://twitter.com/aiulu)
 
@@ -39,16 +41,19 @@ Never lose context again. Your AI remembers everything across:
 <td width="50%">
 
 ### 🧠 Smart Memory
+- **H(x,ψ) Scoring** - Intelligent memory ranking (similarity + decay + importance + frequency)
 - **Semantic Search** - Find memories by meaning, not keywords
 - **Auto-Capture** - AI automatically saves important info
 - **Context Recall** - Remembers past conversations
-- **Conflict Resolution** - H(x,ψ) algorithm handles contradictions
+- **Conflict Resolution** - Smart algorithm handles contradictions
 
 </td>
 <td width="50%">
 
 ### 🔒 Enterprise Security
-- **End-to-End Encryption** - Bank-grade security
+- **End-to-End Encryption (E2EE)** - Your data is encrypted on your device before it reaches our servers
+- **Zero-Knowledge Architecture** - We can't read your encrypted memories, only you can
+- **Client-Side Encryption** - RSA-2048 + AES-256 encryption in your browser
 - **Zero Trust Model** - No default access
 - **Role-Based Access** - Granular permissions
 - **Audit Logging** - Full transparency
