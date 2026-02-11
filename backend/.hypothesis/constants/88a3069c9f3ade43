@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\memory_orchestrator.py
+# hypothesis_version: 6.148.7
+
+[0.5, 1000, 'access_count', 'count', 'data', 'domain', 'episodic', 'episodic_count', 'importance', 'interaction', 'label', 'last_accessed', 'last_interaction', 'metadata', 'neutral', 'ranked', 'recent', 'score', 'source', 'stm_full', 'stm_max', 'stm_size', 'system', 'text', 'timestamp', 'user', 'vector', 'vector_count']

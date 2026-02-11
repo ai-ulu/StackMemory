@@ -1,0 +1,1133 @@
+{
+  "id": "012fae3a1c18",
+  "name": "Analysis Test",
+  "variants": [
+    {
+      "id": "control",
+      "name": "Control",
+      "weights": {
+        "alpha": 0.4,
+        "beta": 0.2,
+        "gamma": 0.3,
+        "delta": 0.1
+      },
+      "description": null
+    },
+    {
+      "id": "variant_a",
+      "name": "Variant A",
+      "weights": {
+        "alpha": 0.5,
+        "beta": 0.2,
+        "gamma": 0.2,
+        "delta": 0.1
+      },
+      "description": null
+    }
+  ],
+  "results": [
+    {
+      "user_id": "user_0",
+      "variant_id": "control",
+      "score": 0.75,
+      "timestamp": 1770771700.024198,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_1",
+      "variant_id": "control",
+      "score": 0.76,
+      "timestamp": 1770771700.0251987,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_2",
+      "variant_id": "control",
+      "score": 0.77,
+      "timestamp": 1770771700.027197,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_3",
+      "variant_id": "control",
+      "score": 0.78,
+      "timestamp": 1770771700.028197,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_4",
+      "variant_id": "control",
+      "score": 0.79,
+      "timestamp": 1770771700.0291944,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_5",
+      "variant_id": "control",
+      "score": 0.8,
+      "timestamp": 1770771700.0311935,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_6",
+      "variant_id": "control",
+      "score": 0.81,
+      "timestamp": 1770771700.0321972,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_7",
+      "variant_id": "control",
+      "score": 0.8200000000000001,
+      "timestamp": 1770771700.0341957,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_8",
+      "variant_id": "control",
+      "score": 0.83,
+      "timestamp": 1770771700.0361958,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_9",
+      "variant_id": "control",
+      "score": 0.84,
+      "timestamp": 1770771700.0382001,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_10",
+      "variant_id": "control",
+      "score": 0.75,
+      "timestamp": 1770771700.0401943,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_11",
+      "variant_id": "control",
+      "score": 0.76,
+      "timestamp": 1770771700.0411947,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_12",
+      "variant_id": "control",
+      "score": 0.77,
+      "timestamp": 1770771700.0441968,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_13",
+      "variant_id": "control",
+      "score": 0.78,
+      "timestamp": 1770771700.0461934,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_14",
+      "variant_id": "control",
+      "score": 0.79,
+      "timestamp": 1770771700.0481932,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_15",
+      "variant_id": "control",
+      "score": 0.8,
+      "timestamp": 1770771700.0511937,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_16",
+      "variant_id": "control",
+      "score": 0.81,
+      "timestamp": 1770771700.0542035,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_17",
+      "variant_id": "control",
+      "score": 0.8200000000000001,
+      "timestamp": 1770771700.0576558,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_18",
+      "variant_id": "control",
+      "score": 0.83,
+      "timestamp": 1770771700.059655,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_19",
+      "variant_id": "control",
+      "score": 0.84,
+      "timestamp": 1770771700.0626552,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_20",
+      "variant_id": "control",
+      "score": 0.75,
+      "timestamp": 1770771700.065654,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_21",
+      "variant_id": "control",
+      "score": 0.76,
+      "timestamp": 1770771700.0691645,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_22",
+      "variant_id": "control",
+      "score": 0.77,
+      "timestamp": 1770771700.0721693,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_23",
+      "variant_id": "control",
+      "score": 0.78,
+      "timestamp": 1770771700.0761688,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_24",
+      "variant_id": "control",
+      "score": 0.79,
+      "timestamp": 1770771700.0801692,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_25",
+      "variant_id": "control",
+      "score": 0.8,
+      "timestamp": 1770771700.084166,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_26",
+      "variant_id": "control",
+      "score": 0.81,
+      "timestamp": 1770771700.0876055,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_27",
+      "variant_id": "control",
+      "score": 0.8200000000000001,
+      "timestamp": 1770771700.0916264,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_28",
+      "variant_id": "control",
+      "score": 0.83,
+      "timestamp": 1770771700.0956461,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_29",
+      "variant_id": "control",
+      "score": 0.84,
+      "timestamp": 1770771700.099669,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_30",
+      "variant_id": "control",
+      "score": 0.75,
+      "timestamp": 1770771700.1050336,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_31",
+      "variant_id": "control",
+      "score": 0.76,
+      "timestamp": 1770771700.1100283,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_32",
+      "variant_id": "control",
+      "score": 0.77,
+      "timestamp": 1770771700.1140301,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_33",
+      "variant_id": "control",
+      "score": 0.78,
+      "timestamp": 1770771700.119029,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_34",
+      "variant_id": "control",
+      "score": 0.79,
+      "timestamp": 1770771700.125032,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_35",
+      "variant_id": "control",
+      "score": 0.8,
+      "timestamp": 1770771700.1300302,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_36",
+      "variant_id": "control",
+      "score": 0.81,
+      "timestamp": 1770771700.1350293,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_37",
+      "variant_id": "control",
+      "score": 0.8200000000000001,
+      "timestamp": 1770771700.1405773,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_38",
+      "variant_id": "control",
+      "score": 0.83,
+      "timestamp": 1770771700.145576,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_39",
+      "variant_id": "control",
+      "score": 0.84,
+      "timestamp": 1770771700.1505756,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_40",
+      "variant_id": "control",
+      "score": 0.75,
+      "timestamp": 1770771700.1567197,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_41",
+      "variant_id": "control",
+      "score": 0.76,
+      "timestamp": 1770771700.16172,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_42",
+      "variant_id": "control",
+      "score": 0.77,
+      "timestamp": 1770771700.1672254,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_43",
+      "variant_id": "control",
+      "score": 0.78,
+      "timestamp": 1770771700.174266,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_44",
+      "variant_id": "control",
+      "score": 0.79,
+      "timestamp": 1770771700.1802661,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_45",
+      "variant_id": "control",
+      "score": 0.8,
+      "timestamp": 1770771700.1852658,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_46",
+      "variant_id": "control",
+      "score": 0.81,
+      "timestamp": 1770771700.1918366,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_47",
+      "variant_id": "control",
+      "score": 0.8200000000000001,
+      "timestamp": 1770771700.1978352,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_48",
+      "variant_id": "control",
+      "score": 0.83,
+      "timestamp": 1770771700.2054305,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_49",
+      "variant_id": "control",
+      "score": 0.84,
+      "timestamp": 1770771700.2114265,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_50",
+      "variant_id": "variant_a",
+      "score": 0.85,
+      "timestamp": 1770771700.2174258,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_51",
+      "variant_id": "variant_a",
+      "score": 0.86,
+      "timestamp": 1770771700.224221,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_52",
+      "variant_id": "variant_a",
+      "score": 0.87,
+      "timestamp": 1770771700.2322218,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_53",
+      "variant_id": "variant_a",
+      "score": 0.88,
+      "timestamp": 1770771700.238696,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_54",
+      "variant_id": "variant_a",
+      "score": 0.89,
+      "timestamp": 1770771700.2456932,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_55",
+      "variant_id": "variant_a",
+      "score": 0.9,
+      "timestamp": 1770771700.2516932,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_56",
+      "variant_id": "variant_a",
+      "score": 0.9099999999999999,
+      "timestamp": 1770771700.258551,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_57",
+      "variant_id": "variant_a",
+      "score": 0.9199999999999999,
+      "timestamp": 1770771700.2655506,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_58",
+      "variant_id": "variant_a",
+      "score": 0.9299999999999999,
+      "timestamp": 1770771700.273258,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_59",
+      "variant_id": "variant_a",
+      "score": 0.94,
+      "timestamp": 1770771700.2802525,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_60",
+      "variant_id": "variant_a",
+      "score": 0.85,
+      "timestamp": 1770771700.2874053,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_61",
+      "variant_id": "variant_a",
+      "score": 0.86,
+      "timestamp": 1770771700.2944255,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_62",
+      "variant_id": "variant_a",
+      "score": 0.87,
+      "timestamp": 1770771700.3014262,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_63",
+      "variant_id": "variant_a",
+      "score": 0.88,
+      "timestamp": 1770771700.3094766,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_64",
+      "variant_id": "variant_a",
+      "score": 0.89,
+      "timestamp": 1770771700.3164747,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_65",
+      "variant_id": "variant_a",
+      "score": 0.9,
+      "timestamp": 1770771700.3251812,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_66",
+      "variant_id": "variant_a",
+      "score": 0.9099999999999999,
+      "timestamp": 1770771700.3321812,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_67",
+      "variant_id": "variant_a",
+      "score": 0.9199999999999999,
+      "timestamp": 1770771700.3408477,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_68",
+      "variant_id": "variant_a",
+      "score": 0.9299999999999999,
+      "timestamp": 1770771700.348848,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_69",
+      "variant_id": "variant_a",
+      "score": 0.94,
+      "timestamp": 1770771700.3584864,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_70",
+      "variant_id": "variant_a",
+      "score": 0.85,
+      "timestamp": 1770771700.366988,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_71",
+      "variant_id": "variant_a",
+      "score": 0.86,
+      "timestamp": 1770771700.3761647,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_72",
+      "variant_id": "variant_a",
+      "score": 0.87,
+      "timestamp": 1770771700.385163,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_73",
+      "variant_id": "variant_a",
+      "score": 0.88,
+      "timestamp": 1770771700.3938365,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_74",
+      "variant_id": "variant_a",
+      "score": 0.89,
+      "timestamp": 1770771700.404477,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_75",
+      "variant_id": "variant_a",
+      "score": 0.9,
+      "timestamp": 1770771700.4145617,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_76",
+      "variant_id": "variant_a",
+      "score": 0.9099999999999999,
+      "timestamp": 1770771700.424167,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_77",
+      "variant_id": "variant_a",
+      "score": 0.9199999999999999,
+      "timestamp": 1770771700.4341671,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_78",
+      "variant_id": "variant_a",
+      "score": 0.9299999999999999,
+      "timestamp": 1770771700.4449975,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_79",
+      "variant_id": "variant_a",
+      "score": 0.94,
+      "timestamp": 1770771700.4557304,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_80",
+      "variant_id": "variant_a",
+      "score": 0.85,
+      "timestamp": 1770771700.465729,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_81",
+      "variant_id": "variant_a",
+      "score": 0.86,
+      "timestamp": 1770771700.47611,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_82",
+      "variant_id": "variant_a",
+      "score": 0.87,
+      "timestamp": 1770771700.4861097,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_83",
+      "variant_id": "variant_a",
+      "score": 0.88,
+      "timestamp": 1770771700.4967365,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_84",
+      "variant_id": "variant_a",
+      "score": 0.89,
+      "timestamp": 1770771700.5084033,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_85",
+      "variant_id": "variant_a",
+      "score": 0.9,
+      "timestamp": 1770771700.5194035,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_86",
+      "variant_id": "variant_a",
+      "score": 0.9099999999999999,
+      "timestamp": 1770771700.5302684,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_87",
+      "variant_id": "variant_a",
+      "score": 0.9199999999999999,
+      "timestamp": 1770771700.5419688,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_88",
+      "variant_id": "variant_a",
+      "score": 0.9299999999999999,
+      "timestamp": 1770771700.5533917,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_89",
+      "variant_id": "variant_a",
+      "score": 0.94,
+      "timestamp": 1770771700.56452,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_90",
+      "variant_id": "variant_a",
+      "score": 0.85,
+      "timestamp": 1770771700.5750284,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_91",
+      "variant_id": "variant_a",
+      "score": 0.86,
+      "timestamp": 1770771700.5870326,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_92",
+      "variant_id": "variant_a",
+      "score": 0.87,
+      "timestamp": 1770771700.597856,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_93",
+      "variant_id": "variant_a",
+      "score": 0.88,
+      "timestamp": 1770771700.6083,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_94",
+      "variant_id": "variant_a",
+      "score": 0.89,
+      "timestamp": 1770771700.621645,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_95",
+      "variant_id": "variant_a",
+      "score": 0.9,
+      "timestamp": 1770771700.632642,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_96",
+      "variant_id": "variant_a",
+      "score": 0.9099999999999999,
+      "timestamp": 1770771700.6446407,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_97",
+      "variant_id": "variant_a",
+      "score": 0.9199999999999999,
+      "timestamp": 1770771700.6564982,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_98",
+      "variant_id": "variant_a",
+      "score": 0.9299999999999999,
+      "timestamp": 1770771700.6680024,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    },
+    {
+      "user_id": "user_99",
+      "variant_id": "variant_a",
+      "score": 0.94,
+      "timestamp": 1770771700.6812341,
+      "metadata": {
+        "search_relevance": null,
+        "user_satisfaction": null,
+        "click_through_rate": null
+      }
+    }
+  ],
+  "status": "running",
+  "created_at": 1770771700.023198,
+  "stopped_at": null
+}

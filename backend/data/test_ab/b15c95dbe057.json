@@ -1,0 +1,32 @@
+{
+  "id": "b15c95dbe057",
+  "name": "Consistency Test",
+  "variants": [
+    {
+      "id": "control",
+      "name": "Control",
+      "weights": {
+        "alpha": 0.4,
+        "beta": 0.2,
+        "gamma": 0.3,
+        "delta": 0.1
+      },
+      "description": null
+    },
+    {
+      "id": "variant_a",
+      "name": "Variant A",
+      "weights": {
+        "alpha": 0.5,
+        "beta": 0.2,
+        "gamma": 0.2,
+        "delta": 0.1
+      },
+      "description": null
+    }
+  ],
+  "results": [],
+  "status": "running",
+  "created_at": 1770771699.954749,
+  "stopped_at": null
+}

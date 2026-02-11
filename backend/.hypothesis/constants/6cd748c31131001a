@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\vector_store.py
+# hypothesis_version: 6.148.7
+
+['$set', 'key', 'metadata', 'score', 'timestamp', 'vector']

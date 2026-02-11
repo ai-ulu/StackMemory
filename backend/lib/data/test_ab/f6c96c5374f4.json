@@ -1,0 +1,32 @@
+{
+  "id": "f6c96c5374f4",
+  "name": "Test Experiment",
+  "variants": [
+    {
+      "id": "control",
+      "name": "Control",
+      "weights": {
+        "alpha": 0.4,
+        "beta": 0.2,
+        "gamma": 0.3,
+        "delta": 0.1
+      },
+      "description": null
+    },
+    {
+      "id": "variant_a",
+      "name": "Variant A",
+      "weights": {
+        "alpha": 0.5,
+        "beta": 0.2,
+        "gamma": 0.2,
+        "delta": 0.1
+      },
+      "description": null
+    }
+  ],
+  "results": [],
+  "status": "running",
+  "created_at": 1770769888.6634035,
+  "stopped_at": null
+}

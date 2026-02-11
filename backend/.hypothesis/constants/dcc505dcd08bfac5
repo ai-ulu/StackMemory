@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\memory_scorer.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 30.0, 1000, 3600, 'access_count', 'alpha', 'beta', 'breakdown', 'current_time', 'decay', 'delta', 'frequency', 'gamma', 'h_score', 'importance', 'last_accessed', 'memory', 'similarity', 'text', 'timestamp', 'total', 'total_score', 'vector']

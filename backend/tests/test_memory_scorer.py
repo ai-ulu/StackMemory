@@ -3,7 +3,7 @@ MemoryScorer testleri - H(x,ψ) puanlama algoritması
 """
 import pytest
 from datetime import datetime, timedelta
-from backend.lib.memory_scorer import MemoryScorer, HScore, HScoreWeights
+from lib.memory_scorer import MemoryScorer, HScore, HScoreWeights
 
 
 class TestHScoreWeights:

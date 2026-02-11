@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\conflict_resolver.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.95, 1.0, 100.0, 1000, 'active', 'ambiguous', 'auto', 'contradiction', 'correct', 'decay', 'disabled', 'duplicate', 'enabled', 'failure', 'false', 'frequency', 'ignore', 'ignored', 'importance', 'inactive', 'incorrect', 'invalid', 'keep1', 'keep2', 'merge', 'merged', 'mergedAt', 'neither', 'never', 'no', 'none', 'not', 'outdated', 'pending', 'resolved', 'similarity', 'source1', 'source2', 'sourceIds', 'success', 'true', 'user', 'valid', 'yes']

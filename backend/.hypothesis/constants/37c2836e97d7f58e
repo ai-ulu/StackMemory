@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\encryption.py
+# hypothesis_version: 6.148.7
+
+[2048, 65537, 100000, 'E2EE:', 'encrypted', 'iv', 'private_key', 'public_key', 'salt', 'utf-8']

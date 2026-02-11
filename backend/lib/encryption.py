@@ -208,6 +208,12 @@ class E2EEncryption:
             
             # Padding çıkar
             padding_length = decrypted_padded[-1]
+            
+            # Geçersiz padding kontrolü
+            if padding_length > 16 or padding_length < 1:
+                logger.error("Invalid padding - wrong password")
+                return None
+            
             decrypted = decrypted_padded[:-padding_length]
             
             return decrypted.decode('utf-8')

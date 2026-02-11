@@ -1,0 +1,4 @@
+# file: C:\Users\sonfi\.kiro\emergent-ai-ulu.com\backend\lib\ab_testing.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.95, 1.0, 1.96, '*.json', 'Henüz sonuç yok', 'click_through_rate', 'completed', 'confidence', 'continue', 'created_at', 'data/ab_testing', 'default_config', 'default_config.json', 'deploy', 'deployed_at', 'description', 'experiment_id', 'experiment_name', 'history', 'history.json', 'id', 'name', 'r', 'results', 'running', 'search_relevance', 'status', 'stop', 'stopped', 'stopped_at', 'user_satisfaction', 'variants', 'w', 'weights', 'winner']

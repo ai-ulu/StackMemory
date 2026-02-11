@@ -1,0 +1,32 @@
+{
+  "id": "2bb49cd871a2",
+  "name": "Stop Test",
+  "variants": [
+    {
+      "id": "control",
+      "name": "Control",
+      "weights": {
+        "alpha": 0.4,
+        "beta": 0.2,
+        "gamma": 0.3,
+        "delta": 0.1
+      },
+      "description": null
+    },
+    {
+      "id": "variant_a",
+      "name": "Variant A",
+      "weights": {
+        "alpha": 0.4,
+        "beta": 0.2,
+        "gamma": 0.3,
+        "delta": 0.1
+      },
+      "description": null
+    }
+  ],
+  "results": [],
+  "status": "stopped",
+  "created_at": 1770772341.0341983,
+  "stopped_at": 1770772341.0361984
+}
