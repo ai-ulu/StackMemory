@@ -34,6 +34,7 @@ export async function GET(request) {
       preferred_language: 'en',
       enable_decay: true,
       decay_half_life_days: 90,
+      encryption_enabled: false,
     };
 
     return NextResponse.json(settings);
@@ -65,6 +66,7 @@ export async function PUT(request) {
       preferred_language,
       enable_decay,
       decay_half_life_days,
+      encryption_enabled,
     } = body;
 
     const updates = { user_id: user.id };
@@ -81,6 +83,7 @@ export async function PUT(request) {
     if (decay_half_life_days !== undefined) {
       updates.decay_half_life_days = Math.max(1, Math.min(365, decay_half_life_days));
     }
+    if (encryption_enabled !== undefined) updates.encryption_enabled = encryption_enabled;
 
     const { data, error } = await supabase
       .from('memory_settings')

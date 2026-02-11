@@ -811,6 +811,159 @@ export default function SettingsPage() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
+            {/* Encryption Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="w-5 h-5" />
+                  Uçtan Uca Şifreleme (E2EE)
+                </CardTitle>
+                <CardDescription>
+                  Hafızalarınızı zero-knowledge şifreleme ile koruyun
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Şifreleme Durumu</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {memorySettings.encryption_enabled 
+                        ? 'Aktif - Hafızalarınız şifrelenmiş' 
+                        : 'Pasif - Hafızalar düz metin'}
+                    </p>
+                  </div>
+                  <Badge variant={memorySettings.encryption_enabled ? 'default' : 'secondary'}>
+                    {memorySettings.encryption_enabled ? 'Aktif' : 'Pasif'}
+                  </Badge>
+                </div>
+
+                {!memorySettings.encryption_enabled ? (
+                  <div className="space-y-4 p-4 rounded-lg bg-muted/50 border">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                      <div className="space-y-2 flex-1">
+                        <p className="text-sm font-medium">Şifreleme Etkinleştir</p>
+                        <p className="text-xs text-muted-foreground">
+                          Şifreleme etkinleştirildiğinde:
+                        </p>
+                        <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                          <li>Tüm hafızalar RSA-2048 + AES-256-GCM ile şifrelenir</li>
+                          <li>Sunucu asla şifresiz verilerinizi göremez (zero-knowledge)</li>
+                          <li>Şifre çözme anahtarı sadece sizde kalır</li>
+                          <li>Şifrenizi kaybederseniz verileriniz kurtarılamaz</li>
+                        </ul>
+                        <Button 
+                          className="w-full mt-4"
+                          onClick={async () => {
+                            const password = prompt('Şifreleme için güçlü bir şifre girin:');
+                            if (!password || password.length < 12) {
+                              toast.error('Şifre en az 12 karakter olmalı');
+                              return;
+                            }
+                            
+                            setSaving(true);
+                            try {
+                              // Import encryption manager
+                              const { encryption } = await import('@/lib/encryption');
+                              
+                              // Generate and encrypt keys
+                              const keyPair = await encryption.generateKeyPair();
+                              const encryptedKeyPair = await encryption.encryptKeyPairWithPassword(keyPair, password);
+                              
+                              // Store on server
+                              const res = await fetch('/api/encryption/setup', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ encryptedKeyPair }),
+                              });
+                              
+                              if (res.ok) {
+                                toast.success('Şifreleme etkinleştirildi');
+                                await loadMemorySettings();
+                              } else {
+                                throw new Error('Setup failed');
+                              }
+                            } catch (error) {
+                              toast.error('Şifreleme kurulumu başarısız');
+                              console.error(error);
+                            } finally {
+                              setSaving(false);
+                            }
+                          }}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Kuruluyor...
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4 mr-2" />
+                              Şifrelemeyi Etkinleştir
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-green-500 mt-0.5" />
+                      <div className="space-y-2 flex-1">
+                        <p className="text-sm font-medium text-green-500">Şifreleme Aktif</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hafızalarınız güvenli bir şekilde şifrelenmiş durumda.
+                        </p>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" className="mt-4">
+                              <Lock className="w-4 h-4 mr-2" />
+                              Şifrelemeyi Devre Dışı Bırak
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Şifrelemeyi Devre Dışı Bırak?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Bu işlem şifreleme anahtarlarınızı silecek. Mevcut şifreli hafızalar okunamaz hale gelecek.
+                                Devam etmek istediğinizden emin misiniz?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>İptal</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={async () => {
+                                  setSaving(true);
+                                  try {
+                                    const res = await fetch('/api/encryption/disable', {
+                                      method: 'POST',
+                                    });
+                                    if (res.ok) {
+                                      toast.success('Şifreleme devre dışı bırakıldı');
+                                      await loadMemorySettings();
+                                    }
+                                  } catch (error) {
+                                    toast.error('İşlem başarısız');
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Devre Dışı Bırak
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Şifre Değiştir</CardTitle>
