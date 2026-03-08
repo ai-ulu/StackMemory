@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * MCP Orchestration API
  * 
- * Central endpoint for AI-ULU Hub queries.
+ * Central endpoint for StackMemory Hub queries.
  * Routes queries to appropriate MCP servers and synthesizes results.
  * 
  * POST /api/orchestrate
@@ -76,7 +76,7 @@ class SimpleHub {
   }
 
   async queryMemory(query) {
-    // Query local AI-ULU memory
+    // Query local StackMemory memory
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     
     const response = await fetch(`${baseUrl}/api/memories/search?q=${encodeURIComponent(query)}&limit=5`, {
@@ -127,7 +127,7 @@ class SimpleHub {
       memoryResult.data.memories.slice(0, 3).forEach(m => {
         parts.push(`- ${m.content}`);
       });
-      sources.push({ name: 'AI-ULU Hafıza', type: 'memory' });
+      sources.push({ name: 'StackMemory Hafızası', type: 'memory' });
     }
     
     // Add web results

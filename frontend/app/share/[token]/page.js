@@ -57,7 +57,7 @@ function Message({ message, isUser }) {
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">
-            {isUser ? 'User' : 'AI-ULU'}
+            {isUser ? 'User' : 'StackMemory'}
           </span>
           <span className="text-xs text-muted-foreground">
             {new Date(message.created_at).toLocaleTimeString('tr-TR')}
@@ -173,7 +173,7 @@ export default function SharedPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold">AI-ULU</span>
+            <span className="font-bold">StackMemory</span>
           </Link>
           
           <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function SharedPage() {
         {/* CTA */}
         <div className="mt-8 text-center">
           <p className="text-muted-foreground mb-4">
-            AI-ULU ile kendi hafızalı AI asistanınızı oluşturun
+            StackMemory ile kendi hafızalı AI workflow'unuzu oluşturun
           </p>
           <Link href="/signup">
             <Button className="bg-gradient-to-r from-primary to-violet-600">

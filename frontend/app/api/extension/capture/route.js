@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 /**
  * Browser Extension Capture API
- * Allows browser extension to capture content and save to AI-ULU memory.
+ * Allows browser extension to capture content and save to StackMemory.
  */
 
 async function generateEmbedding(text) {

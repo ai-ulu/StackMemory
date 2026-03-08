@@ -446,7 +446,7 @@ export default function SettingsPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold">AI-ULU</span>
+            <span className="font-semibold">StackMemory</span>
           </div>
         </div>
       </nav>
@@ -496,7 +496,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Hafıza Sistemi</Label>
-                    <p className="text-sm text-muted-foreground">AI'nin sizi hatırlamasını sağlayın</p>
+                    <p className="text-sm text-muted-foreground">AI coding araçlarının proje bağlamınızı hatırlamasını sağlayın</p>
                   </div>
                   <Switch
                     checked={memorySettings.enabled}

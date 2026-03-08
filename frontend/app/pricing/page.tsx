@@ -34,7 +34,7 @@ export default function PricingPage() {
     }
 
     if (planId === 'enterprise') {
-      window.location.href = 'mailto:enterprise@ai-ulu.com?subject=Enterprise Plan Inquiry'
+      window.location.href = 'mailto:enterprise@stackmemory.dev?subject=Enterprise Plan Inquiry'
       return
     }
 
@@ -159,7 +159,7 @@ export default function PricingPage() {
                 Can I embed this into my own AI app?
               </h3>
               <p className="text-muted-foreground">
-                Yes. AI-ULU is designed to work as both a user-facing memory workspace and a memory backend through API, bridge, MCP, and SDK surfaces.
+                Yes. StackMemory is designed to work as both a user-facing memory workspace and a memory backend through API, bridge, MCP, and SDK surfaces.
               </p>
             </div>
 
@@ -198,7 +198,7 @@ export default function PricingPage() {
             Ready to stop repeating project context?
           </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Use AI-ULU as your own shared memory layer or embed it into the AI workflows you build.
+            Use StackMemory as your own shared memory layer or embed it into the AI workflows you build.
           </p>
           <Button size="lg" onClick={() => handleSelectPlan('pro')}>
             Start Free Trial

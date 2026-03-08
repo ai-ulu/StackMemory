@@ -132,7 +132,7 @@ export default function AdminPage() {
               <span className="text-3xl">🛡️</span>
               Admin Dashboard
             </h1>
-            <p className="text-gray-400 text-sm">AI-ULU Platform Yönetimi</p>
+            <p className="text-gray-400 text-sm">StackMemory Platform Yönetimi</p>
           </div>
           <button
             onClick={() => router.push('/chat')}

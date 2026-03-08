@@ -151,14 +151,14 @@ export default function SignupPage() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
                 <Brain className="w-7 h-7 text-white" />
               </div>
-              <span className="text-2xl font-bold">AI-ULU</span>
+              <span className="text-2xl font-bold">StackMemory</span>
             </Link>
           </div>
 
           <Card className="border-2">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Hesap Oluştur</CardTitle>
-              <CardDescription>Ücretsiz hesabınızı oluşturun ve başlayın</CardDescription>
+              <CardDescription>Ücretsiz hesabınızı oluşturun ve proje hafızanızı başlatın</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignup} className="space-y-4">

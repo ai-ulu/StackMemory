@@ -13,7 +13,7 @@ const openai = new OpenAI({
 });
 
 // Memory-First System Prompt (LOCKED)
-const SYSTEM_PROMPT_BASE = `Sen AI-ULU, **hafıza öncelikli mimari** ile çalışan bir yapay zeka asistanısın.
+const SYSTEM_PROMPT_BASE = `Sen StackMemory üzerinden çalışan, **hafıza öncelikli mimari** kullanan bir yapay zeka asistanısın.
 
 TEMEL KURALLAR:
 1. Hafıza bütünlüğü > Hız > Yaratıcılık
@@ -37,10 +37,10 @@ async function generateEmbedding(text) {
   }
 }
 
-// Quantum-Inspired Heuristic Scoring (AI-ULU v2.1)
+// Quantum-Inspired Heuristic Scoring (StackMemory v2.1)
 // H(x,ψ,E) = α·S + β·D + γ·I + δ·F + ε·E
 // Extended with Emotional Resonance parameter
-// Referans: AI-ULU Teknik Blueprint - Algoritmik Detaylandırma
+// Referans: StackMemory teknik blueprint - algoritmik detaylandırma
 function calculateHScore(memory, similarity, emotionalContext = null) {
   // v2.1 Optimized weights (A/B test ready)
   const α = 0.35;  // similarity weight

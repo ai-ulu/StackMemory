@@ -97,14 +97,14 @@ export default function LoginPage() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
                 <Brain className="w-7 h-7 text-white" />
               </div>
-              <span className="text-2xl font-bold">AI-ULU</span>
+              <span className="text-2xl font-bold">StackMemory</span>
             </Link>
           </div>
 
           <Card className="border-2">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Tekrar Hoş Geldiniz</CardTitle>
-              <CardDescription>Hesabınıza giriş yapın</CardDescription>
+              <CardDescription>Proje hafızanıza giriş yapın</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">

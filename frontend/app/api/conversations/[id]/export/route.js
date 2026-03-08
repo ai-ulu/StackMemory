@@ -68,7 +68,7 @@ export async function POST(request, { params }) {
       markdown += `---\n\n`;
 
       for (const msg of (messages || [])) {
-        const role = msg.role === 'user' ? '**You**' : '**AI-ULU**';
+        const role = msg.role === 'user' ? '**You**' : '**StackMemory**';
         const time = new Date(msg.created_at).toLocaleTimeString('tr-TR');
         markdown += `### ${role} (${time})\n\n`;
         markdown += `${msg.content}\n\n`;

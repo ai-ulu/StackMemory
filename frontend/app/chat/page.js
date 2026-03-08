@@ -196,7 +196,7 @@ function Message({ message, isUser, showResonance }) {
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">
-            {isUser ? 'Sen' : 'AI-ULU'}
+            {isUser ? 'Sen' : 'StackMemory'}
           </span>
           {!isUser && message.source && (
             <SourceBadge source={message.source} />
@@ -298,9 +298,9 @@ function EmptyState({ onSuggestionClick }) {
       <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
         <Brain className="w-10 h-10 text-white" />
       </div>
-      <h2 className="text-2xl font-bold mb-2">AI-ULU'ya Hoş Geldiniz</h2>
+      <h2 className="text-2xl font-bold mb-2">StackMemory'e Hoş Geldiniz</h2>
       <p className="text-muted-foreground mb-8 max-w-md">
-        Sizi hatırlayan yapay zeka asistanınız. Bir soru sorun veya önerilerden birini seçin.
+        Kodlama araçlarınız arasında proje bağlamını koruyan hafıza katmanı. Bir soru sorun veya önerilerden birini seçin.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
         {suggestions.map((suggestion, idx) => (
