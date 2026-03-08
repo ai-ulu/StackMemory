@@ -1,9 +1,14 @@
 import Stripe from 'stripe';
 
-// Initialize Stripe
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-12-15.clover',
-});
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  });
+}
 
 // Price IDs (set these in Stripe Dashboard)
 export const STRIPE_PRICES = {
@@ -17,6 +22,7 @@ export const STRIPE_PRICES = {
 // Create checkout session
 export async function createCheckoutSession({ priceId, userId, userEmail, successUrl, cancelUrl }) {
   try {
+    const stripe = getStripeClient();
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -50,6 +56,7 @@ export async function createCheckoutSession({ priceId, userId, userEmail, succes
 // Create customer portal session
 export async function createPortalSession({ customerId, returnUrl }) {
   try {
+    const stripe = getStripeClient();
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
@@ -65,6 +72,7 @@ export async function createPortalSession({ customerId, returnUrl }) {
 // Get subscription status
 export async function getSubscriptionStatus(customerId) {
   try {
+    const stripe = getStripeClient();
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: 'active',
@@ -101,6 +109,7 @@ export async function getSubscriptionStatus(customerId) {
 // Cancel subscription
 export async function cancelSubscription(subscriptionId) {
   try {
+    const stripe = getStripeClient();
     const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
@@ -115,6 +124,7 @@ export async function cancelSubscription(subscriptionId) {
 // Resume subscription
 export async function resumeSubscription(subscriptionId) {
   try {
+    const stripe = getStripeClient();
     const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: false,
     });

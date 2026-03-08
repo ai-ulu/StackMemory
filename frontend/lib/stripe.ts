@@ -85,8 +85,9 @@ export type PlanId = keyof typeof PRICING_PLANS
  */
 export async function createCheckoutSession(planId: PlanId): Promise<string> {
   const plan = PRICING_PLANS[planId]
+  const priceId = 'price_id' in plan ? plan.price_id : undefined
   
-  if (!plan.price_id) {
+  if (!priceId) {
     throw new Error(`Plan ${planId} does not have a price ID`)
   }
 

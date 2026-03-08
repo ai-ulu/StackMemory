@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { stripe } from '@/lib/stripe';
+import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  });
+}
 
 export async function POST(request) {
   const body = await request.text();
   const signature = headers().get('stripe-signature');
+  const stripe = getStripeClient();
 
   let event;
 
