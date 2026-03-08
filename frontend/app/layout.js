@@ -6,32 +6,36 @@ import { Toaster } from '@/components/ui/sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'AI-ULU | Your Personal AI Memory Assistant',
-  description: 'Securely capture, organize, and recall all your important thoughts with advanced AI. Remember Everything, Effortlessly.',
-  keywords: ['AI', 'memory', 'assistant', 'chatbot', 'productivity', 'enterprise'],
+  title: 'StackMemory | Shared Memory For AI Coding Workflows',
+  description: 'Shared memory for Claude Code, Cursor, Codex-style agents, VS Code workflows, and custom AI developer tools.',
+  keywords: ['AI memory', 'developer tools', 'coding agents', 'MCP', 'project context', 'AI workflow'],
   manifest: '/manifest.json',
-  themeColor: '#3b82f6',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'AI-ULU',
+    title: 'StackMemory',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
   openGraph: {
-    title: 'AI-ULU | Your Personal AI Memory Assistant',
-    description: 'Remember Everything, Effortlessly.',
+    title: 'StackMemory | Shared Memory For AI Coding Workflows',
+    description: 'One memory layer for AI coding tools, agents, and developer workflows.',
     type: 'website',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#3b82f6',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#3b82f6" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"

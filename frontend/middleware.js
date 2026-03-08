@@ -1,9 +1,37 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import { LOCAL_AUTH_COOKIE } from '@/lib/dev/local-auth-shared';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 
 export const runtime = 'nodejs';
 
 export async function middleware(request) {
+  if (isLocalAuthMode()) {
+    const localUser = request.cookies.get(LOCAL_AUTH_COOKIE)?.value;
+
+    if (
+      !localUser &&
+      (request.nextUrl.pathname.startsWith('/chat') ||
+        request.nextUrl.pathname.startsWith('/settings'))
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+
+    if (
+      localUser &&
+      (request.nextUrl.pathname === '/login' ||
+        request.nextUrl.pathname === '/signup')
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/chat';
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

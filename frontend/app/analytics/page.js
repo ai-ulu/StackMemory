@@ -4,10 +4,26 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+const EMPTY_STATS = {
+  total: 0,
+  period: 0,
+  today: 0,
+  byType: {
+    identity: 0,
+    preference: 0,
+    fact: 0,
+  },
+  bySource: {},
+  dailyData: {},
+  avgConfidence: 0,
+  topAccessed: [],
+  growthRate: 0,
+};
+
 export default function AnalyticsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState(EMPTY_STATS);
   const [timeRange, setTimeRange] = useState('7d');
   const [user, setUser] = useState(null);
 
@@ -32,6 +48,11 @@ export default function AnalyticsPage() {
     setLoading(true);
     
     try {
+      if (typeof supabase.from !== 'function') {
+        setStats(EMPTY_STATS);
+        return;
+      }
+
       // Get time range
       const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
       const startDate = new Date();
@@ -110,6 +131,7 @@ export default function AnalyticsPage() {
       });
     } catch (error) {
       console.error('Stats loading error:', error);
+      setStats(EMPTY_STATS);
     } finally {
       setLoading(false);
     }

@@ -1,9 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { deleteConversation, getConversation, updateConversation } from '@/lib/dev/local-data';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 
 // GET - Get conversation with messages
 export async function GET(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      const { id } = await params;
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const conversation = await getConversation(user.id, id);
+      if (!conversation) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      }
+      return NextResponse.json(conversation);
+    }
+
     const supabase = await createClient();
     const { id } = await params;
     
@@ -48,6 +64,26 @@ export async function GET(request, { params }) {
 // PUT - Update conversation
 export async function PUT(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      const { id } = await params;
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { title } = body;
+      if (!title) {
+        return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+      }
+
+      const conversation = await updateConversation(user.id, id, { title });
+      if (!conversation) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      }
+      return NextResponse.json(conversation);
+    }
+
     const supabase = await createClient();
     const { id } = await params;
     
@@ -86,6 +122,20 @@ export async function PUT(request, { params }) {
 // DELETE - Delete conversation
 export async function DELETE(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      const { id } = await params;
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const deleted = await deleteConversation(user.id, id);
+      if (!deleted) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
     const supabase = await createClient();
     const { id } = await params;
     

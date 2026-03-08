@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getModelConfig } from '@/lib/models';
 import OpenAI from 'openai';
+import { appendMessage, updateConversation } from '@/lib/dev/local-data';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 
 // Initialize OpenAI client for embeddings
 const openai = new OpenAI({
@@ -314,6 +317,102 @@ async function storeMemory(supabase, userId, content, embedding, classification)
 
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { message, conversationId, model = 'gpt-4o-mini' } = body;
+      if (!message || !conversationId) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      }
+
+      await appendMessage(conversationId, 'user', message);
+      await updateConversation(user.id, conversationId, { model });
+
+      const config = getModelConfig();
+      const modelName = config.models[model] || config.models['gpt-4o-mini'];
+      const encoder = new TextEncoder();
+      const stream = new TransformStream();
+      const writer = stream.writable.getWriter();
+
+      (async () => {
+        let fullResponse = '';
+        try {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({
+            source: 'api',
+            memory_used: false,
+            memories: [],
+          })}\n\n`));
+
+          const response = await fetch(config.endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT_BASE },
+                { role: 'user', content: message },
+              ],
+              stream: true,
+              temperature: 0.7,
+              max_tokens: 2000,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Model API error');
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (!content) continue;
+                fullResponse += content;
+                await writer.write(encoder.encode(`data: {"content": ${JSON.stringify(content)}}\n\n`));
+              } catch {}
+            }
+          }
+
+          if (fullResponse) {
+            await appendMessage(conversationId, 'assistant', fullResponse, { source_type: 'api' });
+          }
+
+          await writer.write(encoder.encode('data: [DONE]\n\n'));
+        } catch (error) {
+          await writer.write(encoder.encode(`data: {"error": ${JSON.stringify(error.message)}}\n\n`));
+        } finally {
+          await writer.close();
+        }
+      })();
+
+      return new Response(stream.readable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+
     const supabase = await createClient();
     
     // Verify authentication

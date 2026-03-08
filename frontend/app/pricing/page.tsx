@@ -59,10 +59,10 @@ export default function PricingPage() {
             Pricing
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Simple, Transparent Pricing
+            Pricing for shared AI memory
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits your needs. All plans include our core memory features.
+            For developers, AI power users, and teams that need one memory layer across tools and workflows.
           </p>
         </div>
 
@@ -147,19 +147,19 @@ export default function PricingPage() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                Can I change plans later?
+                Who is this for?
               </h3>
               <p className="text-muted-foreground">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the difference.
+                Developers using tools like Claude Desktop, Cursor, VS Code AI workflows, internal coding agents, and custom AI applications that need persistent project context.
               </p>
             </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                What payment methods do you accept?
+                Can I embed this into my own AI app?
               </h3>
               <p className="text-muted-foreground">
-                We accept all major credit cards (Visa, Mastercard, American Express) through Stripe. Enterprise customers can also pay via invoice.
+                Yes. AI-ULU is designed to work as both a user-facing memory workspace and a memory backend through API, bridge, MCP, and SDK surfaces.
               </p>
             </div>
 
@@ -174,19 +174,19 @@ export default function PricingPage() {
 
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                Can I cancel anytime?
+                Which tools can this work with?
               </h3>
               <p className="text-muted-foreground">
-                Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
+                MCP-compatible tools, coding agents, internal copilots, and apps that can call an API or memory bridge. Coverage depends on the integration surface each platform exposes.
               </p>
             </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                Do you offer refunds?
+                Can I cancel anytime?
               </h3>
               <p className="text-muted-foreground">
-                We offer a 14-day money-back guarantee. If you're not satisfied, contact us for a full refund.
+                Yes. You can cancel at any time and keep access through the end of your billing period.
               </p>
             </div>
           </div>
@@ -195,10 +195,10 @@ export default function PricingPage() {
         {/* CTA Section */}
         <div className="mt-24 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to get started?
+            Ready to stop repeating project context?
           </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Join thousands of users who never forget anything.
+            Use AI-ULU as your own shared memory layer or embed it into the AI workflows you build.
           </p>
           <Button size="lg" onClick={() => handleSelectPlan('pro')}>
             Start Free Trial

@@ -1,328 +1,152 @@
-<div align="center">
+# StackMemory
 
-# 🧠 AI-ULU
-
-**Your Personal AI Memory Assistant**
+**Shared Memory Layer For AI Coding Workflows**
 
 ```
-Remember Everything. Effortlessly.
+One memory. Many tools. Same project context.
 ```
 
-[![Production Ready](https://img.shields.io/badge/production-ready-success)](https://github.com/ai-ulu/emergent-ai-ulu.com)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](docker-compose.yml)
-[![Tests](https://img.shields.io/badge/tests-40%20passing-success)](frontend/e2e)
-[![E2EE](https://img.shields.io/badge/E2EE-enabled-green)](backend/lib/encryption.py)
-[![Security](https://img.shields.io/badge/security-RSA--2048%20%2B%20AES--256-brightgreen)](frontend/lib/encryption.ts)
+[![MCP](https://img.shields.io/badge/MCP-supported-green)](mcp-server/README.md)
+[![API](https://img.shields.io/badge/API-bridge-ready-blue)](bridge/server.py)
 
-[🚀 Try Free](https://ai-ulu.com/signup) · [📚 Docs](https://docs.ai-ulu.com) · [💬 Discord](https://discord.gg/aiulu) · [🐦 Twitter](https://twitter.com/aiulu)
+## What It Is
 
-</div>
+StackMemory is a shared memory layer for developers, AI power users, and builders working across multiple AI coding tools.
 
----
+It is designed for workflows that span tools such as:
+- Claude Desktop and MCP-compatible clients
+- Cursor and VS Code AI-assisted development
+- Codex-style agents and internal developer copilots
+- Bolt, Lovable, and Replit-style builder environments
+- Custom AI apps that need persistent user or project memory
 
-## 🎯 What is AI-ULU?
+StackMemory can be used in two ways:
+- As a **developer-facing memory workspace**
+- As a **memory backend** through REST API, WebSocket, MCP, and SDK
 
-AI-ULU is your **universal memory layer** for AI conversations.
+## Core Value
 
-Never lose context again. Your AI remembers everything across:
-- 💬 **ChatGPT, Claude, Gemini** - Persistent memory across all AI chats
-- 🖥️ **CLI & Terminal** - Command-line memory management
-- 💼 **Slack, Discord, Telegram** - Team knowledge base
-- 🔧 **VS Code, Cursor, Windsurf** - IDE integration via MCP
-- 🌐 **Any Platform** - REST API + WebSocket + MCP Protocol
+AI tools are good at generating output and bad at preserving durable context across sessions and surfaces.
 
----
+StackMemory gives you one place to store and retrieve:
+- project context
+- coding preferences
+- architecture decisions
+- active work items
+- reusable instructions
 
-## ✨ Key Features
+The goal is simple:
 
-<table>
-<tr>
-<td width="50%">
+**Stop re-explaining your project to every AI tool.**
 
-### 🧠 Smart Memory
-- **H(x,ψ) Scoring** - Intelligent memory ranking (similarity + decay + importance + frequency)
-- **Semantic Search** - Find memories by meaning, not keywords
-- **Auto-Capture** - AI automatically saves important info
-- **Context Recall** - Remembers past conversations
-- **Conflict Resolution** - Smart algorithm handles contradictions
+## Core Product Surfaces
 
-</td>
-<td width="50%">
+- [frontend](frontend) - user-facing memory workspace
+- [bridge](bridge) - REST and WebSocket bridge for apps and agents
+- [mcp-server](mcp-server) - MCP server for compatible tools
+- [sdk/python](sdk/python) - Python SDK for custom integrations
 
-### 🔒 Enterprise Security
-- **End-to-End Encryption (E2EE)** - Your data is encrypted on your device before it reaches our servers
-- **Zero-Knowledge Architecture** - We can't read your encrypted memories, only you can
-- **Client-Side Encryption** - RSA-2048 + AES-256 encryption in your browser
-- **Zero Trust Model** - No default access
-- **Role-Based Access** - Granular permissions
-- **Audit Logging** - Full transparency
+## Key Features
 
-</td>
-</tr>
-<tr>
-<td width="50%">
+- **Shared project memory** across coding workflows
+- **Semantic recall** for prior decisions and preferences
+- **Memory write + search APIs** for custom tools
+- **MCP integration** for AI coding clients
+- **User-controlled memory** with inspect, edit, export, and delete flows
+- **Security-oriented design** with encryption and access control layers
 
-### 🚀 Multi-Platform
-- **Web App** - Beautiful, responsive UI
-- **REST API** - Universal HTTP endpoints
-- **WebSocket** - Real-time updates
-- **MCP Protocol** - Claude, Cursor, Windsurf
-- **CLI** - Terminal interface
-- **Bots** - Slack, Discord, Telegram
+## Example Use Cases
 
-</td>
-<td width="50%">
+### For End Users
 
-### 👥 Team Collaboration
-- **Shared Memory Pools** - Team knowledge base
-- **Smart Sharing** - Secure chat export
-- **Team Workspaces** - Isolated environments
-- **Admin Dashboard** - Full control
+- Resume work in Claude after starting in Cursor
+- Keep your coding style and project rules available across sessions
+- Preserve architecture choices and stack preferences
+- Reuse the same context in IDE agents, web tools, and custom workflows
 
-</td>
-</tr>
-</table>
+### For Builders
 
----
+- Add persistent memory to your own AI coding assistant
+- Store project-specific constraints and user preferences
+- Use AI-ULU as a retrieval layer behind your agent system
+- Expose memory through API, bridge, or MCP depending on the client
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1️⃣ Web App (Easiest)
-
-```bash
-# Visit https://ai-ulu.com
-# Sign up for free
-# Start chatting with AI memory!
-```
-
-### 2️⃣ Self-Hosted (Docker)
+### Local App
 
 ```bash
 git clone https://github.com/ai-ulu/emergent-ai-ulu.com
 cd emergent-ai-ulu.com
 cp .env.example .env
-# Edit .env with your Supabase credentials
 docker-compose up -d
 ```
 
-Visit `http://localhost:3000` 🎉
-
-### 3️⃣ CLI (Power Users)
-
-```bash
-# Install
-pip install ai-ulu
-
-# Configure
-export AI_ULU_API_KEY=ulu_full_xxx...
-
-# Use
-ulu ask "What did I work on yesterday?"
-ulu remember "I prefer dark mode" --type preference
-ulu search "projects"
-```
-
-### 4️⃣ Python SDK
+### Python SDK
 
 ```python
 from ai_ulu import AIULU
 
-# Initialize
 ulu = AIULU(api_key="ulu_full_xxx...")
 
-# Query memory
-response = ulu.ask("What do I like?")
+result = ulu.ask("What project constraints have I already defined?")
+print(result.answer)
 
-# Store memory
-ulu.remember("I love Python", type="preference")
-
-# Search
-results = ulu.search("machine learning projects")
+ulu.remember("Prefer TypeScript and small diffs", type="preference")
 ```
 
----
+### MCP Server
 
-## 📊 Architecture
+See [mcp-server/README.md](mcp-server/README.md) for Claude Desktop and MCP-compatible configuration.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    YOUR AI APPS                         │
-│   ChatGPT │ Claude │ CLI │ Slack │ VS Code │ Web ...   │
-└────────────────────────┬────────────────────────────────┘
-                         │
-         ┌───────────────┴────────────────┐
-         │       AI-ULU BRIDGE            │
-         │   REST + WebSocket + MCP       │
-         │   Rate Limiting │ Auth         │
-         └───────────────┬────────────────┘
-                         │
-         ┌───────────────┴────────────────┐
-         │       AI-ULU CORE              │
-         │   Memory Engine │ H(x,ψ)       │
-         │   Semantic Search │ Embeddings │
-         └───────────────┬────────────────┘
-                         │
-         ┌───────────────┴────────────────┐
-         │       SUPABASE                 │
-         │   PostgreSQL │ Auth │ Storage  │
-         └────────────────────────────────┘
-```
+## Product Direction
 
----
+This repository is being shaped around a focused product direction:
 
-## 🔐 Authentication & API
+**StackMemory is for AI-native development workflows first.**
 
-### API Keys
+That means the primary focus is:
+- developers using multiple AI coding tools
+- teams that need shared project context
+- builders embedding memory into their own AI applications
 
-Get your API key from [Settings](https://ai-ulu.com/settings/keys)
+It is not being optimized first for generic consumer chat memory, bots, or broad non-technical use cases.
 
-```bash
-Authorization: Bearer ulu_full_xxx...
+## Architecture
+
+```text
+AI Coding Tools / Agents
+        |
+        v
+   MCP / API / SDK
+        |
+        v
+    AI-ULU Bridge
+        |
+        v
+    Memory Engine
+        |
+        v
+   Storage + Retrieval
 ```
 
-### Scopes & Rate Limits
+## Repository Notes
 
-| Scope | Permissions | Rate Limit | Use Case |
-|-------|-------------|------------|----------|
-| `read` | Query, Search | 60/min | Read-only apps |
-| `write` | + Create, Update | 30/min | Chat apps |
-| `full` | + Delete | 100/min | Full control |
-| `admin` | All operations | 200/min | Admin tools |
+Important directories:
+- [frontend](frontend)
+- [backend](backend)
+- [bridge](bridge)
+- [mcp-server](mcp-server)
+- [sdk](sdk)
+- [chrome-extension](chrome-extension)
 
-### API Endpoints
+Secondary or later-stage surfaces:
+- [bots](bots)
+- [monitoring](monitoring)
+- [nginx](nginx)
 
-```
-POST   /v1/query          Query memory with context
-POST   /v1/memory         Store new memory
-GET    /v1/memories       List all memories
-DELETE /v1/memory/:id     Delete memory
-POST   /v1/search         Semantic search
-POST   /v1/orchestrate    MCP hub endpoint
-WS     /ws/:session_id    Real-time updates
-```
+## License
 
----
-
-## 💻 Tech Stack
-
-**Frontend:**
-- Next.js 14 (App Router)
-- React 18 + TypeScript
-- Tailwind CSS + shadcn/ui
-- Supabase Auth
-
-**Backend:**
-- FastAPI (Python)
-- PostgreSQL (Supabase)
-- Redis (Caching)
-- OpenAI Embeddings
-
-**Infrastructure:**
-- Docker + Docker Compose
-- Nginx (Reverse Proxy)
-- Prometheus + Grafana (Monitoring)
-- GitHub Actions (CI/CD)
-
----
-
-## 🧪 Testing
-
-### Unit Tests
-```bash
-cd frontend
-npm test                 # Run once
-npm run test:watch       # Watch mode
-npm run test:coverage    # With coverage
-```
-
-**Coverage:** 70% (28 tests passing)
-
-### E2E Tests (Playwright)
-```bash
-npm run test:e2e         # Headless
-npm run test:e2e:ui      # Interactive UI
-npm run test:e2e:headed  # See browser
-```
-
-**Coverage:** 31 tests × 5 browsers = 155 test runs
-
----
-
-## 📦 Deployment
-
-### Production (Docker)
-
-```bash
-# 1. Setup environment
-cp .env.example .env
-# Edit .env with production values
-
-# 2. Deploy
-docker-compose -f docker-compose.prod.yml up -d
-
-# 3. Check health
-curl http://localhost:3000/api/health
-curl http://localhost:8080/health
-
-# 4. View logs
-docker-compose logs -f
-```
-
-### Cloud Platforms
-
-**Vercel (Frontend):**
-```bash
-vercel deploy
-```
-
-**Railway (Full Stack):**
-```bash
-railway up
-```
-
-**Fly.io:**
-```bash
-fly deploy
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md)
-
-1. Fork the repo
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open Pull Request
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details
-
----
-
-## 🙏 Acknowledgments
-
-- [Supabase](https://supabase.com) - Auth & Database
-- [OpenAI](https://openai.com) - Embeddings
-- [Vercel](https://vercel.com) - Hosting
-- [shadcn/ui](https://ui.shadcn.com) - UI Components
-
----
-
-<div align="center">
-
-### 🚀 Ready to remember everything?
-
-[**Try AI-ULU Free →**](https://ai-ulu.com/signup)
-
-Made with ❤️ by the AI-ULU Team
-
-[Website](https://ai-ulu.com) · [Docs](https://docs.ai-ulu.com) · [Discord](https://discord.gg/aiulu) · [Twitter](https://twitter.com/aiulu)
-
-</div>
+MIT
