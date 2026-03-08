@@ -1,43 +1,39 @@
-# 🧠 AI-ULU MCP Server
+# StackMemory MCP Server
 
-**Model Context Protocol (MCP) implementation for AI-ULU Universal Memory System**
+**Model Context Protocol server for StackMemory**
 
-Turn AI-ULU into the **universal memory layer** for all MCP-compatible AI applications.
+Turn StackMemory into the shared memory layer for MCP-compatible AI coding tools and custom AI workflows.
 
-## 🚀 What This Does
+## What This Does
 
-AI-ULU MCP Server allows any AI that supports the Model Context Protocol to access your personal AI memory:
+The StackMemory MCP Server allows MCP-compatible clients to read and write memory through a shared backend.
 
-- **Claude Desktop** - Your memories available in Claude
-- **Cursor IDE** - Code with context awareness
-- **Windsurf** - AI pair programming with memory
-- **Any MCP Client** - Universal compatibility
+Typical targets:
+- Claude Desktop
+- Cursor and IDE-adjacent MCP workflows
+- Windsurf-style coding tools
+- Custom MCP-compatible clients
 
-## 📦 Installation
+## Installation
 
-```bash
-npm install -g @ai-ulu/mcp-server
-```
-
-Or use with npx:
 ```bash
 npx @ai-ulu/mcp-server
 ```
 
-## ⚙️ Configuration
+Package and environment names remain backward-compatible for now.
 
-### Claude Desktop
+## Configuration
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Example Claude Desktop config:
 
 ```json
 {
   "mcpServers": {
-    "ai-ulu": {
+    "stackmemory": {
       "command": "npx",
       "args": ["@ai-ulu/mcp-server"],
       "env": {
-        "AI_ULU_API_URL": "https://your-ai-ulu-instance.com",
+        "AI_ULU_API_URL": "https://your-stackmemory-instance.com",
         "AI_ULU_API_KEY": "your-api-key"
       }
     }
@@ -45,153 +41,21 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-### Environment Variables
+## Available Tools
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `AI_ULU_API_URL` | Your AI-ULU instance URL | Yes |
-| `AI_ULU_API_KEY` | API authentication key | Yes |
-| `AI_ULU_USER_ID` | User ID (if using shared key) | No |
+- `search_memories`
+- `store_memory`
+- `update_memory`
+- `delete_memory`
+- `query_memories`
+- `list_memories`
+- `get_memory_graph`
 
-## 🛠️ Available Tools
+## Product Position
 
-### `search_memories`
-Search your memories by semantic similarity.
+StackMemory is designed for:
+- shared project memory across AI coding tools
+- developer preferences and decision recall
+- custom AI products that need a memory backend
 
-```
-Input: { query: "favorite programming language", limit: 5 }
-Output: Relevant memories ranked by H(x,ψ) score
-```
-
-### `store_memory`
-Store new information in your memory.
-
-```
-Input: { 
-  content: "User prefers TypeScript over JavaScript",
-  type: "preference",  // identity | preference | fact
-  confidence: 0.9 
-}
-```
-
-### `update_memory`
-Update an existing memory.
-
-```
-Input: { id: "memory-uuid", content: "Updated content" }
-```
-
-### `delete_memory`
-Delete a memory (moves to shadow archive).
-
-```
-Input: { id: "memory-uuid" }
-```
-
-### `query_memories`
-Ask natural language questions about your memories.
-
-```
-Input: { question: "What programming languages does the user know?" }
-Output: AI-generated answer based on memories
-```
-
-### `list_memories`
-List all memories, optionally filtered.
-
-```
-Input: { type: "preference", limit: 10 }
-```
-
-### `get_memory_graph`
-Get the memory relationship graph.
-
-```
-Input: { limit: 50 }
-Output: Nodes, edges, and statistics
-```
-
-## 📚 Available Resources
-
-Access your memories as MCP resources:
-
-| URI | Description |
-|-----|-------------|
-| `memories://all` | All user memories |
-| `memories://identity` | Identity memories (name, profession, etc.) |
-| `memories://preferences` | Preference memories (likes/dislikes) |
-| `memories://facts` | Fact memories (general info) |
-| `memories://graph` | Memory relationship graph |
-| `settings://memory` | Memory configuration |
-
-## 💬 Available Prompts
-
-### `remember_context`
-Load user context before responding.
-
-```
-Arguments: { topic?: "programming" }
-```
-
-### `memory_aware_response`
-Generate a response incorporating memories.
-
-```
-Arguments: { user_message: "What should I have for lunch?" }
-```
-
-### `summarize_memories`
-Create a summary of user memories.
-
-```
-Arguments: { type?: "preference" }
-```
-
-## 🔒 Security
-
-- All API communication uses HTTPS
-- API keys are stored securely in environment variables
-- Memory access respects user privacy settings
-- Shadow delete ensures audit trail
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Claude/Cursor  │────▶│  AI-ULU MCP     │────▶│  AI-ULU API     │
-│  (MCP Client)   │◀────│  Server         │◀────│  (Backend)      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │
-                               ▼
-                        ┌─────────────────┐
-                        │   H(x,ψ)        │
-                        │   Algorithm     │
-                        │   + Memory DB   │
-                        └─────────────────┘
-```
-
-## 📖 Example Usage in Claude
-
-Once configured, you can say things like:
-
-> "Search my memories for anything about Python"
-> 
-> "Remember that I prefer dark mode in all applications"
-> 
-> "What do you know about my work preferences?"
-> 
-> "Show me my memory graph"
-
-Claude will use the AI-ULU tools to access and update your personal memory.
-
-## 🤝 Contributing
-
-Contributions welcome! Please see our [Contributing Guide](../CONTRIBUTING.md).
-
-## 📄 License
-
-MIT License - see [LICENSE](../LICENSE)
-
----
-
-**AI-ULU** - Your AI's Memory, Everywhere
+It is not just a generic chat memory layer. The main use case is AI-native development workflows.

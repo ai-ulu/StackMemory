@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-AI-ULU Universal Bridge Server
+StackMemory Universal Bridge Server
 
-The backbone that connects AI-ULU to EVERYTHING:
+The backbone that connects StackMemory to external tools and workflows:
 - REST API (ChatGPT, LangChain, any HTTP client)
 - WebSocket (Slack, Discord, real-time apps)
 - CLI (Terminal tools)
-- MCP Protocol (Claude, Cursor)
+- MCP Protocol (Claude, Cursor, compatible coding clients)
 
-This is the "Universal AI Backbone" - one brain, everywhere.
+This is the shared memory bridge for AI-native development workflows.
 """
 
 import os
@@ -34,7 +34,7 @@ import httpx
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("ai-ulu-bridge")
+logger = logging.getLogger("stackmemory-bridge")
 
 # =============================================================================
 # API Key Authentication & Rate Limiting
@@ -187,7 +187,11 @@ def require_permission(permission: str):
 # Configuration
 # =============================================================================
 
-AI_ULU_API_URL = os.getenv("AI_ULU_API_URL", "http://localhost:3000")
+STACKMEMORY_API_URL = os.getenv(
+    "STACKMEMORY_API_URL",
+    os.getenv("AI_ULU_API_URL", "http://localhost:3000"),
+)
+AI_ULU_API_URL = STACKMEMORY_API_URL
 BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8080"))
 BRIDGE_HOST = os.getenv("BRIDGE_HOST", "0.0.0.0")
 

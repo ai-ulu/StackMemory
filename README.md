@@ -70,7 +70,7 @@ The goal is simple:
 
 - Add persistent memory to your own AI coding assistant
 - Store project-specific constraints and user preferences
-- Use AI-ULU as a retrieval layer behind your agent system
+- Use StackMemory as a retrieval layer behind your agent system
 - Expose memory through API, bridge, or MCP depending on the client
 
 ## Quick Start
@@ -123,7 +123,7 @@ AI Coding Tools / Agents
    MCP / API / SDK
         |
         v
-    AI-ULU Bridge
+    StackMemory Bridge
         |
         v
     Memory Engine

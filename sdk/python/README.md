@@ -1,10 +1,6 @@
-# AI-ULU
+# StackMemory Python SDK
 
-Universal Memory & Context Infrastructure for AI
-
-```
-One brain. Every AI. Everywhere.
-```
+Python client for the StackMemory bridge and memory API.
 
 ## Install
 
@@ -12,68 +8,31 @@ One brain. Every AI. Everywhere.
 pip install ai-ulu
 ```
 
+The package name is still backward-compatible for now.
+
 ## Quick Start
-
-### CLI
-
-```bash
-export AI_ULU_API_KEY=ulu_full_xxx...
-
-ulu ask "What's my favorite programming language?"
-ulu remember "I prefer dark mode" --type preference
-ulu search "projects"
-ulu chat
-```
-
-### Python SDK
 
 ```python
 from ai_ulu import AIULU
 
-ulu = AIULU(api_key="ulu_full_xxx...")
+client = AIULU(api_key="ulu_full_xxx...")
 
-# Query
-result = ulu.ask("What do I like?")
+result = client.ask("What project constraints have I already defined?")
 print(result.answer)
 
-# Store
-ulu.remember("I love Python", type="preference")
-
-# Search
-results = ulu.search("programming")
-for mem in results.memories:
-    print(mem.content)
+client.remember("Prefer TypeScript and small diffs", type="preference")
 ```
 
-### LangChain
+## Intended Use
 
-```python
-from ai_ulu.langchain import AIULUMemory, AIULURetriever
+Use the SDK when you want to:
+- add persistent developer memory to your own AI app
+- store user preferences and project decisions
+- retrieve shared context across agent workflows
+- connect a custom coding assistant to the same memory layer
 
-# As conversation memory
-memory = AIULUMemory()
+## Current Compatibility
 
-# As retriever
-retriever = AIULURetriever()
-docs = retriever.get_relevant_documents("my preferences")
-```
-
-## API Keys
-
-Get your key at [ai-ulu.com/settings](https://ai-ulu.com/settings)
-
-| Scope | Permissions | Rate Limit |
-|-------|-------------|------------|
-| `read` | Query, Search | 60/min |
-| `write` | + Create, Update | 30/min |
-| `full` | + Delete | 100/min |
-
-## Links
-
-- [Documentation](https://docs.ai-ulu.com)
-- [GitHub](https://github.com/agiulucom42-del/emergent-ai-ulu.com)
-- [Discord](https://discord.gg/aiulu)
-
-## License
-
-MIT
+- `AIULU` client class name is still preserved
+- `AI_ULU_API_KEY` and related env vars are still supported
+- branding is moving to StackMemory without breaking existing integrations

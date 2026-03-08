@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI-ULU CLI
+StackMemory CLI
 
 Usage:
     ulu ask "What's my favorite color?"
@@ -38,14 +38,14 @@ def color(text: str, c: str) -> str:
 
 
 def get_client():
-    api_key = os.getenv("AI_ULU_API_KEY", "")
-    base_url = os.getenv("AI_ULU_URL", "http://localhost:8080")
+    api_key = os.getenv("STACKMEMORY_API_KEY") or os.getenv("AI_ULU_API_KEY", "")
+    base_url = os.getenv("STACKMEMORY_URL") or os.getenv("AI_ULU_URL", "http://localhost:8080")
     return AIULU(api_key=api_key, base_url=base_url)
 
 
 def cmd_ask(args):
     """Ask a question"""
-    print(color("\n🧠 AI-ULU", C.CYAN), color("thinking...", C.DIM))
+    print(color("\n🧠 StackMemory", C.CYAN), color("thinking...", C.DIM))
     
     try:
         client = get_client()
@@ -122,7 +122,7 @@ def cmd_orchestrate(args):
 
 def cmd_chat(args):
     """Interactive chat"""
-    print(color("\n🧠 AI-ULU Chat", C.CYAN + C.BOLD))
+    print(color("\n🧠 StackMemory Chat", C.CYAN + C.BOLD))
     print(color("   Type 'exit' to quit, '/help' for commands\n", C.DIM))
     
     client = get_client()
@@ -169,14 +169,14 @@ def cmd_chat(args):
         
         try:
             result = client.ask(user_input)
-            print(color(f"AI-ULU: ", C.CYAN) + result.answer + "\n")
+            print(color("StackMemory: ", C.CYAN) + result.answer + "\n")
         except AIULUError as e:
             print(color(f"Error: {e.message}", C.RED))
 
 
 def cmd_status(args):
     """Check status"""
-    print(color("\n🔌 Checking AI-ULU...", C.CYAN))
+    print(color("\n🔌 Checking StackMemory...", C.CYAN))
     
     client = get_client()
     
@@ -193,7 +193,7 @@ def cmd_status(args):
 def main():
     parser = argparse.ArgumentParser(
         prog="ulu",
-        description="AI-ULU CLI - Universal AI Memory",
+        description="StackMemory CLI - Shared memory for AI workflows",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

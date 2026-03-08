@@ -1,7 +1,7 @@
 """
-AI-ULU Python Client
+StackMemory Python Client
 
-Main client for interacting with AI-ULU API.
+Main client for interacting with the StackMemory API.
 """
 
 import os
@@ -15,7 +15,7 @@ from .memory import Memory, MemoryType
 
 
 class AIULUError(Exception):
-    """AI-ULU API Error"""
+    """StackMemory API error."""
     def __init__(self, message: str, status_code: Optional[int] = None):
         self.message = message
         self.status_code = status_code
@@ -40,7 +40,7 @@ class SearchResult:
 
 class AIULU:
     """
-    AI-ULU Client - Universal AI Memory
+    StackMemory Client - Shared memory for AI workflows
     
     Example:
         ulu = AIULU(api_key="your-key")
@@ -65,15 +65,19 @@ class AIULU:
         timeout: int = 30,
     ):
         """
-        Initialize AI-ULU client.
+        Initialize StackMemory client.
         
         Args:
-            api_key: API key (or set AI_ULU_API_KEY env var)
+            api_key: API key (or set STACKMEMORY_API_KEY or AI_ULU_API_KEY)
             base_url: API base URL (default: http://localhost:8080 for bridge)
             timeout: Request timeout in seconds
         """
-        self.api_key = api_key or os.getenv("AI_ULU_API_KEY", "")
-        self.base_url = base_url or os.getenv("AI_ULU_BRIDGE_URL", "http://localhost:8080")
+        self.api_key = api_key or os.getenv("STACKMEMORY_API_KEY") or os.getenv("AI_ULU_API_KEY", "")
+        self.base_url = (
+            base_url
+            or os.getenv("STACKMEMORY_BRIDGE_URL")
+            or os.getenv("AI_ULU_BRIDGE_URL", "http://localhost:8080")
+        )
         self.timeout = timeout
     
     def _request(
@@ -87,7 +91,7 @@ class AIULU:
         
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "AI-ULU-Python-SDK/1.0",
+            "User-Agent": "StackMemory-Python-SDK/1.0",
         }
         
         if self.api_key:
@@ -108,7 +112,7 @@ class AIULU:
     
     def ask(self, query: str, context: Optional[Dict] = None) -> QueryResult:
         """
-        Ask a question to AI-ULU.
+        Ask a question through StackMemory.
         
         Args:
             query: Natural language question

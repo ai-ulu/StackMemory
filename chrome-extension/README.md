@@ -1,103 +1,88 @@
-# 🧠 AI-ULU Chrome Extension
+# StackMemory Chrome Extension
 
-**Tek tıkla web'den AI hafızanıza kaydedin!**
+Save useful context from the web into StackMemory with one click.
 
-## 🚀 Özellikler
+## What It Does
 
-- **Seçili Metin Kaydetme** - Herhangi bir metni seçin, 🧠 butonuna tıklayın
-- **Sayfa Kaydetme** - Tüm sayfayı tek tıkla özetleyip kaydedin
-- **Sağ Tık Menüsü** - Context menu ile hızlı kayıt
-- **Klavye Kısayolu** - `Ctrl+Shift+M` ile anında kaydet
-- **Otomatik Sınıflandırma** - AI içeriği otomatik kategorize eder
+- Save selected text directly into your shared memory
+- Capture an entire page summary for later recall
+- Use the context menu for quick saves
+- Trigger capture with `Ctrl+Shift+M`
+- Classify captured content automatically
 
-## 📦 Kurulum
+## Install
 
-### Chrome Web Store'dan (Yakında)
-1. Chrome Web Store'a gidin
-2. "AI-ULU Memory" arayın
-3. "Chrome'a Ekle" tıklayın
+### Chrome Web Store
+1. Open the Chrome Web Store.
+2. Search for `StackMemory`.
+3. Click `Add to Chrome`.
 
-### Manuel Kurulum (Geliştirici)
-1. Bu klasörü indirin
-2. Chrome'da `chrome://extensions` açın
-3. "Geliştirici modu"nu açın
-4. "Paketlenmemiş öğe yükle" tıklayın
-5. `chrome-extension` klasörünü seçin
+### Manual Install
+1. Download this repository.
+2. Open `chrome://extensions`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked`.
+5. Select the `chrome-extension` folder.
 
-## 🔐 Giriş
+## Connect
 
-1. Extension ikonuna tıklayın
-2. "AI-ULU ile Giriş Yap" veya API anahtarınızı girin
-3. Bağlantı kurulduğunda yeşil ✓ göreceksiniz
+1. Click the extension icon.
+2. Sign in with StackMemory or paste your API key.
+3. When the connection succeeds you will see a green check.
 
-## 💡 Kullanım
+The extension can point to a hosted StackMemory environment or your own local deployment.
 
-### Seçili Metin Kaydetme
-1. Web sayfasında bir metin seçin
-2. Beliren 🧠 butonuna tıklayın
-3. Veya `Ctrl+Shift+M` (Mac: `Cmd+Shift+M`) tuşlayın
+## Usage
 
-### Sağ Tık Menüsü
-1. Bir metin seçin
-2. Sağ tıklayın
-3. "🧠 AI-ULU: Hafızaya Kaydet" seçin
+### Save Selected Text
+1. Highlight text on a web page.
+2. Click the floating memory button.
+3. Or press `Ctrl+Shift+M` on Windows/Linux and `Cmd+Shift+M` on macOS.
 
-### Popup'tan Kaydetme
-1. Extension ikonuna tıklayın
-2. Metin alanına yazın
-3. Kategori seçin (Bilgi/Tercih/Kimlik)
-4. "Kaydet" tıklayın
+### Save From The Context Menu
+1. Select text.
+2. Right click.
+3. Choose `StackMemory: Save to memory`.
 
-## ⌨️ Klavye Kısayolları
+### Save From The Popup
+1. Click the extension icon.
+2. Paste or type content.
+3. Pick a memory type.
+4. Click `Save`.
 
-| Kısayol | İşlev |
-|---------|-------|
-| `Ctrl+Shift+M` | Seçili metni kaydet |
+## Settings
 
-## 📊 İstatistikler
+From the popup settings screen you can:
 
-Popup'ta görebileceğiniz istatistikler:
-- **Toplam**: Tüm hafızalar
-- **Bugün**: Bugün kaydedilenler
-- **Extension**: Extension ile kaydedilenler
+- change the API URL
+- enable or disable notifications
+- adjust automatic categorization
 
-## 🔧 Ayarlar
+## Troubleshooting
 
-Extension popup'ındaki ⚙️ simgesine tıklayarak:
-- API URL'sini değiştirebilir
-- Bildirimleri açıp kapatabilir
-- Otomatik kategorilendirmeyi ayarlayabilirsiniz
+### Connection Failed
 
-## 🐛 Sorun Giderme
+- Verify your API key
+- Verify network access
+- Verify the configured StackMemory URL is reachable
 
-### Bağlantı kurulamıyor
-- API anahtarınızı kontrol edin
-- İnternet bağlantınızı kontrol edin
-- ai-ulu.com'a erişebildiğinizden emin olun
+### Save Failed
 
-### Kayıt başarısız
-- Popup'tan tekrar giriş yapın
-- Tarayıcıyı yenileyin
-- Extension'ı yeniden yükleyin
+- Reconnect from the popup
+- Refresh the current tab
+- Reload the extension
 
-## 📄 İzinler
+## Privacy
 
-Extension şu izinleri kullanır:
-- **storage**: Ayarları ve API anahtarını saklamak için
-- **activeTab**: Aktif sekmeden içerik almak için
-- **contextMenus**: Sağ tık menüsü için
-- **notifications**: Bildirimler için
+- Your API key is stored only in the browser
+- Captured data is sent only to your configured StackMemory server
+- Nothing is shared with third parties by the extension itself
 
-## 🔒 Gizlilik
+## Support
 
-- API anahtarınız sadece tarayıcınızda saklanır
-- Verileriniz sadece AI-ULU sunucularına gönderilir
-- Üçüncü taraflarla paylaşılmaz
-
-## 📞 Destek
-
-Sorularınız için: support@ai-ulu.com
+Contact: `support@stackmemory.dev`
 
 ---
 
-**AI-ULU** - Your AI's Memory, Everywhere
+**StackMemory**  
+Shared memory for AI coding workflows.
