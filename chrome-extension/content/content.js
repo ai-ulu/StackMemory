@@ -1,5 +1,5 @@
 /**
- * AI-ULU Chrome Extension - Content Script
+ * StackMemory Chrome Extension - Content Script
  * Injects UI elements for quick memory capture
  */
 
@@ -14,7 +14,7 @@
   const captureButton = document.createElement('div');
   captureButton.id = 'ai-ulu-capture-btn';
   captureButton.innerHTML = '🧠';
-  captureButton.title = 'AI-ULU: Seçili metni kaydet';
+  captureButton.title = 'StackMemory: Seçili metni kaydet';
   captureButton.style.cssText = `
     display: none;
     position: fixed;

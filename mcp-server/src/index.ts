@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * AI-ULU MCP Server
+ * StackMemory MCP Server
  * 
- * Model Context Protocol implementation for universal AI memory.
- * Connects any MCP-compatible AI (Claude, Cursor, etc.) to AI-ULU memory system.
+ * Model Context Protocol implementation for shared AI workflow memory.
+ * Connects any MCP-compatible AI (Claude, Cursor, etc.) to the StackMemory system.
  * 
  * Usage:
  *   npx @ai-ulu/mcp-server --api-url https://your-ai-ulu-instance.com --api-key YOUR_KEY
@@ -43,7 +43,7 @@ const config = {
   userId: process.env.AI_ULU_USER_ID || '',
 };
 
-// API client for AI-ULU backend
+// API client for the StackMemory backend
 class AIUluClient {
   private baseUrl: string;
   private apiKey: string;
@@ -581,13 +581,13 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       }
 
       return {
-        description: 'User context loaded from AI-ULU memory',
+        description: 'User context loaded from StackMemory',
         messages: [
           {
             role: 'user',
             content: {
               type: 'text',
-              text: `Here is what I know about you from your AI-ULU memory:\n\n${JSON.stringify(memories, null, 2)}\n\nPlease use this context to provide personalized responses.`,
+              text: `Here is what I know about you from StackMemory:\n\n${JSON.stringify(memories, null, 2)}\n\nPlease use this context to provide personalized responses.`,
             },
           },
         ],
@@ -641,13 +641,13 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
-  console.error('AI-ULU MCP Server starting...');
+  console.error('StackMemory MCP Server starting...');
   console.error(`API URL: ${config.apiUrl}`);
   
   const transport = new StdioServerTransport();
   await server.connect(transport);
   
-  console.error('AI-ULU MCP Server running');
+  console.error('StackMemory MCP Server running');
 }
 
 main().catch((error) => {

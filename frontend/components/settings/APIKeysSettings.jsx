@@ -230,7 +230,7 @@ export default function APIKeysSettings() {
         {keys.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <p>No API keys yet.</p>
-            <p className="text-sm mt-1">Create one to use AI-ULU from CLI, bots, or other apps.</p>
+            <p className="text-sm mt-1">Create one to use StackMemory from CLI, bots, or other apps.</p>
           </div>
         ) : (
           keys.map(key => (

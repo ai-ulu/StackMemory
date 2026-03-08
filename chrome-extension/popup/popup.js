@@ -1,5 +1,5 @@
 /**
- * AI-ULU Chrome Extension - Popup Script
+ * StackMemory Chrome Extension - Popup Script
  */
 
 // Configuration
@@ -102,7 +102,7 @@ async function checkAuth() {
 }
 
 function handleLogin() {
-  // Open AI-ULU login page in new tab
+  // Open StackMemory login page in new tab
   chrome.tabs.create({ url: `${CONFIG.apiUrl}/login?extension=true` });
 }
 
@@ -362,7 +362,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Query MCP Hub for intelligent multi-source answers
  * This allows the extension to leverage:
- * - Local AI-ULU memory
+ * - Local StackMemory memory
  * - Web search (Brave)
  * - GitHub code search
  * - And other connected MCPs

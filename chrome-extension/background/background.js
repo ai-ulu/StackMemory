@@ -1,5 +1,5 @@
 /**
- * AI-ULU Chrome Extension - Background Service Worker
+ * StackMemory Chrome Extension - Background Service Worker
  */
 
 const CONFIG = {
@@ -12,23 +12,23 @@ chrome.runtime.onInstalled.addListener(() => {
   // Create context menu items
   chrome.contextMenus.create({
     id: 'ai-ulu-capture',
-    title: '🧠 AI-ULU: Hafızaya Kaydet',
+    title: '🧠 StackMemory: Hafızaya Kaydet',
     contexts: ['selection'],
   });
 
   chrome.contextMenus.create({
     id: 'ai-ulu-capture-link',
-    title: '🧠 AI-ULU: Bu Linki Kaydet',
+    title: '🧠 StackMemory: Bu Linki Kaydet',
     contexts: ['link'],
   });
 
   chrome.contextMenus.create({
     id: 'ai-ulu-capture-image',
-    title: '🧠 AI-ULU: Bu Görseli Kaydet',
+    title: '🧠 StackMemory: Bu Görseli Kaydet',
     contexts: ['image'],
   });
 
-  console.log('AI-ULU Extension installed');
+  console.log('StackMemory extension installed');
 });
 
 // Handle context menu clicks
@@ -39,7 +39,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
-      title: 'AI-ULU',
+      title: 'StackMemory',
       message: 'Önce giriş yapmalısınız. Extension popup\'ını açın.',
     });
     return;
@@ -83,7 +83,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
-        title: 'AI-ULU ✨',
+        title: 'StackMemory ✨',
         message: 'Hafızaya kaydedildi!',
       });
     } else {
@@ -93,7 +93,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
-      title: 'AI-ULU Hatası',
+      title: 'StackMemory Hatası',
       message: 'Kayıt başarısız oldu.',
     });
   }
@@ -119,7 +119,7 @@ chrome.commands.onCommand.addListener(async (command) => {
         chrome.notifications.create({
           type: 'basic',
           iconUrl: 'icons/icon48.png',
-          title: 'AI-ULU',
+          title: 'StackMemory',
           message: 'Önce giriş yapmalısınız.',
         });
         return;
@@ -147,7 +147,7 @@ chrome.commands.onCommand.addListener(async (command) => {
           chrome.notifications.create({
             type: 'basic',
             iconUrl: 'icons/icon48.png',
-            title: 'AI-ULU ✨',
+            title: 'StackMemory ✨',
             message: 'Seçili metin hafızaya kaydedildi!',
           });
         }
@@ -158,7 +158,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
-        title: 'AI-ULU',
+        title: 'StackMemory',
         message: 'Önce bir metin seçin.',
       });
     }
@@ -181,7 +181,7 @@ async function handleCaptureFromContent(message, tab) {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
-      title: 'AI-ULU',
+      title: 'StackMemory',
       message: 'Önce giriş yapmalısınız.',
     });
     return;

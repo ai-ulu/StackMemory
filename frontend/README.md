@@ -1,10 +1,10 @@
-# 🧠 AI-ULU
+# StackMemory Frontend
 
 **Hafıza Öncelikli Yapay Zeka Asistanı**
 
-AI-ULU, quantum-inspired heuristic algoritması ile çalışan, sizi gerçekten hatırlayan bir yapay zeka sohbet platformudur.
+StackMemory, AI coding workflow'leri için ortak proje hafızası sağlayan frontend uygulamasıdır.
 
-![AI-ULU Landing](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
+![StackMemory Landing](https://img.shields.io/badge/Status-Active-brightgreen)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green)
@@ -50,7 +50,7 @@ AI-ULU, quantum-inspired heuristic algoritması ile çalışan, sizi gerçekten 
 ### 1. Projeyi klonlayın
 ```bash
 git clone <repo-url>
-cd ai-ulu/frontend
+cd emergent-ai-ulu.com/frontend
 ```
 
 ### 2. Bağımlılıkları yükleyin
@@ -211,4 +211,4 @@ MIT License
 
 ---
 
-**AI-ULU** - Sizi gerçekten hatırlayan yapay zeka 🧠
+**StackMemory** - AI coding workflow'leri için ortak hafıza

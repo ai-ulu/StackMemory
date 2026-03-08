@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 const BUILTIN_SERVERS = [
   {
     id: 'ai-ulu-memory',
-    name: 'AI-ULU Hafiza',
+    name: 'StackMemory Hafızası',
     icon: '🧠',
     description: 'Kisisel hafiza sistemi',
     alwaysEnabled: true,
