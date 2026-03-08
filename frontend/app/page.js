@@ -90,12 +90,16 @@ export default function LandingPage() {
                   StackMemory keeps project context, coding preferences, architecture decisions, and active tasks portable across AI tools.
                   Use it as your own memory workspace or embed it into the AI products you build.
                 </p>
+                <div className="rounded-2xl border border-border/60 bg-card/50 p-4 text-sm text-muted-foreground">
+                  Start by storing:
+                  {' '}project rules, preferred stack, code review preferences, current tasks, architecture decisions, and reusable prompts for your agents.
+                </div>
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row">
                 <Link href="/signup">
                   <Button size="lg" className="rounded-xl px-8">
-                    Start With Shared Memory
+                    Start Capturing Project Context
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
@@ -148,7 +152,7 @@ export default function LandingPage() {
             <Badge variant="secondary">Core Product</Badge>
             <h2 className="text-3xl font-bold sm:text-4xl">Built for AI-native development workflows</h2>
             <p className="text-lg text-muted-foreground">
-              StackMemory is not a generic chat app. It is a shared memory system for coding tools, agents, and developer workflows.
+              StackMemory is not a generic chat app. It is a shared memory system for coding tools, agents, and developer workflows that need durable project context.
             </p>
           </div>
 
@@ -172,10 +176,10 @@ export default function LandingPage() {
       <section id="usage" className="border-y border-border/60 bg-muted/30 py-20">
         <div className="container grid gap-6 lg:grid-cols-3">
           <InfoCard icon={Terminal} title="For tool users">
-            Claude Code, Claude Desktop, Cursor, VS Code workflows, Bolt, Lovable, Replit, and other AI-heavy coding environments can share the same project memory when integration surfaces allow it.
+            Claude Code, Claude Desktop, Cursor, VS Code workflows, Bolt, Lovable, Replit, and other AI-heavy coding environments can pull from the same project memory when integration surfaces allow it.
           </InfoCard>
           <InfoCard icon={Braces} title="For builders">
-            If you are building your own AI app, internal copilot, or agent workflow, StackMemory can act as the memory backend behind your product.
+            If you are building your own AI app, internal copilot, or agent workflow, StackMemory can act as the memory backend behind your product from day one.
           </InfoCard>
           <InfoCard icon={GitBranch} title="For teams">
             Teams can use the same foundation for project-scoped context, shared instructions, and reusable developer memory over time.

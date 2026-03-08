@@ -64,6 +64,9 @@ export default function PricingPage() {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             For developers, AI power users, and teams that need one memory layer across tools and workflows.
           </p>
+          <p className="mt-4 text-sm text-muted-foreground max-w-2xl mx-auto">
+            Typical usage includes shared project rules across Claude Code and Cursor, reusable coding preferences, persistent architecture decisions, and memory infrastructure for custom AI apps.
+          </p>
         </div>
 
         {/* Pricing Cards */}
@@ -150,7 +153,7 @@ export default function PricingPage() {
                 Who is this for?
               </h3>
               <p className="text-muted-foreground">
-                Developers using tools like Claude Desktop, Cursor, VS Code AI workflows, internal coding agents, and custom AI applications that need persistent project context.
+                Developers using tools like Claude Code, Claude Desktop, Cursor, VS Code AI workflows, internal coding agents, and custom AI applications that need persistent project context.
               </p>
             </div>
 

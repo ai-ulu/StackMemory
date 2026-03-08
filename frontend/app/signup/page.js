@@ -161,6 +161,10 @@ export default function SignupPage() {
               <CardDescription>Ücretsiz hesabınızı oluşturun ve proje hafızanızı başlatın</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-5 rounded-2xl border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
+                İlk gün için ideal kullanım:
+                {' '}proje kurallarını kaydet, tercih ettiğin stack'i belirt, aktif işleri not et ve bunu Claude Code, Cursor, Codex-style ajanlar veya kendi uygulaman için tekrar kullan.
+              </div>
               <form onSubmit={handleSignup} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">

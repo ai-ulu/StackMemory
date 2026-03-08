@@ -287,10 +287,10 @@ function ConversationSkeleton() {
 // Empty state
 function EmptyState({ onSuggestionClick }) {
   const suggestions = [
-    '💡 Bir proje fikirim var, yardım eder misin?',
-    '📝 Bu kodu açıklar mısın?',
-    '🌟 Bugün nasıl yardımcı olabilirim?',
-    '🚀 Yeni bir şeyler öğrenmek istiyorum',
+    'Claude Code, Cursor ve VS Code için paylaşılacak proje kurallarımı çıkar',
+    'Bu repo için kalıcı coding preferences listesi oluştur',
+    'Aktif görevlerimi ve mimari kararlarımı hafızaya kaydetmek için şablon hazırla',
+    'Bu projeyi yeni bir coding agent oturumuna aktarmak için bağlam özeti yaz',
   ];
 
   return (
@@ -302,11 +302,14 @@ function EmptyState({ onSuggestionClick }) {
       <p className="text-muted-foreground mb-8 max-w-md">
         Kodlama araçlarınız arasında proje bağlamını koruyan hafıza katmanı. Bir soru sorun veya önerilerden birini seçin.
       </p>
+      <div className="mb-6 max-w-lg rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-left text-sm text-muted-foreground">
+        Buraya proje kuralları, stack tercihleri, aktif görevler, mimari kararlar ve agent'ların her oturumda bilmesi gereken bağlamı yazabilirsiniz.
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
         {suggestions.map((suggestion, idx) => (
           <button
             key={idx}
-            onClick={() => onSuggestionClick(suggestion.slice(2).trim())}
+            onClick={() => onSuggestionClick(suggestion)}
             className="p-4 text-left rounded-xl border-2 border-transparent bg-muted/50 hover:bg-muted hover:border-primary/20 transition-all text-sm"
           >
             {suggestion}
