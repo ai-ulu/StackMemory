@@ -320,6 +320,83 @@ function EmptyState({ onSuggestionClick }) {
   );
 }
 
+function SetupWizard({ onApply }) {
+  const [projectName, setProjectName] = useState('');
+  const [stack, setStack] = useState('');
+  const [tools, setTools] = useState('Claude Code, Cursor, VS Code');
+  const [preferences, setPreferences] = useState('TypeScript, küçük diffler, API-first tasarım');
+
+  const handleApply = () => {
+    const prompt = [
+      'Bu bilgilerle benim için kalıcı bir proje hafızası özeti oluştur ve önemli noktaları saklanacak şekilde düzenle:',
+      `Proje adı: ${projectName || 'Henüz belirtilmedi'}`,
+      `Kullandığım araçlar: ${tools || 'Belirtilmedi'}`,
+      `Teknoloji stack: ${stack || 'Belirtilmedi'}`,
+      `Coding tercihleri: ${preferences || 'Belirtilmedi'}`,
+      'Çıktıyı şu başlıklarla ver: proje kuralları, tercih edilen stack, coding preferences, aktif bağlam, sonraki oturum için kısa özet.',
+    ].join('\n');
+
+    onApply(prompt);
+  };
+
+  return (
+    <div className="mb-8 w-full max-w-3xl rounded-3xl border border-border/60 bg-card/70 p-5 text-left shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
+        <Badge variant="secondary">Setup Wizard</Badge>
+        <span className="text-sm text-muted-foreground">İlk hafızanı 60 saniyede oluştur</span>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="project-name">Proje adı</Label>
+          <Input
+            id="project-name"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            placeholder="Örn: StackMemory web app"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tools">Kullandığın araçlar</Label>
+          <Input
+            id="tools"
+            value={tools}
+            onChange={(e) => setTools(e.target.value)}
+            placeholder="Örn: Claude Code, Cursor, Codex"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="stack">Stack</Label>
+          <Input
+            id="stack"
+            value={stack}
+            onChange={(e) => setStack(e.target.value)}
+            placeholder="Örn: Next.js, FastAPI, Supabase"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="preferences">Coding preferences</Label>
+          <Input
+            id="preferences"
+            value={preferences}
+            onChange={(e) => setPreferences(e.target.value)}
+            placeholder="Örn: TypeScript, test-first, clean commits"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          Bu akış, StackMemory içinde ilk proje bağlamını üretmek için hazır bir başlangıç prompt'u gönderir.
+        </p>
+        <Button onClick={handleApply} className="sm:min-w-52">
+          Proje Hafızasını Oluştur
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Conversation item in sidebar
 function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -1075,7 +1152,10 @@ export default function ChatPage() {
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               {messages.length === 0 ? (
-                <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
+                <div className="flex flex-col items-center">
+                  <SetupWizard onApply={(text) => sendMessage(text)} />
+                  <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
+                </div>
               ) : (
                 <div className="divide-y divide-border/50">
                   {messages.map((msg, idx) => (
