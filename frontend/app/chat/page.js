@@ -327,6 +327,41 @@ function SetupWizard({ onApply }) {
   const [preferences, setPreferences] = useState('TypeScript, küçük diffler, API-first tasarım');
 
   const handleApply = () => {
+    const starterMemories = [
+      {
+        content: `Project name: ${projectName || 'Henüz belirtilmedi'}`,
+        type: 'identity',
+        scope: 'private',
+        write_reason: 'Starter project context created from setup wizard',
+        write_intent: 'user_explicit',
+        write_source: 'setup_wizard',
+      },
+      {
+        content: `Primary AI tools: ${tools || 'Belirtilmedi'}`,
+        type: 'fact',
+        scope: 'private',
+        write_reason: 'Starter tool context created from setup wizard',
+        write_intent: 'user_explicit',
+        write_source: 'setup_wizard',
+      },
+      {
+        content: `Project stack: ${stack || 'Belirtilmedi'}`,
+        type: 'fact',
+        scope: 'private',
+        write_reason: 'Starter stack context created from setup wizard',
+        write_intent: 'user_explicit',
+        write_source: 'setup_wizard',
+      },
+      {
+        content: `Coding preferences: ${preferences || 'Belirtilmedi'}`,
+        type: 'preference',
+        scope: 'private',
+        write_reason: 'Starter preference context created from setup wizard',
+        write_intent: 'user_explicit',
+        write_source: 'setup_wizard',
+      },
+    ];
+
     const prompt = [
       'Bu bilgilerle benim için kalıcı bir proje hafızası özeti oluştur ve önemli noktaları saklanacak şekilde düzenle:',
       `Proje adı: ${projectName || 'Henüz belirtilmedi'}`,
@@ -336,7 +371,7 @@ function SetupWizard({ onApply }) {
       'Çıktıyı şu başlıklarla ver: proje kuralları, tercih edilen stack, coding preferences, aktif bağlam, sonraki oturum için kısa özet.',
     ].join('\n');
 
-    onApply(prompt);
+    onApply({ prompt, starterMemories });
   };
 
   return (
@@ -1153,7 +1188,27 @@ export default function ChatPage() {
             <ScrollArea className="h-full">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center">
-                  <SetupWizard onApply={(text) => sendMessage(text)} />
+                  <SetupWizard
+                    onApply={async ({ prompt, starterMemories }) => {
+                      try {
+                        await Promise.all(
+                          starterMemories.map((memory) =>
+                            fetch('/api/memories', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(memory),
+                            })
+                          )
+                        );
+                        toast.success('Başlangıç proje hafızası kaydedildi');
+                      } catch (error) {
+                        console.error('Starter memory save error:', error);
+                        toast.error('Başlangıç hafızası kaydedilemedi');
+                      }
+
+                      sendMessage(prompt);
+                    }}
+                  />
                   <EmptyState onSuggestionClick={(text) => sendMessage(text)} />
                 </div>
               ) : (

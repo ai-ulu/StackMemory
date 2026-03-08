@@ -18,6 +18,33 @@ function defaultSettings(userId) {
   };
 }
 
+function buildLocalMemory(userId, payload = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    content: payload.content || '',
+    type: payload.type || 'fact',
+    confidence: payload.confidence ?? 0.8,
+    status: 'active',
+    truth_type: 'user_claim',
+    scope: payload.scope || 'private',
+    language: payload.language || 'en',
+    version: 1,
+    decay_factor: 1,
+    last_accessed_at: now,
+    access_count: 0,
+    write_reason: payload.write_reason || 'Manual memory creation',
+    write_intent: payload.write_intent || 'user_explicit',
+    write_source: payload.write_source || 'manual',
+    is_shadow: false,
+    conflict_with: null,
+    requires_approval: false,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
 export async function listConversations(userId) {
   const store = await getLocalStore();
   return store.conversations
@@ -98,6 +125,29 @@ export async function appendMessage(conversationId, role, content, extra = {}) {
 export async function getMemorySettings(userId) {
   const store = await getLocalStore();
   return store.memorySettings[userId] || defaultSettings(userId);
+}
+
+export async function listMemories(userId, filters = {}) {
+  const store = await getLocalStore();
+  const includeDeprecated = filters.includeDeprecated === true;
+  const includeShadow = filters.includeShadow === true;
+
+  return (store.memories || [])
+    .filter((item) => item.user_id === userId)
+    .filter((item) => (includeShadow ? true : !item.is_shadow))
+    .filter((item) => (includeDeprecated ? true : item.status !== 'deprecated'))
+    .filter((item) => (filters.type ? item.type === filters.type : true))
+    .filter((item) => (filters.scope ? item.scope === filters.scope : true))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+export async function createMemory(userId, payload) {
+  const store = await getLocalStore();
+  const memory = buildLocalMemory(userId, payload);
+  store.memories = store.memories || [];
+  store.memories.unshift(memory);
+  await saveLocalStore(store);
+  return memory;
 }
 
 export async function saveMemorySettingsForUser(userId, updates) {

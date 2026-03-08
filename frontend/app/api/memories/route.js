@@ -1,9 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { createMemory, listMemories } from '@/lib/dev/local-data';
 
 // GET - List all user memories with filters
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const data = await listMemories(user.id, {
+        includeDeprecated: searchParams.get('includeDeprecated') === 'true',
+        includeShadow: searchParams.get('includeShadow') === 'true',
+        type: searchParams.get('type') || undefined,
+        scope: searchParams.get('scope') || undefined,
+      });
+      return NextResponse.json(data);
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -61,6 +80,47 @@ export async function GET(request) {
 // POST - Create new memory with Write-Intent Guard
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const {
+        content,
+        type = 'fact',
+        confidence = 0.8,
+        scope = 'private',
+        write_reason,
+        write_intent = 'user_explicit',
+        write_source = 'manual',
+      } = body;
+
+      if (!content) {
+        return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+      }
+
+      if (!['identity', 'preference', 'fact'].includes(type)) {
+        return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
+      }
+
+      if (!['user_explicit', 'auto_capture', 'correction', 'merge'].includes(write_intent)) {
+        return NextResponse.json({ error: 'Invalid write_intent' }, { status: 400 });
+      }
+
+      const data = await createMemory(user.id, {
+        content,
+        type,
+        confidence: Math.max(0, Math.min(1, confidence)),
+        scope,
+        write_reason,
+        write_intent,
+        write_source,
+      });
+      return NextResponse.json(data);
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
