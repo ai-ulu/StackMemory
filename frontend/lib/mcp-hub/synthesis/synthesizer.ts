@@ -1,5 +1,5 @@
 /**
- * AI-ULU MCP Hub - Synthesis Engine
+ * StackMemory MCP Hub - Synthesis Engine
  * 
  * Combines and synthesizes results from multiple MCP servers.
  * Deduplicates, prioritizes, and creates coherent responses.
@@ -325,7 +325,7 @@ export class SynthesisEngine {
       sources: [
         {
           serverId: 'ai-ulu-memory',
-          serverName: 'AI-ULU Hafıza',
+          serverName: 'StackMemory Hafızası',
           relevance: 1.0,
           excerpt: memorySection.slice(0, 200),
           timestamp: new Date(),

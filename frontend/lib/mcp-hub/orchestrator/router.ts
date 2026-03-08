@@ -1,5 +1,5 @@
 /**
- * AI-ULU MCP Hub - Smart Router
+ * StackMemory MCP Hub - Smart Router
  * 
  * Intelligent routing of queries to appropriate MCP servers.
  * Uses semantic analysis and ML-based routing decisions.

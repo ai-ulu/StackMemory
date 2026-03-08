@@ -1,5 +1,5 @@
 /**
- * AI-ULU Memory Templates
+ * StackMemory Memory Templates
  * 
  * Pre-defined templates for quick memory setup.
  * Helps users quickly populate their AI memory with structured data.
@@ -108,7 +108,7 @@ export const MEMORY_TEMPLATES = {
     description: 'Aktif proje bilgilerini kaydedin',
     icon: '🚀',
     fields: [
-      { key: 'project_name', label: 'Proje Adı', type: 'fact', placeholder: 'Örn: AI-ULU' },
+      { key: 'project_name', label: 'Proje Adı', type: 'fact', placeholder: 'Örn: StackMemory' },
       { key: 'project_type', label: 'Proje Türü', type: 'fact', placeholder: 'Örn: SaaS, E-ticaret' },
       { key: 'tech_stack', label: 'Teknoloji Stack', type: 'fact', placeholder: 'Örn: Next.js, Supabase, OpenAI' },
       { key: 'team_size', label: 'Takım Büyüklüğü', type: 'fact', placeholder: 'Örn: 5 kişi' },

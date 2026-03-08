@@ -1,12 +1,12 @@
 /**
- * AI-ULU A/B Testing Framework
+ * StackMemory A/B Testing Framework
  * 
  * Allows testing different H(x,ψ) weights and configurations
  * to optimize memory retrieval quality.
  */
 
 // Default algorithm weights (v3.0 - Spec Aligned)
-// Reference: AI-ULU Teknik Blueprint - Algoritmik Detaylandırma
+// Reference: StackMemory teknik blueprint - algoritmik detaylandırma
 export const DEFAULT_WEIGHTS = {
   alpha: 0.40,  // similarity (spec: α=0.4)
   beta: 0.20,   // decay (spec: β=0.2)
@@ -48,7 +48,7 @@ export const EXPERIMENTS = {
   // Control group (Spec Aligned v3.0)
   'control': {
     name: 'Control (Spec v3.0)',
-    description: 'Default weights aligned with AI-ULU Blueprint spec',
+    description: 'Default weights aligned with the StackMemory blueprint',
     weights: DEFAULT_WEIGHTS,
     active: true,
     traffic: 0.60,

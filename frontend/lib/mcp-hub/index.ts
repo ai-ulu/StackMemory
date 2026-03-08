@@ -1,10 +1,10 @@
 /**
- * AI-ULU MCP Hub - Main Orchestrator
+ * StackMemory MCP Hub - Main Orchestrator
  * 
  * THE OPERATING SYSTEM FOR AI
  * 
  * This is the central orchestration layer that:
- * - Remembers globally (AI-ULU memory)
+ * - Remembers globally (StackMemory memory)
  * - Routes intelligently (smart MCP routing)
  * - Caches efficiently (dedup queries)
  * - Coordinates tools (multiple MCP servers)

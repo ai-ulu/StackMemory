@@ -1,5 +1,5 @@
 /**
- * AI-ULU MCP Hub - Registry
+ * StackMemory MCP Hub - Registry
  * 
  * Central registry of all known MCP servers.
  * Manages connection configs, capabilities, and health status.
@@ -118,11 +118,11 @@ export const BUILTIN_MCP_SERVERS: MCPServerConfig[] = [
     status: 'unknown',
   },
 
-  // Memory/SQLite MCP (built-in AI-ULU)
+  // Memory/SQLite MCP (built-in StackMemory)
   {
     id: 'ai-ulu-memory',
-    name: 'AI-ULU Memory',
-    description: 'Personal AI memory system',
+    name: 'StackMemory Memory',
+    description: 'Shared memory system for AI coding workflows',
     endpoint: 'http://localhost:3000',
     transport: 'http',
     capabilities: [

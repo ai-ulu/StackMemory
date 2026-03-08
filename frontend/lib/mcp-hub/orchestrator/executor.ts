@@ -1,5 +1,5 @@
 /**
- * AI-ULU MCP Hub - Executor
+ * StackMemory MCP Hub - Executor
  * 
  * Executes MCP calls and aggregates results.
  * Handles parallel execution, timeouts, retries, and error handling.

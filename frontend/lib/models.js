@@ -1,5 +1,5 @@
 /**
- * AI-ULU Model Configuration
+ * StackMemory Model Configuration
  * 
  * Supports multiple API providers:
  * 1. LiteLLM (recommended - unified interface)
@@ -47,8 +47,8 @@ export function getModelConfig() {
         'deepseek': 'deepseek/deepseek-chat',
       },
       headers: {
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ai-ulu.com',
-        'X-Title': 'AI-ULU Memory System',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://stackmemory.dev',
+        'X-Title': 'StackMemory',
       },
     };
   }

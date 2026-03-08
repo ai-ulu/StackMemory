@@ -1,5 +1,5 @@
 /**
- * AI-ULU API Key Management System
+ * StackMemory API Key Management System
  * 
  * Features:
  * - Per-client API keys (CLI, Slack, Discord, Extension, etc.)

@@ -17,7 +17,7 @@ export function getWelcomeEmailHTML(userName) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to AI-ULU</title>
+  <title>Welcome to StackMemory</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -72,13 +72,13 @@ export function getWelcomeEmailHTML(userName) {
 </head>
 <body>
   <div class="header">
-    <div class="logo">🧠 AI-ULU</div>
+    <div class="logo">🧠 StackMemory</div>
   </div>
   
   <div class="content">
     <h1>Hoş Geldin${userName ? `, ${userName}` : ''}! 🎉</h1>
     
-    <p>AI-ULU'ya katıldığın için teşekkürler! Artık AI asistanların seni her zaman hatırlayacak.</p>
+    <p>StackMemory'e katıldığın için teşekkürler! Artık AI coding araçların proje bağlamını daha iyi hatırlayacak.</p>
     
     <div class="feature">
       <h3>🧠 İlk Hafızanı Oluştur</h3>
@@ -109,14 +109,14 @@ export function getWelcomeEmailHTML(userName) {
       <li>⚙️ Settings'den API key oluştur (CLI/SDK için)</li>
     </ul>
     
-    <p>Sorularını mı var? <a href="${process.env.NEXT_PUBLIC_APP_URL}/help">Yardım Merkezi</a>'ni ziyaret et veya <a href="mailto:support@ai-ulu.com">support@ai-ulu.com</a> adresine yaz.</p>
+    <p>Soruların mı var? <a href="${process.env.NEXT_PUBLIC_APP_URL}/help">Yardım Merkezi</a>'ni ziyaret et veya <a href="mailto:support@stackmemory.dev">support@stackmemory.dev</a> adresine yaz.</p>
     
     <p>İyi hatırlamalar! 🚀</p>
-    <p><strong>AI-ULU Ekibi</strong></p>
+    <p><strong>StackMemory Ekibi</strong></p>
   </div>
   
   <div class="footer">
-    <p>AI-ULU - Remember Everything, Effortlessly</p>
+    <p>StackMemory - Shared memory for AI coding workflows</p>
     <p>
       <a href="${process.env.NEXT_PUBLIC_APP_URL}">Website</a> · 
       <a href="${process.env.NEXT_PUBLIC_APP_URL}/docs">Docs</a> · 
@@ -143,7 +143,7 @@ export async function sendWelcomeEmail(userEmail, userName) {
       },
       body: JSON.stringify({
         to: userEmail,
-        subject: 'AI-ULU\'ya Hoş Geldin! 🎉',
+        subject: 'StackMemory\'e Hoş Geldin! 🎉',
         html: getWelcomeEmailHTML(userName),
       }),
     });
@@ -236,7 +236,7 @@ export function getPaymentSuccessEmailHTML(plan, amount) {
     <p>Faturanı <a href="${process.env.NEXT_PUBLIC_APP_URL}/settings/billing">Billing</a> sayfasından indirebilirsin.</p>
     
     <p>Teşekkürler! 🙏</p>
-    <p><strong>AI-ULU Ekibi</strong></p>
+    <p><strong>StackMemory Ekibi</strong></p>
   </div>
 </body>
 </html>
