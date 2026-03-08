@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import MemoryGraph, { MemoryData, GraphNode } from '@/components/MemoryGraph';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function MemoryGraphPage() {
@@ -51,12 +50,12 @@ export default function MemoryGraphPage() {
       </div>
 
       {error && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
+        <div className="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="text-muted-foreground">
             {error} - Demo veriler gösteriliyor
-          </AlertDescription>
-        </Alert>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

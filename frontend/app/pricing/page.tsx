@@ -5,7 +5,7 @@ import { Check, Zap, Users, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { PRICING_PLANS, formatPrice, createCheckoutSession, type PlanId } from '@/lib/stripe'
+import { PRICING_PLANS, formatPrice, createCheckoutSession, type PlanId } from '@/lib/billing'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 

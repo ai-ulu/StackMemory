@@ -114,6 +114,10 @@ function MemoryCard({ memory, onDelete, onRestore }) {
       case 'identity': return <User className="w-4 h-4 text-blue-400" />;
       case 'preference': return <Sparkles className="w-4 h-4 text-pink-400" />;
       case 'fact': return <Database className="w-4 h-4 text-green-400" />;
+      case 'project': return <Network className="w-4 h-4 text-cyan-400" />;
+      case 'rule': return <Shield className="w-4 h-4 text-amber-400" />;
+      case 'decision': return <Activity className="w-4 h-4 text-violet-400" />;
+      case 'task': return <Clock className="w-4 h-4 text-orange-400" />;
       default: return <Brain className="w-4 h-4" />;
     }
   };
@@ -307,6 +311,16 @@ export default function SettingsPage() {
   const [memories, setMemories] = useState([]);
   const [loadingMemories, setLoadingMemories] = useState(false);
   const [memoryFilter, setMemoryFilter] = useState('all');
+  const memoryTypeOptions = [
+    { value: 'all', label: 'Tümü' },
+    { value: 'project', label: 'Proje' },
+    { value: 'rule', label: 'Kural' },
+    { value: 'decision', label: 'Karar' },
+    { value: 'task', label: 'Görev' },
+    { value: 'preference', label: 'Tercih' },
+    { value: 'identity', label: 'Kimlik' },
+    { value: 'fact', label: 'Bilgi' },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -418,12 +432,18 @@ export default function SettingsPage() {
 
   const memoryStats = {
     total: memories.length,
-    identity: memories.filter(m => m.type === 'identity').length,
-    preference: memories.filter(m => m.type === 'preference').length,
-    fact: memories.filter(m => m.type === 'fact').length,
     avgConfidence: memories.length ? (memories.reduce((sum, m) => sum + m.confidence, 0) / memories.length * 100).toFixed(0) : 0,
     avgDecay: memories.length ? (memories.reduce((sum, m) => sum + (m.decay_factor || 1), 0) / memories.length * 100).toFixed(0) : 100,
   };
+  const memoryBreakdown = memoryTypeOptions
+    .filter((option) => option.value !== 'all')
+    .map((option) => ({
+      ...option,
+      count: memories.filter((memory) => memory.type === option.value).length,
+    }))
+    .filter((option) => option.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
 
   if (loading) {
     return (
@@ -722,10 +742,11 @@ export default function SettingsPage() {
                         <SelectValue placeholder="Filtre" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tümü</SelectItem>
-                        <SelectItem value="identity">Kimlik</SelectItem>
-                        <SelectItem value="preference">Tercih</SelectItem>
-                        <SelectItem value="fact">Gerçek</SelectItem>
+                        {memoryTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Badge variant="outline">{filteredMemories.length}</Badge>
@@ -751,6 +772,16 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">Ort. Tazelik</p>
                   </div>
                 </div>
+
+                {memoryBreakdown.length > 0 && (
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    {memoryBreakdown.map((item) => (
+                      <Badge key={item.value} variant="secondary" className="px-3 py-1">
+                        {item.label}: {item.count}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
 
                 {loadingMemories ? (
                   <div className="flex items-center justify-center py-8">

@@ -1,8 +1,12 @@
 // Memory Types and Classifications
 export const MEMORY_TYPES = {
   IDENTITY: 'identity',
-  PREFERENCE: 'preference', 
+  PREFERENCE: 'preference',
   FACT: 'fact',
+  PROJECT: 'project',
+  RULE: 'rule',
+  DECISION: 'decision',
+  TASK: 'task',
 } as const;
 
 export const MEMORY_STATUS = {
@@ -111,6 +115,22 @@ export function classifyMessage(content: string): typeof CLASSIFICATION[keyof ty
 // Detect memory type from content
 export function detectMemoryType(content: string): typeof MEMORY_TYPES[keyof typeof MEMORY_TYPES] {
   const lowerContent = content.toLowerCase();
+  
+  if (/project|repo|codebase|stack|architecture|tech stack|workflow|workspace/i.test(lowerContent)) {
+    return MEMORY_TYPES.PROJECT;
+  }
+  
+  if (/must|always|never|should|follow|rule|constraint|convention|standard/i.test(lowerContent)) {
+    return MEMORY_TYPES.RULE;
+  }
+  
+  if (/decided|decision|tradeoff|chosen|we will|we chose|karar/i.test(lowerContent)) {
+    return MEMORY_TYPES.DECISION;
+  }
+  
+  if (/todo|next step|next task|in progress|blocked/i.test(lowerContent)) {
+    return MEMORY_TYPES.TASK;
+  }
   
   // Identity patterns
   if (/adım|ismim|name|ben.*bir|i am a|profession|meslek/i.test(content)) {

@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia'
+  apiVersion: '2025-12-15.clover'
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -150,14 +150,19 @@ async function handlePaymentFailed(
   console.error(`Payment failed for invoice: ${invoice.id}`)
   
   // Update subscription status
-  if (invoice.subscription) {
+  const subscriptionId =
+    typeof (invoice as { subscription?: string | Stripe.Subscription | null }).subscription === 'string'
+      ? (invoice as { subscription?: string | null }).subscription
+      : (invoice as { subscription?: Stripe.Subscription | null }).subscription?.id
+
+  if (subscriptionId) {
     const { error } = await supabase
       .from('users')
       .update({
         subscription_status: 'past_due',
         updated_at: new Date().toISOString()
       })
-      .eq('stripe_subscription_id', invoice.subscription)
+      .eq('stripe_subscription_id', subscriptionId)
 
     if (error) {
       console.error('Failed to update payment status:', error)

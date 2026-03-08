@@ -4,6 +4,8 @@ import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
 import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import { createMemory, listMemories } from '@/lib/dev/local-data';
 
+const ALLOWED_MEMORY_TYPES = ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'];
+
 // GET - List all user memories with filters
 export async function GET(request) {
   try {
@@ -101,7 +103,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Content is required' }, { status: 400 });
       }
 
-      if (!['identity', 'preference', 'fact'].includes(type)) {
+      if (!ALLOWED_MEMORY_TYPES.includes(type)) {
         return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
       }
 
@@ -153,7 +155,7 @@ export async function POST(request) {
     }
 
     // Validate type
-    if (!['identity', 'preference', 'fact'].includes(type)) {
+    if (!ALLOWED_MEMORY_TYPES.includes(type)) {
       return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
     }
 

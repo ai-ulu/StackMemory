@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,6 +97,26 @@ function NeuralResonancePanel({ memories, isOpen, onToggle }) {
   if (!memories || memories.length === 0) return null;
 
   const totalInfluence = memories.reduce((sum, m) => sum + (m.influence || 0), 0);
+  const getMemoryTypeIcon = (type) => {
+    switch (type) {
+      case 'identity':
+        return <User className="w-3 h-3 text-blue-400" />;
+      case 'preference':
+        return <Sparkles className="w-3 h-3 text-pink-400" />;
+      case 'fact':
+        return <Database className="w-3 h-3 text-green-400" />;
+      case 'project':
+        return <Brain className="w-3 h-3 text-cyan-400" />;
+      case 'rule':
+        return <Eye className="w-3 h-3 text-amber-400" />;
+      case 'decision':
+        return <Activity className="w-3 h-3 text-violet-400" />;
+      case 'task':
+        return <MessageSquare className="w-3 h-3 text-orange-400" />;
+      default:
+        return <Brain className="w-3 h-3 text-muted-foreground" />;
+    }
+  };
 
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
@@ -114,11 +135,7 @@ function NeuralResonancePanel({ memories, isOpen, onToggle }) {
           </div>
           {memories.map((mem, idx) => (
             <div key={mem.id || idx} className="flex items-start gap-2">
-              <div className="flex-shrink-0 mt-0.5">
-                {mem.type === 'identity' && <User className="w-3 h-3 text-blue-400" />}
-                {mem.type === 'preference' && <Sparkles className="w-3 h-3 text-pink-400" />}
-                {mem.type === 'fact' && <Database className="w-3 h-3 text-green-400" />}
-              </div>
+              <div className="flex-shrink-0 mt-0.5">{getMemoryTypeIcon(mem.type)}</div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground truncate">{mem.content}</p>
                 <div className="flex items-center gap-2 mt-1">
@@ -330,7 +347,7 @@ function SetupWizard({ onApply }) {
     const starterMemories = [
       {
         content: `Project name: ${projectName || 'Henüz belirtilmedi'}`,
-        type: 'identity',
+        type: 'project',
         scope: 'private',
         write_reason: 'Starter project context created from setup wizard',
         write_intent: 'user_explicit',
@@ -338,7 +355,7 @@ function SetupWizard({ onApply }) {
       },
       {
         content: `Primary AI tools: ${tools || 'Belirtilmedi'}`,
-        type: 'fact',
+        type: 'project',
         scope: 'private',
         write_reason: 'Starter tool context created from setup wizard',
         write_intent: 'user_explicit',
@@ -346,7 +363,7 @@ function SetupWizard({ onApply }) {
       },
       {
         content: `Project stack: ${stack || 'Belirtilmedi'}`,
-        type: 'fact',
+        type: 'project',
         scope: 'private',
         write_reason: 'Starter stack context created from setup wizard',
         write_intent: 'user_explicit',
