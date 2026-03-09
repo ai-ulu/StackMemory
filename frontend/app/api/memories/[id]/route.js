@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAppApiUrl } from '@/lib/app-url';
 
 // GET - Get single memory with full details
 export async function GET(request, { params }) {
@@ -66,7 +67,7 @@ export async function PUT(request, { params }) {
       updates.content = content;
       // Regenerate embedding for new content
       try {
-        const embedResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/embed`, {
+        const embedResponse = await fetch(getAppApiUrl(request, '/api/embed'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: content }),

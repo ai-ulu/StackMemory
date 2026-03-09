@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
 import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import { createMemory, listMemories } from '@/lib/dev/local-data';
+import { getAppApiUrl } from '@/lib/app-url';
 
 const ALLOWED_MEMORY_TYPES = ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'];
 
@@ -167,7 +168,7 @@ export async function POST(request) {
     // Generate embedding
     let embedding = null;
     try {
-      const embedResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/embed`, {
+      const embedResponse = await fetch(getAppApiUrl(request, '/api/embed'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: content }),

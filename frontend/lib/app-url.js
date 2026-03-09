@@ -29,3 +29,9 @@ export function getAppBaseUrl(request) {
 
   return 'http://localhost:3000';
 }
+
+export function getAppApiUrl(request, path) {
+  const baseUrl = getAppBaseUrl(request);
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl}${normalizedPath}`;
+}
