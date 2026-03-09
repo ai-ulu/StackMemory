@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to AI-ULU will be documented in this file.
+All notable changes to StackMemory will be documented in this file.
 
 ## [3.5.0] - 2026-02-11 - H(x,ψ) Scoring System 🎯
 

@@ -1,9 +1,9 @@
-# AI-ULU Makefile - Quick Commands
+# StackMemory Makefile - Quick Commands
 
 .PHONY: help install dev build test deploy clean
 
 help: ## Show this help
-	@echo "AI-ULU Development Commands:"
+	@echo "StackMemory Development Commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
@@ -142,8 +142,8 @@ benchmark: ## Run performance benchmarks
 
 docs: ## Generate documentation
 	@echo "📚 Generating docs..."
-	@echo "Docs available at: https://docs.ai-ulu.com"
+	@echo "Docs available in this repository and product guides"
 
 version: ## Show version
-	@echo "AI-ULU v3.3.0 - Production Ready"
+	@echo "StackMemory - AI coding workflow memory layer"
 

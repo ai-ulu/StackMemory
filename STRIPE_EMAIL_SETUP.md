@@ -27,15 +27,15 @@
 ```bash
 # In Stripe Dashboard → Products
 
-# Product 1: AI-ULU Pro
-- Name: AI-ULU Pro
+# Product 1: StackMemory Pro
+- Name: StackMemory Pro
 - Description: Unlimited messages, advanced memory, all models
 - Pricing:
   - Monthly: $29/month (recurring)
   - Yearly: $290/year (recurring, save $58)
 
-# Product 2: AI-ULU Team
-- Name: AI-ULU Team
+# Product 2: StackMemory Team
+- Name: StackMemory Team
 - Description: Pro features + team workspaces + admin panel
 - Pricing:
   - Monthly: $79/month (recurring)
@@ -73,7 +73,7 @@ NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID=price_xxx...
 # Stripe Dashboard → Developers → Webhooks → Add endpoint
 
 # Endpoint URL (production)
-https://ai-ulu.com/api/stripe/webhook
+https://your-stackmemory-domain.com/api/stripe/webhook
 
 # Events to listen:
 - checkout.session.completed
@@ -151,7 +151,7 @@ serve(async (req) => {
   try {
     await sgMail.send({
       to,
-      from: 'noreply@ai-ulu.com',
+      from: 'noreply@your-stackmemory-domain.com',
       subject,
       html,
     });
@@ -183,7 +183,7 @@ supabase secrets set SENDGRID_API_KEY=SG.xxx...
 # sendgrid.com → Settings → API Keys
 
 SENDGRID_API_KEY=SG.xxx...
-SENDGRID_FROM_EMAIL=noreply@ai-ulu.com
+SENDGRID_FROM_EMAIL=noreply@your-stackmemory-domain.com
 ```
 
 ### Option C: Resend (Modern alternative)
@@ -218,7 +218,7 @@ RESEND_API_KEY=re_xxx...
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000  # Development
-# NEXT_PUBLIC_APP_URL=https://ai-ulu.com  # Production
+# NEXT_PUBLIC_APP_URL=https://your-stackmemory-domain.com  # Production
 ```
 
 ---

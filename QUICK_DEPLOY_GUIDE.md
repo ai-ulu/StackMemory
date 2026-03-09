@@ -46,7 +46,7 @@ DOMAIN=your-domain.com
 **Nereden alınır?**
 - Coolify'dan alacağın domain
 - Veya Coolify'ın verdiği subdomain
-- Örnek: `ai-ulu.coolify.io`
+- Örnek: `stackmemory.coolify.io`
 
 ### Node ENV (2 değişken)
 ```env
