@@ -52,6 +52,7 @@ ENV/
 *.egg-info/
 .coverage
 .emergent/summary.txt
+backend/.hypothesis/
 
 # Misc
 .cache/
