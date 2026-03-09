@@ -1,4 +1,4 @@
-# 🧪 AI-ULU E2E Test Plan
+# 🧪 StackMemory E2E Test Plan
 
 **Date:** 11 Şubat 2026  
 **Framework:** Playwright  

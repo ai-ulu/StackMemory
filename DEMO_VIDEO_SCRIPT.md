@@ -1,4 +1,4 @@
-# 🎬 AI-ULU Demo Video Script
+# 🎬 StackMemory Demo Video Script
 
 **Duration:** 2 minutes  
 **Style:** Screen recording + voiceover  
@@ -10,7 +10,7 @@
 
 **Visual:** Landing page hero section  
 **Voiceover:**  
-> "Ever wish your AI could remember everything you've ever told it? Meet AI-ULU - your personal AI memory assistant."
+> "Ever wish your AI coding tools could share the same project memory? Meet StackMemory - the shared memory layer for AI workflows."
 
 **On-screen text:** "Remember Everything. Effortlessly."
 
@@ -31,9 +31,9 @@
 
 ## 🎥 Scene 3: The Solution (0:25 - 0:45)
 
-**Visual:** AI-ULU chat interface  
+**Visual:** StackMemory chat interface  
 **Voiceover:**  
-> "AI-ULU changes that. It's a universal memory layer that works with ALL your AI tools. One memory, everywhere."
+> "StackMemory changes that. It's a shared memory layer for Claude Code, Cursor, Codex-style agents, Replit, and your own AI apps."
 
 **Demo actions:**
 1. Type: "I'm working on a React Native e-commerce project"
@@ -112,7 +112,7 @@
 2. Fill email/password
 3. Click "Create Account"
 4. Show dashboard loading
-5. First chat message: "Welcome to AI-ULU!"
+5. First chat message: "Welcome to StackMemory!"
 
 **On-screen text:**
 - "✅ No credit card required"
@@ -120,8 +120,8 @@
 - "✅ 2-minute setup"
 
 **Final frame:**
-- Logo + tagline: "AI-ULU - Remember Everything, Effortlessly"
-- URL: ai-ulu.com
+- Logo + tagline: "StackMemory - Shared memory for AI coding workflows"
+- URL: stackmemory.dev
 - Social links
 
 ---
