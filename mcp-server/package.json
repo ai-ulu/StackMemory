@@ -2,6 +2,7 @@
   "name": "@ai-ulu/mcp-server",
   "version": "1.0.0",
   "description": "StackMemory MCP server for shared memory across AI coding workflows",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

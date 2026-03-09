@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 
 export async function GET() {
@@ -31,7 +31,16 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    const supabase = await createClient();
+    const supabase = createSupabaseClient(
+      config.url,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
     
     // Test database connection
     const { error } = await supabase.from('conversations').select('count').limit(1);
