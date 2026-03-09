@@ -2,6 +2,7 @@
  * MCP Hub Integration for Chat API
  * Import this in chat/route.js to enable external context
  */
+import { getAppBaseUrl } from '@/lib/app-url';
 
 const EXTERNAL_TRIGGERS = [
   /\b(latest|son|guncel|yeni|2024|2025)\b/i,
@@ -18,7 +19,7 @@ export function needsExternalContext(message, localMemoryCount = 0) {
 
 export async function fetchExternalContext(message, baseUrl) {
   try {
-    const url = baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const url = baseUrl || getAppBaseUrl();
     const response = await fetch(url + '/api/orchestrate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAppApiUrl } from '@/lib/app-url';
 
 /**
  * MCP Orchestration API
@@ -77,9 +78,7 @@ class SimpleHub {
 
   async queryMemory(query) {
     // Query local StackMemory memory
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
-    const response = await fetch(`${baseUrl}/api/memories/search?q=${encodeURIComponent(query)}&limit=5`, {
+    const response = await fetch(getAppApiUrl(null, `/api/memories/search?q=${encodeURIComponent(query)}&limit=5`), {
       headers: {
         'Content-Type': 'application/json',
       },
