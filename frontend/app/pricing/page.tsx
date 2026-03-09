@@ -213,6 +213,9 @@ export default function PricingPage() {
               <p>Start with the bridge quick start, then move to Enterprise when you need production support.</p>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 sm:flex-row">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => router.push('/integrations')}>
+                Open integration guide
+              </Button>
               <Button className="w-full sm:w-auto" variant="outline" onClick={() => router.push('/signup?workflow=custom_app')}>
                 Start builder onboarding
               </Button>

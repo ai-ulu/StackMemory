@@ -109,6 +109,8 @@ See [bridge/README.md](bridge/README.md) for HTTP examples covering:
 - memory search before agent execution
 - query orchestration for custom AI apps
 
+The frontend also includes a builder-focused integration guide at `/integrations`.
+
 ## Product Direction
 
 This repository is being shaped around a focused product direction:

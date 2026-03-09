@@ -290,6 +290,14 @@ export default function LandingPage() {
             <p className="text-lg text-muted-foreground">
               StackMemory should be usable as infrastructure, not just as a workspace. The bridge gives you a direct path for memory writes, search, and query orchestration.
             </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/integrations">
+                <Button variant="outline">Open integration guide</Button>
+              </Link>
+              <Link href="/signup?workflow=custom_app">
+                <Button>Start builder onboarding</Button>
+              </Link>
+            </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
