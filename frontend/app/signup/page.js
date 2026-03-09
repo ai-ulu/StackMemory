@@ -130,7 +130,7 @@ function SignupContent() {
               </Alert>
             </CardContent>
             <CardFooter>
-              <Link href="/login" className="w-full">
+              <Link href={`/login?workflow=${workflow}`} className="w-full">
                 <Button variant="outline" className="w-full">
                   Giriş Sayfasına Dön
                 </Button>
@@ -265,7 +265,7 @@ function SignupContent() {
               </p>
               <div className="text-center text-sm text-muted-foreground">
                 Zaten hesabınız var mı?{' '}
-                <Link href="/login" className="text-primary hover:underline font-medium">
+                <Link href={`/login?workflow=${workflow}`} className="text-primary hover:underline font-medium">
                   Giriş Yap
                 </Link>
               </div>
