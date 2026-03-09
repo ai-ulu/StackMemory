@@ -50,6 +50,8 @@ venv/
 env/
 ENV/
 *.egg-info/
+.coverage
+.emergent/summary.txt
 
 # Misc
 .cache/
