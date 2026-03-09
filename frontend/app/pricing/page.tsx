@@ -177,6 +177,52 @@ export default function PricingPage() {
           </Card>
         </div>
 
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle>How to choose</CardTitle>
+              <CardDescription>Pick the plan based on workflow shape, not just memory volume.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">Free</p>
+                <p>Use it to start one personal project memory and validate your workflow.</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Pro</p>
+                <p>Best when one developer moves across Claude Code, Cursor, Codex, Replit, Bolt or Lovable and wants the same context everywhere.</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Team</p>
+                <p>Best when multiple developers or operators need shared project rules, active tasks and handoff context.</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Enterprise</p>
+                <p>Best when you are embedding StackMemory into internal copilots, custom apps, MCP deployments, or n8n-style automation pipelines.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle>Builder track</CardTitle>
+              <CardDescription>For custom AI apps, bridge integrations, and automation workflows.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>If you need API access, deployment control, security review, or a memory backend for your own product, use the builder path.</p>
+              <p>Start with the bridge quick start, then move to Enterprise when you need production support.</p>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 sm:flex-row">
+              <Button className="w-full sm:w-auto" variant="outline" onClick={() => router.push('/signup?workflow=custom_app')}>
+                Start builder onboarding
+              </Button>
+              <Button className="w-full sm:w-auto" onClick={() => window.location.href = 'mailto:enterprise@stackmemory.dev?subject=Builder Plan Inquiry'}>
+                Contact builder sales
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
         {/* FAQ Section */}
         <div className="mt-24 max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">

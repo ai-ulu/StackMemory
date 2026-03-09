@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -19,8 +19,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [workflow, setWorkflow] = useState('claude_code');
   const router = useRouter();
   const supabase = createClient();
+  const workflowLabel = useMemo(() => {
+    const labels = {
+      claude_code: 'Claude Code',
+      cursor: 'Cursor',
+      codex: 'Codex',
+      replit: 'Replit',
+      custom_app: 'Custom App / n8n',
+    };
+    return labels[workflow] || 'AI workflow';
+  }, [workflow]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setWorkflow(params.get('workflow') || 'claude_code');
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -45,7 +61,7 @@ export default function LoginPage() {
       }
 
       toast.success('Giriş başarılı!');
-      router.push('/chat');
+      router.push(`/chat?workflow=${workflow}`);
       router.refresh();
     } catch (err) {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
@@ -107,6 +123,9 @@ export default function LoginPage() {
               <CardDescription>Proje hafızanıza giriş yapın</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-3 inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                Selected workflow: {workflowLabel}
+              </div>
               <form onSubmit={handleLogin} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">
@@ -175,7 +194,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col gap-4">
               <div className="text-center text-sm text-muted-foreground">
                 Hesabınız yok mu?{' '}
-                <Link href="/signup" className="text-primary hover:underline font-medium">
+                <Link href={`/signup?workflow=${workflow}`} className="text-primary hover:underline font-medium">
                   Hesap Oluştur
                 </Link>
               </div>
