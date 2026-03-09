@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,17 @@ import { toast } from 'sonner';
 
 export const dynamic = 'force-dynamic';
 
-export default function SignupPage() {
+function SignupContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [workflow, setWorkflow] = useState('claude_code');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const workflow = searchParams.get('workflow') || 'claude_code';
   const workflowLabel = useMemo(() => {
     const labels = {
       claude_code: 'Claude Code',
@@ -34,11 +35,6 @@ export default function SignupPage() {
     };
     return labels[workflow] || 'AI workflow';
   }, [workflow]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setWorkflow(params.get('workflow') || 'claude_code');
-  }, []);
 
   const validatePassword = (pass) => {
     if (pass.length < 8) return 'Şifre en az 8 karakter olmalı';
@@ -278,5 +274,13 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupContent />
+    </Suspense>
   );
 }
