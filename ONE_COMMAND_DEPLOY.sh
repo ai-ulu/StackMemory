@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 AI-ULU Otomatik Deployment Başlıyor..."
+echo "🚀 StackMemory Otomatik Deployment Başlıyor..."
 echo "=========================================="
 
 # Renkler

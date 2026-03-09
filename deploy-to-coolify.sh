@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# AI-ULU Coolify Deployment Script
+# StackMemory Coolify Deployment Script
 # Kullanım: ssh root@187.77.64.91 'bash -s' < deploy-to-coolify.sh
 
 set -e  # Hata olursa dur
 
-echo "🚀 AI-ULU Coolify Deployment Başlıyor..."
+echo "🚀 StackMemory Coolify Deployment Başlıyor..."
 echo "=========================================="
 
 # Renkler

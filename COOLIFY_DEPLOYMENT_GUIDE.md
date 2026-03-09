@@ -1,6 +1,6 @@
 # 🚀 Coolify Deployment Guide - Hostinger
 
-Bu rehber, AI-ULU'yu Hostinger üzerinde Coolify ile deploy etmek için adım adım talimatlar içerir.
+Bu rehber, StackMemory'i Hostinger üzerinde Coolify ile deploy etmek için adım adım talimatlar içerir.
 
 ---
 
@@ -298,8 +298,8 @@ docker exec ai-ulu-redis redis-cli BGSAVE
 ### Coolify Dokümantasyon
 - https://coolify.io/docs
 
-### AI-ULU Dokümantasyon
-- https://docs.ai-ulu.com
+### StackMemory Dokümantasyon
+- Product docs and guides in this repository
 
 ### GitHub Issues
 - https://github.com/ai-ulu/emergent-ai-ulu.com/issues
@@ -308,7 +308,7 @@ docker exec ai-ulu-redis redis-cli BGSAVE
 
 ## 🎉 Deployment Tamamlandı!
 
-Artık AI-ULU production'da çalışıyor:
+Artık StackMemory production'da çalışıyor:
 - ✅ Frontend: `https://your-domain.com`
 - ✅ Backend API: `https://your-domain.com/api/backend`
 - ✅ SSL aktif
