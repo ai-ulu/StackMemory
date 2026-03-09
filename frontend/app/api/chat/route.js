@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getModelConfig } from '@/lib/models';
 import OpenAI from 'openai';
-import { appendMessage, updateConversation } from '@/lib/dev/local-data';
+import { appendMessage, listMemories, updateConversation } from '@/lib/dev/local-data';
 import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
 import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 
@@ -315,6 +315,59 @@ async function storeMemory(supabase, userId, content, embedding, classification)
   }
 }
 
+function scoreLocalMemory(memory, message) {
+  const messageTerms = new Set(
+    message
+      .toLowerCase()
+      .split(/[^a-zA-Z0-9_]+/)
+      .filter((term) => term.length > 2)
+  );
+
+  const memoryTerms = new Set(
+    (memory.content || '')
+      .toLowerCase()
+      .split(/[^a-zA-Z0-9_]+/)
+      .filter((term) => term.length > 2)
+  );
+
+  let overlap = 0;
+  for (const term of messageTerms) {
+    if (memoryTerms.has(term)) {
+      overlap += 1;
+    }
+  }
+
+  const similarity = messageTerms.size > 0 ? overlap / messageTerms.size : 0;
+  const confidence = memory.confidence || 0.8;
+  const accessScore = Math.min((memory.access_count || 0) / 10, 1);
+  const score = similarity * 0.6 + confidence * 0.3 + accessScore * 0.1;
+
+  return {
+    score,
+    similarity,
+    overlap,
+  };
+}
+
+async function searchLocalMemories(userId, message, limit = 3) {
+  const memories = await listMemories(userId);
+  if (!memories.length) return [];
+
+  return memories
+    .map((memory) => {
+      const { score, similarity, overlap } = scoreLocalMemory(memory, message);
+      return {
+        ...memory,
+        similarity,
+        overlap,
+        influence_percentage: Math.round(score * 100),
+      };
+    })
+    .filter((memory) => memory.influence_percentage >= 25)
+    .sort((a, b) => b.influence_percentage - a.influence_percentage)
+    .slice(0, limit);
+}
+
 export async function POST(request) {
   try {
     if (isLocalAuthMode()) {
@@ -331,6 +384,14 @@ export async function POST(request) {
 
       await appendMessage(conversationId, 'user', message);
       await updateConversation(user.id, conversationId, { model });
+      const memories = await searchLocalMemories(user.id, message, 3);
+      const sourceType = memories.length > 0 ? 'mixed' : 'api';
+      const memoryContext = memories.length > 0
+        ? `\n\nKULLANILABILECEK HAFIZA:\n${memories.map((memory, index) => {
+            const reason = memory.write_reason || memory.write_source || 'Recorded context';
+            return `${index + 1}. [${memory.type}] ${memory.content} (Guven: %${Math.round((memory.confidence || 0.8) * 100)}, Etki: %${memory.influence_percentage}, Kaynak: ${reason})`;
+          }).join('\n')}\n\nBu baglami dogal sekilde kullan ve hangi kisimlarin proje kurali, tercih veya karar oldugunu ayirt et.`
+        : '';
 
       const config = getModelConfig();
       const modelName = config.models[model] || config.models['gpt-4o-mini'];
@@ -342,9 +403,19 @@ export async function POST(request) {
         let fullResponse = '';
         try {
           await writer.write(encoder.encode(`data: ${JSON.stringify({
-            source: 'api',
-            memory_used: false,
-            memories: [],
+            source: sourceType,
+            memory_used: memories.length > 0,
+            memories: memories.map((memory) => ({
+              id: memory.id,
+              content: memory.content,
+              type: memory.type,
+              influence: memory.influence_percentage || 50,
+              confidence: Math.round((memory.confidence || 0.8) * 100),
+              scope: memory.scope || 'private',
+              source: memory.write_source || 'manual',
+              reason: memory.write_reason || 'Recorded context',
+              relatedContext: `Matched ${memory.overlap || 0} shared terms with the current prompt`,
+            })),
           })}\n\n`));
 
           const response = await fetch(config.endpoint, {
@@ -356,7 +427,7 @@ export async function POST(request) {
             body: JSON.stringify({
               model: modelName,
               messages: [
-                { role: 'system', content: SYSTEM_PROMPT_BASE },
+                { role: 'system', content: `${SYSTEM_PROMPT_BASE}${memoryContext}` },
                 { role: 'user', content: message },
               ],
               stream: true,
@@ -393,7 +464,7 @@ export async function POST(request) {
           }
 
           if (fullResponse) {
-            await appendMessage(conversationId, 'assistant', fullResponse, { source_type: 'api' });
+            await appendMessage(conversationId, 'assistant', fullResponse, { source_type: sourceType });
           }
 
           await writer.write(encoder.encode('data: [DONE]\n\n'));
@@ -578,9 +649,16 @@ export async function POST(request) {
           memory_used: memories.length > 0,
           memories: memories.map(m => ({
             id: m.id,
-            content: (m.content || '').slice(0, 50) + '...',
+            content: m.content || '',
             type: m.type,
             influence: m.influence_percentage || 50,
+            confidence: Math.round((m.confidence || 0.8) * 100),
+            scope: m.scope || 'private',
+            source: m.write_source || 'memory',
+            reason: m.write_reason || 'Recalled from prior context',
+            relatedContext: m.emotionalMatch
+              ? `Emotional match: %${m.emotionalMatch}`
+              : `Similarity: %${Math.round((m.similarity || 0) * 100)}`,
           })),
         })}\n\n`));
 

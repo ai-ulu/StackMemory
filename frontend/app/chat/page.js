@@ -97,6 +97,9 @@ function NeuralResonancePanel({ memories, isOpen, onToggle }) {
   if (!memories || memories.length === 0) return null;
 
   const totalInfluence = memories.reduce((sum, m) => sum + (m.influence || 0), 0);
+  const avgConfidence = Math.round(
+    memories.reduce((sum, m) => sum + (m.confidence || 0), 0) / memories.length
+  );
   const getMemoryTypeIcon = (type) => {
     switch (type) {
       case 'identity':
@@ -133,15 +136,42 @@ function NeuralResonancePanel({ memories, isOpen, onToggle }) {
             <span className="font-medium">Neural Resonance</span>
             <span>Toplam Etki: %{totalInfluence}</span>
           </div>
+          <div className="flex flex-wrap gap-2 text-[10px] text-amber-600 dark:text-amber-400">
+            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5">
+              Ortalama gÃ¼ven: %{avgConfidence}
+            </span>
+            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5">
+              Ä°lgili baÄŸlam: {memories.filter((memory) => memory.relatedContext).length}
+            </span>
+          </div>
           {memories.map((mem, idx) => (
-            <div key={mem.id || idx} className="flex items-start gap-2">
+            <div key={mem.id || idx} className="flex items-start gap-2 rounded-lg border border-amber-500/10 bg-background/40 p-2">
               <div className="flex-shrink-0 mt-0.5">{getMemoryTypeIcon(mem.type)}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground truncate">{mem.content}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-medium text-foreground">{mem.content}</p>
+                  <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {mem.scope || 'private'}
+                  </span>
+                  {mem.source && (
+                    <span className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {mem.source}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Progress value={mem.influence || 0} className="h-1 flex-1" />
                   <span className="text-[10px] text-muted-foreground">%{mem.influence || 0}</span>
                 </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                  {typeof mem.confidence === 'number' && <span>GÃ¼ven: %{mem.confidence}</span>}
+                  {mem.reason && <span>Neden: {mem.reason}</span>}
+                </div>
+                {mem.relatedContext && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Ä°lgili baÄŸlam: {mem.relatedContext}
+                  </p>
+                )}
               </div>
             </div>
           ))}
