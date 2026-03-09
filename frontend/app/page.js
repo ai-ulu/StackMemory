@@ -127,6 +127,12 @@ const workflowTargets = [
   },
 ];
 
+const proofPoints = [
+  'Shared memory across Claude Code, Cursor, Codex-style agents, Replit, Bolt and custom apps',
+  'Project, rule, decision, task and preference memory types built for real developer workflows',
+  'MCP, bridge, REST and SDK surfaces for embedding memory into your own stack',
+];
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -169,33 +175,33 @@ export default function LandingPage() {
 
               <div className="space-y-5">
                 <h1 className="max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-                  One memory layer for your
+                  Stop re-explaining your project to every
                   {' '}
                   <span className="bg-gradient-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">
-                    AI coding stack
+                    AI coding tool
                   </span>
                   .
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                  StackMemory keeps project context, coding preferences, architecture decisions, and active tasks portable across AI tools.
-                  Use it as your own memory workspace or embed it into the AI products you build.
+                  StackMemory gives Claude Code, Cursor, Codex-style agents, Replit, Bolt, Lovable, and your own AI apps
+                  one shared memory layer for project context, coding preferences, architecture decisions, and active tasks.
                 </p>
                 <div className="rounded-2xl border border-border/60 bg-card/50 p-4 text-sm text-muted-foreground">
-                  Start by storing:
-                  {' '}project rules, preferred stack, code review preferences, current tasks, architecture decisions, and reusable prompts for your agents.
+                  Use it in two ways:
+                  {' '}as your personal memory workspace across multiple AI coding tools, or as the memory backend inside the AI products and automations you build.
                 </div>
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row">
                 <Link href="/signup?workflow=claude_code">
                   <Button size="lg" className="rounded-xl px-8">
-                    Start Capturing Project Context
+                    Start with a developer workflow
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/pricing">
+                <Link href="/integrations">
                   <Button size="lg" variant="outline" className="rounded-xl px-8">
-                    See Pricing
+                    Open builder guide
                   </Button>
                 </Link>
               </div>
@@ -207,6 +213,18 @@ export default function LandingPage() {
                   'Connect memory via MCP, API, bridge, or SDK',
                   'Use as a developer tool or memory backend',
                 ].map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 rounded-3xl border border-border/60 bg-card/40 p-5">
+                <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                  Why this wins over built-in tool memory
+                </div>
+                {proofPoints.map((item) => (
                   <div key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                     <span>{item}</span>
@@ -230,7 +248,7 @@ export default function LandingPage() {
 
             <Card className="border-border/60 bg-card/60 p-2 shadow-2xl">
               <CardContent className="space-y-4 p-6">
-                <div className="mb-2 text-sm font-medium text-muted-foreground">Example shared project context</div>
+                <div className="mb-2 text-sm font-medium text-muted-foreground">Example developer memory pack</div>
                 {[
                   ['Project', 'memory layer for AI coding workflows'],
                   ['Stack', 'Next.js, FastAPI, MCP, API bridge'],
@@ -272,6 +290,38 @@ export default function LandingPage() {
             <InfoCard icon={Lock} title="Control what gets remembered">
               A serious memory product must make stored context inspectable, editable, exportable, and deletable.
             </InfoCard>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="border-border/60 bg-card/50">
+              <CardHeader>
+                <CardTitle>Why now</CardTitle>
+                <CardDescription>AI usage keeps increasing, but context still resets between tools.</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                The more AI tools your team uses, the more expensive repeated context becomes. Shared memory becomes workflow infrastructure, not a nice-to-have.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/50">
+              <CardHeader>
+                <CardTitle>Why built-in memory falls short</CardTitle>
+                <CardDescription>Most tool memory is isolated to a single product.</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                Chat history is not shared project memory. StackMemory keeps context inspectable, reusable, and portable across coding tools, agents, and custom apps.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/50">
+              <CardHeader>
+                <CardTitle>Why StackMemory</CardTitle>
+                <CardDescription>One memory system for users and builders.</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm leading-6 text-muted-foreground">
+                Use the app to manage memory directly, or use MCP, bridge and APIs to make the same memory available inside your own AI workflows.
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -502,6 +552,32 @@ export default function LandingPage() {
             <Link href="/pricing">
               <Button size="lg" variant="outline" className="rounded-xl px-8">Pricing</Button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border/60 bg-muted/20 py-20">
+        <div className="container">
+          <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-border/60 bg-card/60 px-6 py-12 text-center shadow-sm">
+            <Badge variant="outline">Final CTA</Badge>
+            <h2 className="max-w-3xl text-3xl font-bold sm:text-4xl">
+              Give every AI coding tool the same project memory.
+            </h2>
+            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+              Start with one workflow, store the context that matters, and reuse it across sessions, tools, and agent runs.
+            </p>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Link href="/signup?workflow=cursor">
+                <Button size="lg" className="rounded-xl px-8">
+                  Start free
+                </Button>
+              </Link>
+              <Link href="/pricing">
+                <Button size="lg" variant="outline" className="rounded-xl px-8">
+                  Compare plans
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
