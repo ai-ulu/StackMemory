@@ -63,6 +63,8 @@ services:
       - AI_ULU_API_URL=http://frontend:3000
     depends_on:
       - frontend
+    profiles:
+      - mcp
     restart: unless-stopped
 
   # ==========================================================================

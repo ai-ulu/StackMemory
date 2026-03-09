@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 
 export async function GET() {
@@ -31,31 +30,26 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    const supabase = createSupabaseClient(
-      config.url,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      }
-    );
-    
-    // Test database connection
-    const { error } = await supabase.from('conversations').select('count').limit(1);
-    
-    if (error && !error.message.includes('does not exist')) {
+    const response = await fetch(`${config.url}/rest/v1/conversations?select=count&limit=1`, {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok && response.status !== 404) {
+      const body = await response.text();
       return NextResponse.json({ 
         status: 'unhealthy',
         database: 'error',
-        error: error.message,
+        error: body || `Supabase REST health check failed with ${response.status}`,
       }, { status: 500 });
     }
 
     return NextResponse.json({
       status: 'healthy',
-      database: 'connected',
+      database: response.status === 404 ? 'reachable_schema_pending' : 'connected',
       mode: 'supabase',
       timestamp: new Date().toISOString(),
     });
