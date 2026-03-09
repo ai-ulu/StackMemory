@@ -8,6 +8,8 @@ import crypto from 'crypto';
 // POST - Create share link for conversation
 export async function POST(request) {
   try {
+    const { origin } = new URL(request.url);
+
     if (isLocalAuthMode()) {
       const user = await getLocalRequestUser();
       if (!user) {
@@ -34,7 +36,7 @@ export async function POST(request) {
         permissions,
       });
 
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/share/${sharedLink.token}`;
+      const shareUrl = `${origin}/share/${sharedLink.token}`;
       return NextResponse.json({
         ...sharedLink,
         share_url: shareUrl,
@@ -115,7 +117,7 @@ export async function POST(request) {
         metadata: { token, expires_at: expiresAt },
       });
 
-    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/share/${token}`;
+    const shareUrl = `${origin}/share/${token}`;
 
     return NextResponse.json({
       ...sharedLink,
