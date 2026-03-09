@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards'
 
 function getStripeClient() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -15,6 +16,10 @@ function getStripeClient() {
 
 export async function POST(req: NextRequest) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('stripe_webhook')
+    }
+
     const stripe = getStripeClient()
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
     if (!webhookSecret) {
