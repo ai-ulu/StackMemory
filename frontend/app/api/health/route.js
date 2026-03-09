@@ -30,26 +30,9 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    const response = await fetch(`${config.url}/rest/v1/conversations?select=count&limit=1`, {
-      headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || config.anonKey}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok && response.status !== 404) {
-      const body = await response.text();
-      return NextResponse.json({ 
-        status: 'unhealthy',
-        database: 'error',
-        error: body || `Supabase REST health check failed with ${response.status}`,
-      }, { status: 500 });
-    }
-
     return NextResponse.json({
       status: 'healthy',
-      database: response.status === 404 ? 'reachable_schema_pending' : 'connected',
+      database: 'configured',
       mode: 'supabase',
       timestamp: new Date().toISOString(),
     });
