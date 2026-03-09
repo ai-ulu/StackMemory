@@ -39,6 +39,45 @@ const builderQuickStarts = [
   },
 ];
 
+const demoScenarios = [
+  {
+    badge: 'Tool Handoff',
+    title: 'Claude Code -> Cursor handoff',
+    description: 'Bir ajan oturumunda aldigin kararlar, bir sonraki editor oturumuna tekrar prompt yazmadan tasinsin.',
+    steps: [
+      'Claude Code ile repo kurallari, aktif TODOlar ve son mimari karari hafizaya yaz.',
+      'Cursor oturumu acilmadan once ayni proje icin memory query calistir.',
+      'Yeni oturum, mevcut task ve kurallari tekrar anlatmadan dogru baglamla baslasin.',
+    ],
+    ctaHref: '/signup?workflow=claude_code',
+    ctaLabel: 'Start Claude Code flow',
+  },
+  {
+    badge: 'Cloud IDE',
+    title: 'Replit -> Codex-style prompt memory',
+    description: 'Cloud IDE icindeki build notlari ve runtime kisitlari, sonraki ajan promptlarina kalici baglam olarak girsin.',
+    steps: [
+      'Replit icinde deployment notlari, env beklentileri ve runtime limitlerini kaydet.',
+      'Codex-style agent calismadan once proje hafizasindan kisa prompt base uret.',
+      'Yeni ajan, stack ve deploy kisitlarini tekrar sormadan ise baslasin.',
+    ],
+    ctaHref: '/signup?workflow=replit',
+    ctaLabel: 'Start Replit flow',
+  },
+  {
+    badge: 'Builder',
+    title: 'Custom App / n8n -> memory write + recall',
+    description: 'Kendi uygulaman veya workflow pipeline’in icinde durable memory yaz ve her agent step oncesi geri cagir.',
+    steps: [
+      'Bridge API ile project rules veya user preferences kaydet.',
+      'Bir sonraki n8n node veya custom agent step oncesi /v1/search veya /v1/query kullan.',
+      'Her onemli karar sonrasi yeni durable context’i tekrar StackMemory\'ye yaz.',
+    ],
+    ctaHref: '/integrations',
+    ctaLabel: 'Open builder guide',
+  },
+];
+
 function InfoCard({ icon: Icon, title, children }) {
   return (
     <Card className="border-border/60 bg-card/60 backdrop-blur">
@@ -342,6 +381,47 @@ export default function LandingPage() {
                 </Card>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border/60 bg-background py-20">
+        <div className="container space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <Badge variant="outline">Live Demo Flows</Badge>
+            <h2 className="text-3xl font-bold sm:text-4xl">Three concrete workflows to sell and demo</h2>
+            <p className="text-lg text-muted-foreground">
+              These are the clearest proof paths for StackMemory today: tool handoff, cloud IDE continuity, and embedded builder memory.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {demoScenarios.map((scenario) => (
+              <Card key={scenario.title} className="border-border/60 bg-card/60">
+                <CardHeader className="space-y-3">
+                  <Badge variant="secondary" className="w-fit">{scenario.badge}</Badge>
+                  <CardTitle className="text-2xl">{scenario.title}</CardTitle>
+                  <CardDescription className="text-sm leading-6 text-muted-foreground">
+                    {scenario.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  {scenario.steps.map((step, index) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                        {index + 1}
+                      </div>
+                      <span>{step}</span>
+                    </div>
+                  ))}
+                  <div className="pt-3">
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href={scenario.ctaHref}>{scenario.ctaLabel}</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>

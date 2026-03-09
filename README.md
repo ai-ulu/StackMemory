@@ -74,6 +74,28 @@ The goal is simple:
 - Use StackMemory as a retrieval layer behind your agent system
 - Expose memory through API, bridge, or MCP depending on the client
 
+## Demo Flows
+
+These are the clearest demo paths for the current product direction:
+
+### 1. Claude Code -> Cursor handoff
+
+- Write repo rules, active tasks, and recent decisions during a Claude Code session
+- Query the same project memory before opening the next Cursor workflow
+- Start the next editor session with the same project context, without rewriting the prompt
+
+### 2. Replit -> Codex-style prompt memory
+
+- Save deployment notes, runtime limits, and stack expectations from a Replit session
+- Pull that context into a Codex-style agent prompt before the next run
+- Keep cloud IDE facts durable instead of leaving them trapped in chat history
+
+### 3. Custom App / n8n -> memory write + recall
+
+- Write durable project rules or user preferences through the bridge API
+- Search or query memory before each automation or agent step
+- Send back new decisions and task updates after each meaningful run
+
 ## Quick Start
 
 ### Local App

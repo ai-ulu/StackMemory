@@ -72,6 +72,66 @@ Content-Type: application/json
   },
 ]
 
+const demoRecipes = [
+  {
+    title: 'Claude Code -> Cursor handoff',
+    summary: 'Repo kurallari ve aktif isler bir coding agent oturumundan editor workflow\'una gecsin.',
+    steps: [
+      'Claude Code tarafinda proje kararlari, coding rules ve aktif TODOlari StackMemory\'ye yaz.',
+      'Cursor acildiginda ayni workspace icin query cagir ve baglami prompt base olarak enjekte et.',
+      'Yeni oturum, onceki kararlari tekrar istemeden ayni proje state\'inde calissin.',
+    ],
+    snippet: `POST http://localhost:8080/v1/query
+Authorization: Bearer ulu_full_xxx
+Content-Type: application/json
+
+{
+  "query": "What should Cursor know before editing this repo?",
+  "source": "cursor",
+  "context": {
+    "workspace": "stackmemory-web",
+    "handoff_from": "claude_code"
+  }
+}`,
+  },
+  {
+    title: 'Replit -> Codex-style prompt memory',
+    summary: 'Cloud IDE notlari sonraki ajan promptuna durable context olarak donsun.',
+    steps: [
+      'Replit icinde deployment notes, env vars ve runtime constraints kaydet.',
+      'Codex-style agent baslamadan once o proje icin memory search veya query cagir.',
+      'Agent promptuna sadece canli baglami ekle; gecici chat transcript tasima.',
+    ],
+    snippet: `POST http://localhost:8080/v1/search
+Authorization: Bearer ulu_full_xxx
+Content-Type: application/json
+
+{
+  "query": "deployment notes runtime constraints env expectations",
+  "limit": 5,
+  "source": "codex"
+}`,
+  },
+  {
+    title: 'Custom App / n8n memory write + recall',
+    summary: 'Automation node\'lari ve internal agents ayni memory backend\'i kullansin.',
+    steps: [
+      'Bir workflow node\'u ile durable memory write yap.',
+      'Bir sonraki agent veya router adiminda /v1/query ile uygun baglami cek.',
+      'Yeni kararlar cikarsa ayni pipeline icinden tekrar memory write gonder.',
+    ],
+    snippet: `POST http://localhost:8080/v1/memory
+Authorization: Bearer ulu_full_xxx
+Content-Type: application/json
+
+{
+  "content": "Prefer small diffs and TypeScript-first refactors",
+  "type": "rule",
+  "source": "n8n"
+}`,
+  },
+]
+
 export default function IntegrationsPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -173,6 +233,42 @@ export default function IntegrationsPage() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="space-y-6">
+          <div className="max-w-2xl space-y-3">
+            <Badge variant="secondary">Demo Recipes</Badge>
+            <h2 className="text-3xl font-bold tracking-tight">Three workflows that explain the product fast</h2>
+            <p className="text-muted-foreground">
+              Use these when you need to demo StackMemory to a tool user, a cloud IDE user, or a builder who wants embedded memory.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {demoRecipes.map((recipe) => (
+              <Card key={recipe.title} className="border-border/60 bg-card/60">
+                <CardHeader>
+                  <CardTitle>{recipe.title}</CardTitle>
+                  <CardDescription>{recipe.summary}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    {recipe.steps.map((step, index) => (
+                      <div key={step} className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                          {index + 1}
+                        </div>
+                        <span>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <pre className="overflow-x-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-sm leading-6 text-foreground">
+                    <code>{recipe.snippet}</code>
+                  </pre>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </div>
