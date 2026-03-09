@@ -12,6 +12,11 @@ export function getSupabaseConfig() {
   };
 }
 
+export function isSupabaseMode() {
+  const config = getSupabaseConfig();
+  return !config.isLocalMode && config.isConfigured;
+}
+
 export function assertSupabaseConfig() {
   const config = getSupabaseConfig();
 

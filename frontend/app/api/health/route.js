@@ -5,7 +5,16 @@ import { getSupabaseConfig } from '@/lib/supabase/config';
 export async function GET() {
   try {
     const config = getSupabaseConfig();
-    if (!config.isLocalMode && !config.isConfigured) {
+    if (config.isLocalMode) {
+      return NextResponse.json({
+        status: 'healthy',
+        database: 'local_store',
+        mode: 'local',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!config.isConfigured) {
       return NextResponse.json({
         status: 'unhealthy',
         database: 'missing_config',
@@ -29,7 +38,7 @@ export async function GET() {
     return NextResponse.json({
       status: 'healthy',
       database: 'connected',
-      mode: config.isLocalMode ? 'local' : 'supabase',
+      mode: 'supabase',
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

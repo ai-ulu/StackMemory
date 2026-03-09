@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import { assertSupabaseConfig } from '@/lib/supabase/config';
 
 export async function createClient() {
-  const cookieStore = await cookies();
   const { url, anonKey } = assertSupabaseConfig();
+  const cookieStore = await cookies();
 
   return createServerClient(
     url,
