@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ArrowRight,
   Brain,
@@ -20,6 +20,24 @@ import {
   Terminal,
   Wrench,
 } from 'lucide-react';
+
+const builderQuickStarts = [
+  {
+    title: 'n8n memory write',
+    description: 'Capture a project rule or preference from any workflow node.',
+    code: `POST /v1/memory\nAuthorization: Bearer ulu_full_xxx\n{\n  "content": "Prefer small diffs and TypeScript-first changes",\n  "type": "preference"\n}`,
+  },
+  {
+    title: 'n8n memory search',
+    description: 'Recall prior project context before triggering an agent step.',
+    code: `POST /v1/search\nAuthorization: Bearer ulu_full_xxx\n{\n  "query": "active project constraints",\n  "limit": 5\n}`,
+  },
+  {
+    title: 'Custom app bridge query',
+    description: 'Ask the bridge for reusable project memory inside your own AI app.',
+    code: `POST /v1/query\nAuthorization: Bearer ulu_full_xxx\n{\n  "query": "What should this coding agent remember?",\n  "source": "custom_app"\n}`,
+  },
+];
 
 function InfoCard({ icon: Icon, title, children }) {
   return (
@@ -260,6 +278,62 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border/60 py-20">
+        <div className="container space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <Badge variant="outline">Builder Quick Start</Badge>
+            <h2 className="text-3xl font-bold sm:text-4xl">Connect n8n or your own AI app in minutes</h2>
+            <p className="text-lg text-muted-foreground">
+              StackMemory should be usable as infrastructure, not just as a workspace. The bridge gives you a direct path for memory writes, search, and query orchestration.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <Card className="border-border/60 bg-card/60">
+              <CardHeader>
+                <CardTitle>Recommended flow</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                  <span>Write project rules and preferences into StackMemory from n8n, MCP clients, or your app backend.</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                  <span>Query memory before each coding or agent step so the current run starts with the right project context.</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                  <span>Use MCP for supported coding tools, and use the bridge API for automation, internal copilots, and n8n pipelines.</span>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                  <div className="mb-2 font-medium text-foreground">Best fit</div>
+                  <div>Internal developer copilots, agent workflows, prompt routers, coding assistants, and automation pipelines that need durable project memory.</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4">
+              {builderQuickStarts.map((item) => (
+                <Card key={item.title} className="border-border/60 bg-card/60">
+                  <CardHeader>
+                    <CardTitle className="text-xl">{item.title}</CardTitle>
+                    <CardDescription className="pt-2 text-sm text-muted-foreground">
+                      {item.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="overflow-x-auto rounded-2xl border border-border/60 bg-background/80 p-4 text-sm leading-6 text-foreground">
+                      <code>{item.code}</code>
+                    </pre>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>

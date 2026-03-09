@@ -45,6 +45,7 @@ The goal is simple:
 
 - [frontend](frontend) - user-facing memory workspace
 - [bridge](bridge) - REST and WebSocket bridge for apps and agents
+- [bridge/README.md](bridge/README.md) - quick start for n8n and custom app integration
 - [mcp-server](mcp-server) - MCP server for compatible tools
 - [sdk/python](sdk/python) - Python SDK for custom integrations
 
@@ -100,6 +101,13 @@ ulu.remember("Prefer TypeScript and small diffs", type="preference")
 ### MCP Server
 
 See [mcp-server/README.md](mcp-server/README.md) for Claude Desktop and MCP-compatible configuration.
+
+### n8n / Custom App Bridge
+
+See [bridge/README.md](bridge/README.md) for HTTP examples covering:
+- memory writes from automation flows
+- memory search before agent execution
+- query orchestration for custom AI apps
 
 ## Product Direction
 
