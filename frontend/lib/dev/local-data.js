@@ -249,3 +249,105 @@ export function summarizeLocalApiKeyStats(keys = []) {
 }
 
 export { KEY_SCOPES };
+
+export async function createLocalShareLink(userId, payload = {}) {
+  const store = await getLocalStore();
+  const now = new Date().toISOString();
+  const token = crypto.randomUUID().replace(/-/g, '');
+  const expiresAt = payload.expiresAt || null;
+
+  const link = {
+    id: crypto.randomUUID(),
+    token,
+    conversation_id: payload.conversationId,
+    created_by: userId,
+    expires_at: expiresAt,
+    max_views: payload.maxViews || null,
+    permissions: payload.permissions || { canCopy: true, canExport: false },
+    view_count: 0,
+    created_at: now,
+  };
+
+  store.sharedLinks = store.sharedLinks || [];
+  store.sharedLinks.unshift(link);
+
+  const conversationIndex = (store.conversations || []).findIndex(
+    (item) => item.id === payload.conversationId && item.user_id === userId
+  );
+
+  if (conversationIndex !== -1) {
+    store.conversations[conversationIndex] = {
+      ...store.conversations[conversationIndex],
+      is_shared: true,
+      share_token: token,
+      share_expires_at: expiresAt,
+      updated_at: now,
+    };
+  }
+
+  await saveLocalStore(store);
+  return link;
+}
+
+export async function deleteLocalShareLink(userId, token) {
+  const store = await getLocalStore();
+  const link = (store.sharedLinks || []).find((item) => item.token === token && item.created_by === userId);
+  if (!link) return false;
+
+  store.sharedLinks = (store.sharedLinks || []).filter((item) => !(item.token === token && item.created_by === userId));
+
+  const conversationIndex = (store.conversations || []).findIndex((item) => item.id === link.conversation_id);
+  if (conversationIndex !== -1) {
+    store.conversations[conversationIndex] = {
+      ...store.conversations[conversationIndex],
+      is_shared: false,
+      share_token: null,
+      share_expires_at: null,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  await saveLocalStore(store);
+  return true;
+}
+
+export async function getLocalShareView(token) {
+  const store = await getLocalStore();
+  const linkIndex = (store.sharedLinks || []).findIndex((item) => item.token === token);
+  if (linkIndex === -1) return null;
+
+  const link = store.sharedLinks[linkIndex];
+
+  if (link.expires_at && new Date(link.expires_at) < new Date()) {
+    return { expired: true };
+  }
+
+  if (link.max_views && link.view_count >= link.max_views) {
+    return { exhausted: true };
+  }
+
+  const conversation = (store.conversations || []).find((item) => item.id === link.conversation_id);
+  if (!conversation) return null;
+
+  const messages = (store.messages || [])
+    .filter((item) => item.conversation_id === link.conversation_id)
+    .map(({ id, role, content, created_at }) => ({ id, role, content, created_at }));
+
+  store.sharedLinks[linkIndex] = {
+    ...link,
+    view_count: (link.view_count || 0) + 1,
+  };
+  await saveLocalStore(store);
+
+  return {
+    conversation: {
+      id: conversation.id,
+      title: conversation.title,
+      model: conversation.model,
+      created_at: conversation.created_at,
+    },
+    messages,
+    permissions: link.permissions,
+    view_count: (link.view_count || 0) + 1,
+  };
+}

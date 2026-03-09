@@ -1,9 +1,46 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { createLocalShareLink, deleteLocalShareLink, getConversation } from '@/lib/dev/local-data';
+import crypto from 'crypto';
 
 // POST - Create share link for conversation
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { conversationId, expiresIn, maxViews, permissions } = body;
+
+      if (!conversationId) {
+        return NextResponse.json({ error: 'Conversation ID required' }, { status: 400 });
+      }
+
+      const conversation = await getConversation(user.id, conversationId);
+      if (!conversation) {
+        return NextResponse.json({ error: 'Conversation not found or access denied' }, { status: 404 });
+      }
+
+      const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null;
+      const sharedLink = await createLocalShareLink(user.id, {
+        conversationId,
+        expiresAt,
+        maxViews,
+        permissions,
+      });
+
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/share/${sharedLink.token}`;
+      return NextResponse.json({
+        ...sharedLink,
+        share_url: shareUrl,
+      });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -93,6 +130,27 @@ export async function POST(request) {
 // DELETE - Revoke share link
 export async function DELETE(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const token = searchParams.get('token');
+
+      if (!token) {
+        return NextResponse.json({ error: 'Token required' }, { status: 400 });
+      }
+
+      const deleted = await deleteLocalShareLink(user.id, token);
+      if (!deleted) {
+        return NextResponse.json({ error: 'Share link not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();

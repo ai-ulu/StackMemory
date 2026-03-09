@@ -1,9 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { getLocalShareView } from '@/lib/dev/local-data';
 
 // GET - View shared conversation
 export async function GET(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const { token } = await params;
+      const result = await getLocalShareView(token);
+
+      if (!result) {
+        return NextResponse.json({ error: 'Shared link not found' }, { status: 404 });
+      }
+
+      if (result.expired) {
+        return NextResponse.json({ error: 'Link has expired' }, { status: 410 });
+      }
+
+      if (result.exhausted) {
+        return NextResponse.json({ error: 'Link has reached maximum views' }, { status: 410 });
+      }
+
+      return NextResponse.json(result);
+    }
+
     const supabase = await createClient();
     const { token } = await params;
 

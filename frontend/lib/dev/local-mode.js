@@ -80,6 +80,7 @@ export async function getLocalStore() {
     memorySettings: {},
     apiKeys: [],
     apiKeyLogs: [],
+    sharedLinks: [],
   });
 }
 
