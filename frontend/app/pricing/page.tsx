@@ -142,6 +142,41 @@ export default function PricingPage() {
           })}
         </div>
 
+        <div className="mt-16 grid gap-6 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Best for tool users</CardTitle>
+              <CardDescription>Claude Code, Cursor, Codex, Replit, Bolt and Lovable workflows.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Use Pro when you need one personal memory layer across multiple AI coding surfaces.</p>
+              <p>Focus is persistent project context, coding preferences, and reusable agent instructions.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Best for small teams</CardTitle>
+              <CardDescription>Shared memory for project rules, decisions, and active handoffs.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Team should win when multiple developers or operators need the same project memory.</p>
+              <p>Use it for shared context instead of repeating the same setup across every AI session.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Best for builders</CardTitle>
+              <CardDescription>Custom AI apps, internal copilots, MCP clients, and n8n pipelines.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Enterprise is the path when you need embedded memory infrastructure and controlled deployment.</p>
+              <p>That includes API access, bridge integration, custom security requirements, and platform support.</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* FAQ Section */}
         <div className="mt-24 max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">
