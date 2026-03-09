@@ -67,6 +67,7 @@ import {
   Globe,
   Timer,
   Network,
+  Check,
 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils';
 import { MemoryGraph } from '@/components/memory';
@@ -574,6 +575,64 @@ export default function SettingsPage() {
                       setMemorySettings(prev => ({ ...prev, auto_save: checked }))
                     }
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Network className="w-5 h-5" />
+                  Builder Setup
+                </CardTitle>
+                <CardDescription>
+                  Connect StackMemory to n8n, custom apps, and MCP-compatible coding tools.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <p className="text-sm font-medium">Bridge endpoint</p>
+                    <p className="mt-2 text-sm text-muted-foreground font-mono">
+                      http://localhost:8080/v1
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <p className="text-sm font-medium">Use case</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      n8n, internal copilots, custom agents, API-driven automation
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <p className="text-sm font-medium">Best first key</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Full access key for local development, scoped key for production
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Create an API key from the integrations panel before connecting your workflow.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Write project rules, preferences, and decisions explicitly first. Then add search/query before agent actions.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Use MCP for compatible coding tools and the bridge API for automation or your own apps.</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button asChild variant="outline">
+                    <Link href="/integrations">Open integration guide</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/signup?workflow=custom_app">Start builder onboarding</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
