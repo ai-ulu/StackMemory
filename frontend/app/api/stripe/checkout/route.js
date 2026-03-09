@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards';
+import { getAppBaseUrl } from '@/lib/app-url';
 import { createCheckoutSession } from '@/lib/stripe';
 
 export async function POST(request) {
@@ -24,13 +25,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Price ID required' }, { status: 400 });
     }
 
+    const appBaseUrl = getAppBaseUrl(request);
+
     // Create checkout session
     const { sessionId, url } = await createCheckoutSession({
       priceId,
       userId: user.id,
       userEmail: user.email,
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing?canceled=true`,
+      successUrl: `${appBaseUrl}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${appBaseUrl}/settings/billing?canceled=true`,
     });
 
     return NextResponse.json({ sessionId, url });

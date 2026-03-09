@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards'
+import { getAppBaseUrl } from '@/lib/app-url'
 import Stripe from 'stripe'
 
 function getStripeClient() {
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Price ID not configured' }, { status: 500 })
     }
 
+    const appBaseUrl = getAppBaseUrl(req)
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
@@ -52,8 +55,8 @@ export async function POST(req: NextRequest) {
         }
       ],
       mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_URL}/settings/billing?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/pricing`,
+      success_url: `${appBaseUrl}/settings/billing?success=true`,
+      cancel_url: `${appBaseUrl}/pricing`,
       metadata: {
         user_id: user.id,
         plan_id
