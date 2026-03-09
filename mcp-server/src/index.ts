@@ -53,7 +53,7 @@ class AIUluClient {
     this.apiKey = apiKey;
   }
 
-  private async request(endpoint: string, options: RequestInit = {}) {
+  private async request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
@@ -68,7 +68,7 @@ class AIUluClient {
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // Memory operations
@@ -110,7 +110,11 @@ class AIUluClient {
     });
   }
 
-  async getMemoryGraph(limit: number = 50) {
+  async getMemoryGraph(limit: number = 50): Promise<{
+    nodes?: Array<unknown>;
+    edges?: Array<unknown>;
+    stats?: Record<string, unknown>;
+  }> {
     return this.request(`/api/memories/graph?limit=${limit}`);
   }
 
