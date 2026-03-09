@@ -39,26 +39,32 @@ function InfoCard({ icon: Icon, title, children }) {
 
 const workflowTargets = [
   {
+    key: 'claude_code',
     name: 'Claude Code',
     desc: 'Repo kurallari, aktif TODOlar ve karar gecmisini tekrar anlatmadan surdur.',
   },
   {
+    key: 'cursor',
     name: 'Cursor',
     desc: 'Ayni proje tercihlerini editor icinde ve chat oturumlarinda paylas.',
   },
   {
+    key: 'codex',
     name: 'Codex',
     desc: 'Tekrar eden prompt yerine kalici project context ve rule set kullan.',
   },
   {
+    key: 'replit',
     name: 'Replit',
     desc: 'Cloud IDE ve agent akislarinda ayni hafizayi koru.',
   },
   {
+    key: 'custom_app',
     name: 'Bolt / Lovable',
     desc: 'Hizli urun prototiplemede teknik kararlarini ve stack tercihlerini tasi.',
   },
   {
+    key: 'custom_app',
     name: 'Custom App / n8n',
     desc: 'API, MCP veya bridge ile kendi agent pipelineina memory backend ekle.',
   },
@@ -124,7 +130,7 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Link href="/signup">
+                <Link href="/signup?workflow=claude_code">
                   <Button size="lg" className="rounded-xl px-8">
                     Start Capturing Project Context
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -153,10 +159,14 @@ export default function LandingPage() {
 
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {workflowTargets.map((target) => (
-                  <div key={target.name} className="rounded-2xl border border-border/60 bg-card/40 p-4 text-sm">
+                  <Link
+                    key={target.name}
+                    href={`/signup?workflow=${target.key}`}
+                    className="rounded-2xl border border-border/60 bg-card/40 p-4 text-sm transition-colors hover:border-primary/40 hover:bg-card/70"
+                  >
                     <div className="mb-2 font-medium">{target.name}</div>
                     <div className="text-muted-foreground">{target.desc}</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -267,31 +277,38 @@ export default function LandingPage() {
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[
               {
+                key: 'claude_code',
                 title: 'Claude Code handoff',
                 points: ['architecture decisions', 'repo rules', 'active tasks'],
               },
               {
+                key: 'cursor',
                 title: 'Cursor workspace memory',
                 points: ['coding style', 'preferred stack', 'review constraints'],
               },
               {
+                key: 'codex',
                 title: 'Codex / agent prompt base',
                 points: ['persistent system context', 'project assumptions', 'allowed actions'],
               },
               {
+                key: 'replit',
                 title: 'Replit / cloud IDE memory',
                 points: ['deployment notes', 'runtime limits', 'shared project facts'],
               },
               {
+                key: 'custom_app',
                 title: 'Bolt / Lovable build loop',
                 points: ['product rules', 'UI constraints', 'iteration history'],
               },
               {
+                key: 'custom_app',
                 title: 'Custom app / n8n pipeline',
                 points: ['API memory writes', 'query policies', 'workflow recall'],
               },
             ].map((item) => (
-              <Card key={item.title} className="border-border/60 bg-card/60">
+              <Link key={item.title} href={`/signup?workflow=${item.key}`}>
+              <Card className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
                 <CardHeader>
                   <CardTitle className="text-xl">{item.title}</CardTitle>
                 </CardHeader>
@@ -304,6 +321,7 @@ export default function LandingPage() {
                   ))}
                 </CardContent>
               </Card>
+              </Link>
             ))}
           </div>
         </div>
@@ -316,7 +334,7 @@ export default function LandingPage() {
             Start with one shared memory layer for your workflow, then use the same core inside the AI applications you build.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <Link href="/signup">
+            <Link href="/signup?workflow=claude_code">
               <Button size="lg" className="rounded-xl px-8">Get Started</Button>
             </Link>
             <Link href="/pricing">

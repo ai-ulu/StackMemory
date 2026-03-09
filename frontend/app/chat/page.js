@@ -337,7 +337,7 @@ function EmptyState({ onSuggestionClick }) {
   );
 }
 
-function SetupWizard({ onApply }) {
+function SetupWizard({ onApply, initialPreset = 'claude_code' }) {
   const workflowPresets = {
     claude_code: {
       label: 'Claude Code',
@@ -370,7 +370,7 @@ function SetupWizard({ onApply }) {
       preferences: 'Structured memory writes, reusable context, low-friction integration',
     },
   };
-  const [selectedPreset, setSelectedPreset] = useState('claude_code');
+  const [selectedPreset, setSelectedPreset] = useState(initialPreset);
   const [projectName, setProjectName] = useState('');
   const [stack, setStack] = useState('');
   const [tools, setTools] = useState('Claude Code, Cursor, VS Code');
@@ -385,6 +385,12 @@ function SetupWizard({ onApply }) {
     setStack(preset.stack);
     setPreferences(preset.preferences);
   };
+
+  useEffect(() => {
+    if (workflowPresets[initialPreset]) {
+      applyPreset(initialPreset);
+    }
+  }, [initialPreset]);
 
   const handleApply = () => {
     const starterMemories = [
@@ -646,6 +652,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [workflowPreset, setWorkflowPreset] = useState('claude_code');
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -658,6 +665,11 @@ export default function ChatPage() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setWorkflowPreset(params.get('workflow') || 'claude_code');
   }, []);
 
   // Initialize
@@ -1277,6 +1289,7 @@ export default function ChatPage() {
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center">
                   <SetupWizard
+                    initialPreset={workflowPreset}
                     onApply={async ({ prompt, starterMemories }) => {
                       try {
                         await Promise.all(

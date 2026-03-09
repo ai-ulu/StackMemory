@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -21,8 +21,24 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [workflow, setWorkflow] = useState('claude_code');
   const router = useRouter();
   const supabase = createClient();
+  const workflowLabel = useMemo(() => {
+    const labels = {
+      claude_code: 'Claude Code',
+      cursor: 'Cursor',
+      codex: 'Codex',
+      replit: 'Replit',
+      custom_app: 'Custom App / n8n',
+    };
+    return labels[workflow] || 'AI workflow';
+  }, [workflow]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setWorkflow(params.get('workflow') || 'claude_code');
+  }, []);
 
   const validatePassword = (pass) => {
     if (pass.length < 8) return 'Şifre en az 8 karakter olmalı';
@@ -161,6 +177,9 @@ export default function SignupPage() {
               <CardDescription>Ücretsiz hesabınızı oluşturun ve proje hafızanızı başlatın</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-3 inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                Selected workflow: {workflowLabel}
+              </div>
               <div className="mb-5 rounded-2xl border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
                 İlk gün için ideal kullanım:
                 {' '}proje kurallarını kaydet, tercih ettiğin stack'i belirt, aktif işleri not et ve bunu Claude Code, Cursor, Codex-style ajanlar veya kendi uygulaman için tekrar kullan.
