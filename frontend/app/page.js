@@ -37,6 +37,33 @@ function InfoCard({ icon: Icon, title, children }) {
   );
 }
 
+const workflowTargets = [
+  {
+    name: 'Claude Code',
+    desc: 'Repo kurallari, aktif TODOlar ve karar gecmisini tekrar anlatmadan surdur.',
+  },
+  {
+    name: 'Cursor',
+    desc: 'Ayni proje tercihlerini editor icinde ve chat oturumlarinda paylas.',
+  },
+  {
+    name: 'Codex',
+    desc: 'Tekrar eden prompt yerine kalici project context ve rule set kullan.',
+  },
+  {
+    name: 'Replit',
+    desc: 'Cloud IDE ve agent akislarinda ayni hafizayi koru.',
+  },
+  {
+    name: 'Bolt / Lovable',
+    desc: 'Hizli urun prototiplemede teknik kararlarini ve stack tercihlerini tasi.',
+  },
+  {
+    name: 'Custom App / n8n',
+    desc: 'API, MCP veya bridge ile kendi agent pipelineina memory backend ekle.',
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -120,6 +147,15 @@ export default function LandingPage() {
                   <div key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                     <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {workflowTargets.map((target) => (
+                  <div key={target.name} className="rounded-2xl border border-border/60 bg-card/40 p-4 text-sm">
+                    <div className="mb-2 font-medium">{target.name}</div>
+                    <div className="text-muted-foreground">{target.desc}</div>
                   </div>
                 ))}
               </div>
@@ -213,6 +249,61 @@ export default function LandingPage() {
                   <div className="text-sm text-muted-foreground">{item.desc}</div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border/60 bg-muted/20 py-20">
+        <div className="container space-y-10">
+          <div className="max-w-2xl space-y-4">
+            <Badge variant="secondary">Quick Starts</Badge>
+            <h2 className="text-3xl font-bold sm:text-4xl">Choose your workflow and start with the right memory shape</h2>
+            <p className="text-lg text-muted-foreground">
+              Different tools need different starter context. StackMemory should feel opinionated on day one, not empty.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {[
+              {
+                title: 'Claude Code handoff',
+                points: ['architecture decisions', 'repo rules', 'active tasks'],
+              },
+              {
+                title: 'Cursor workspace memory',
+                points: ['coding style', 'preferred stack', 'review constraints'],
+              },
+              {
+                title: 'Codex / agent prompt base',
+                points: ['persistent system context', 'project assumptions', 'allowed actions'],
+              },
+              {
+                title: 'Replit / cloud IDE memory',
+                points: ['deployment notes', 'runtime limits', 'shared project facts'],
+              },
+              {
+                title: 'Bolt / Lovable build loop',
+                points: ['product rules', 'UI constraints', 'iteration history'],
+              },
+              {
+                title: 'Custom app / n8n pipeline',
+                points: ['API memory writes', 'query policies', 'workflow recall'],
+              },
+            ].map((item) => (
+              <Card key={item.title} className="border-border/60 bg-card/60">
+                <CardHeader>
+                  <CardTitle className="text-xl">{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  {item.points.map((point) => (
+                    <div key={point} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-emerald-500" />
+                      <span>{point}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
