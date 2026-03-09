@@ -5,6 +5,15 @@ import { getSupabaseConfig } from '@/lib/supabase/config';
 export async function GET() {
   try {
     const config = getSupabaseConfig();
+    if (config.isUnsafeProductionLocalMode) {
+      return NextResponse.json({
+        status: 'unhealthy',
+        database: 'local_store',
+        mode: 'local',
+        error: 'Local auth mode is enabled in production. Disable STACKMEMORY_LOCAL_MODE and configure Supabase.',
+      }, { status: 500 });
+    }
+
     if (config.isLocalMode) {
       return NextResponse.json({
         status: 'healthy',

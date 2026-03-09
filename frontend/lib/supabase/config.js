@@ -3,12 +3,16 @@ import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 export function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isLocalMode = isLocalAuthMode();
 
   return {
     url,
     anonKey,
-    isLocalMode: isLocalAuthMode(),
+    isLocalMode,
     isConfigured: Boolean(url && anonKey),
+    isProduction,
+    isUnsafeProductionLocalMode: isProduction && isLocalMode,
   };
 }
 
