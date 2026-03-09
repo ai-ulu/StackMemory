@@ -1,4 +1,7 @@
 // Email templates and sending logic
+import { getConfiguredAppUrl } from '@/lib/app-url';
+
+const appUrl = getConfiguredAppUrl() || 'http://localhost:3000';
 
 export const EMAIL_TEMPLATES = {
   WELCOME: 'welcome',
@@ -96,7 +99,7 @@ export function getWelcomeEmailHTML(userName) {
     </div>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/chat" class="button">
+      <a href="${appUrl}/chat" class="button">
         Hemen Başla →
       </a>
     </center>
@@ -109,7 +112,7 @@ export function getWelcomeEmailHTML(userName) {
       <li>⚙️ Settings'den API key oluştur (CLI/SDK için)</li>
     </ul>
     
-    <p>Soruların mı var? <a href="${process.env.NEXT_PUBLIC_APP_URL}/help">Yardım Merkezi</a>'ni ziyaret et veya <a href="mailto:support@stackmemory.dev">support@stackmemory.dev</a> adresine yaz.</p>
+    <p>Soruların mı var? <a href="${appUrl}/help">Yardım Merkezi</a>'ni ziyaret et veya <a href="mailto:support@stackmemory.dev">support@stackmemory.dev</a> adresine yaz.</p>
     
     <p>İyi hatırlamalar! 🚀</p>
     <p><strong>StackMemory Ekibi</strong></p>
@@ -118,12 +121,12 @@ export function getWelcomeEmailHTML(userName) {
   <div class="footer">
     <p>StackMemory - Shared memory for AI coding workflows</p>
     <p>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}">Website</a> · 
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/docs">Docs</a> · 
+      <a href="${appUrl}">Website</a> ·
+      <a href="${appUrl}/docs">Docs</a> ·
       <a href="https://discord.gg/aiulu">Discord</a>
     </p>
     <p style="font-size: 12px; color: #999;">
-      Bu emaili almak istemiyorsan <a href="${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications">buradan</a> ayarlarını değiştirebilirsin.
+      Bu emaili almak istemiyorsan <a href="${appUrl}/settings/notifications">buradan</a> ayarlarını değiştirebilirsin.
     </p>
   </div>
 </body>
@@ -228,12 +231,12 @@ export function getPaymentSuccessEmailHTML(plan, amount) {
     </ul>
     
     <center>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/chat" class="button">
+      <a href="${appUrl}/chat" class="button">
         Hemen Kullanmaya Başla →
       </a>
     </center>
     
-    <p>Faturanı <a href="${process.env.NEXT_PUBLIC_APP_URL}/settings/billing">Billing</a> sayfasından indirebilirsin.</p>
+    <p>Faturanı <a href="${appUrl}/settings/billing">Billing</a> sayfasından indirebilirsin.</p>
     
     <p>Teşekkürler! 🙏</p>
     <p><strong>StackMemory Ekibi</strong></p>

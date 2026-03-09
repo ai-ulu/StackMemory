@@ -8,6 +8,9 @@
  * 4. Direct OpenAI
  * 5. Custom endpoints
  */
+import { getConfiguredAppUrl } from '@/lib/app-url';
+
+const appUrl = getConfiguredAppUrl() || 'https://stackmemory.dev';
 
 // Provider detection priority
 export function getModelConfig() {
@@ -47,7 +50,7 @@ export function getModelConfig() {
         'deepseek': 'deepseek/deepseek-chat',
       },
       headers: {
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://stackmemory.dev',
+        'HTTP-Referer': appUrl,
         'X-Title': 'StackMemory',
       },
     };
