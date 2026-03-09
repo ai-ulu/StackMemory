@@ -338,10 +338,53 @@ function EmptyState({ onSuggestionClick }) {
 }
 
 function SetupWizard({ onApply }) {
+  const workflowPresets = {
+    claude_code: {
+      label: 'Claude Code',
+      tools: 'Claude Code, VS Code',
+      stack: 'TypeScript, Next.js, API routes',
+      preferences: 'Small diffs, explicit plans, safe refactors',
+    },
+    cursor: {
+      label: 'Cursor',
+      tools: 'Cursor, VS Code, GitHub',
+      stack: 'TypeScript, React, Node.js',
+      preferences: 'Project rules, reusable prompts, focused edits',
+    },
+    codex: {
+      label: 'Codex',
+      tools: 'Codex, terminal, GitHub',
+      stack: 'Full-stack app, API integration, tests',
+      preferences: 'Deterministic tasks, short prompts, verifiable outputs',
+    },
+    replit: {
+      label: 'Replit',
+      tools: 'Replit, browser IDE, deployment tools',
+      stack: 'Node.js, Python, hosted services',
+      preferences: 'Fast iteration, working deploys, simple setup',
+    },
+    custom_app: {
+      label: 'Custom App / n8n',
+      tools: 'MCP client, internal AI app, n8n',
+      stack: 'API workflows, memory search, automation',
+      preferences: 'Structured memory writes, reusable context, low-friction integration',
+    },
+  };
+  const [selectedPreset, setSelectedPreset] = useState('claude_code');
   const [projectName, setProjectName] = useState('');
   const [stack, setStack] = useState('');
   const [tools, setTools] = useState('Claude Code, Cursor, VS Code');
   const [preferences, setPreferences] = useState('TypeScript, küçük diffler, API-first tasarım');
+
+  const applyPreset = (presetKey) => {
+    const preset = workflowPresets[presetKey];
+    if (!preset) return;
+
+    setSelectedPreset(presetKey);
+    setTools(preset.tools);
+    setStack(preset.stack);
+    setPreferences(preset.preferences);
+  };
 
   const handleApply = () => {
     const starterMemories = [
@@ -377,12 +420,21 @@ function SetupWizard({ onApply }) {
         write_intent: 'user_explicit',
         write_source: 'setup_wizard',
       },
+      {
+        content: `Primary workflow preset: ${workflowPresets[selectedPreset]?.label || 'Custom'}`,
+        type: 'rule',
+        scope: 'private',
+        write_reason: 'Starter workflow preset created from setup wizard',
+        write_intent: 'user_explicit',
+        write_source: 'setup_wizard',
+      },
     ];
 
     const prompt = [
       'Bu bilgilerle benim için kalıcı bir proje hafızası özeti oluştur ve önemli noktaları saklanacak şekilde düzenle:',
       `Proje adı: ${projectName || 'Henüz belirtilmedi'}`,
       `Kullandığım araçlar: ${tools || 'Belirtilmedi'}`,
+      `Workflow preset: ${workflowPresets[selectedPreset]?.label || 'Custom'}`,
       `Teknoloji stack: ${stack || 'Belirtilmedi'}`,
       `Coding tercihleri: ${preferences || 'Belirtilmedi'}`,
       'Çıktıyı şu başlıklarla ver: proje kuralları, tercih edilen stack, coding preferences, aktif bağlam, sonraki oturum için kısa özet.',
@@ -396,6 +448,25 @@ function SetupWizard({ onApply }) {
       <div className="mb-4 flex items-center gap-2">
         <Badge variant="secondary">Setup Wizard</Badge>
         <span className="text-sm text-muted-foreground">İlk hafızanı 60 saniyede oluştur</span>
+      </div>
+
+      <div className="mb-4">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Workflow preset sec
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(workflowPresets).map(([key, preset]) => (
+            <Button
+              key={key}
+              type="button"
+              variant={selectedPreset === key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => applyPreset(key)}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
