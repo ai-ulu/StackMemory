@@ -87,6 +87,10 @@ health: ## Check service health
 	@curl -f http://localhost:3000/api/health || echo "❌ Frontend unhealthy"
 	@curl -f http://localhost:8080/health || echo "❌ Bridge unhealthy"
 
+smoke-prod: ## Run production smoke test (PowerShell)
+	@echo "🧪 Running production smoke test..."
+	powershell -ExecutionPolicy Bypass -File scripts/prod-smoke-test.ps1
+
 clean: ## Clean build artifacts
 	@echo "🧹 Cleaning..."
 	cd frontend && rm -rf .next node_modules

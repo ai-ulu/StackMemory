@@ -132,6 +132,14 @@ npx playwright test
 npx playwright test --ui
 ```
 
+### Production Smoke Test
+
+```powershell
+$env:APP_URL="https://your-domain.com"
+$env:BRIDGE_HEALTH_URL="https://your-domain.com/api/backend/health"
+powershell -ExecutionPolicy Bypass -File scripts/prod-smoke-test.ps1
+```
+
 ### Integration Tests
 
 ```bash
