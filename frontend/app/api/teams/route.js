@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { createLocalTeam, deleteLocalTeam, listLocalTeams } from '@/lib/dev/local-data';
 
 /**
  * Teams API
@@ -15,6 +18,16 @@ import { createClient } from '@/lib/supabase/server';
 // GET - List user's teams
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teams = await listLocalTeams(user.id);
+      return NextResponse.json({ teams });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -67,6 +80,26 @@ export async function GET(request) {
 // POST - Create new team
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { name, description } = body;
+
+      if (!name || name.length < 2) {
+        return NextResponse.json({ error: 'Team name required (min 2 chars)' }, { status: 400 });
+      }
+
+      const team = await createLocalTeam(user, { name, description });
+      return NextResponse.json({
+        team,
+        message: 'Team created successfully',
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -123,6 +156,27 @@ export async function POST(request) {
 // DELETE - Delete team (owner only)
 export async function DELETE(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const teamId = searchParams.get('id');
+
+      if (!teamId) {
+        return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+      }
+
+      const deleted = await deleteLocalTeam(user.id, teamId);
+      if (!deleted) {
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Team deleted' });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

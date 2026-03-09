@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import {
+  createLocalTeamMemory,
+  getLocalTeamMembership,
+  listLocalTeamMemories,
+  listMemories,
+  removeLocalTeamMemory,
+} from '@/lib/dev/local-data';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -20,6 +29,29 @@ const openai = new OpenAI({
 // GET - List team memories
 export async function GET(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const { searchParams } = new URL(request.url);
+      const type = searchParams.get('type');
+      const limit = parseInt(searchParams.get('limit') || '50');
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      if (!membership) {
+        return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      }
+
+      const memories = await listLocalTeamMemories(teamId, { type, limit });
+      return NextResponse.json({
+        memories,
+        role: membership.role,
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -81,6 +113,61 @@ export async function GET(request, { params }) {
 // POST - Create team memory
 export async function POST(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const body = await request.json();
+      const { content, type = 'fact', shareFromPersonal, personalMemoryId } = body;
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      if (!membership || membership.role === 'viewer') {
+        return NextResponse.json({ error: 'Write access required' }, { status: 403 });
+      }
+
+      if (shareFromPersonal && personalMemoryId) {
+        const personalMemories = await listMemories(user.id);
+        const personalMemory = personalMemories.find((item) => item.id === personalMemoryId);
+        if (!personalMemory) {
+          return NextResponse.json({ error: 'Personal memory not found' }, { status: 404 });
+        }
+
+        const teamMemory = await createLocalTeamMemory(user, teamId, {
+          content: personalMemory.content,
+          type: personalMemory.type,
+          confidence: personalMemory.confidence,
+          write_source: 'share',
+          write_reason: `Shared from personal memory by ${user.email}`,
+        });
+
+        return NextResponse.json({
+          memory: teamMemory,
+          message: 'Memory shared with team',
+        });
+      }
+
+      if (!content) {
+        return NextResponse.json({ error: 'Content required' }, { status: 400 });
+      }
+
+      const memory = await createLocalTeamMemory(user, teamId, {
+        content,
+        type,
+        confidence: 0.8,
+        write_source: 'team',
+        write_intent: 'user_explicit',
+        write_reason: `Created for team by ${user.email}`,
+      });
+
+      return NextResponse.json({
+        memory,
+        message: 'Team memory created',
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -192,6 +279,38 @@ export async function POST(request, { params }) {
 // DELETE - Remove team memory
 export async function DELETE(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const { searchParams } = new URL(request.url);
+      const memoryId = searchParams.get('memoryId');
+
+      if (!memoryId) {
+        return NextResponse.json({ error: 'Memory ID required' }, { status: 400 });
+      }
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      const memories = await listLocalTeamMemories(teamId, { limit: 1000 });
+      const memory = memories.find((item) => item.id === memoryId);
+      const isOwner = memory?.user_id === user.id;
+      const isAdmin = membership?.role === 'admin';
+
+      if (!isOwner && !isAdmin) {
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+      }
+
+      const deleted = await removeLocalTeamMemory(teamId, memoryId);
+      if (!deleted) {
+        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Memory removed from team' });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

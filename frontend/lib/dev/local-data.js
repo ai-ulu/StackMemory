@@ -351,3 +351,169 @@ export async function getLocalShareView(token) {
     view_count: (link.view_count || 0) + 1,
   };
 }
+
+export async function listLocalTeams(userId) {
+  const store = await getLocalStore();
+  const memberships = (store.teamMembers || []).filter((item) => item.user_id === userId);
+  return memberships
+    .map((membership) => {
+      const team = (store.teams || []).find((item) => item.id === membership.team_id);
+      if (!team) return null;
+      return {
+        ...team,
+        role: membership.role,
+        joined_at: membership.joined_at,
+        isOwner: team.owner_id === userId,
+      };
+    })
+    .filter(Boolean);
+}
+
+export async function createLocalTeam(user, payload = {}) {
+  const store = await getLocalStore();
+  const now = new Date().toISOString();
+  const team = {
+    id: crypto.randomUUID(),
+    name: payload.name,
+    description: payload.description || '',
+    avatar_url: null,
+    owner_id: user.id,
+    created_at: now,
+    updated_at: now,
+  };
+
+  const membership = {
+    id: crypto.randomUUID(),
+    team_id: team.id,
+    user_id: user.id,
+    user_email: user.email,
+    role: 'admin',
+    joined_at: now,
+  };
+
+  store.teams = store.teams || [];
+  store.teamMembers = store.teamMembers || [];
+  store.teams.unshift(team);
+  store.teamMembers.push(membership);
+  await saveLocalStore(store);
+
+  return {
+    ...team,
+    role: 'admin',
+    isOwner: true,
+  };
+}
+
+export async function deleteLocalTeam(userId, teamId) {
+  const store = await getLocalStore();
+  const team = (store.teams || []).find((item) => item.id === teamId);
+  if (!team || team.owner_id !== userId) return false;
+
+  store.teams = (store.teams || []).filter((item) => item.id !== teamId);
+  store.teamMembers = (store.teamMembers || []).filter((item) => item.team_id !== teamId);
+  store.teamInvitations = (store.teamInvitations || []).filter((item) => item.team_id !== teamId);
+  store.memories = (store.memories || []).map((memory) =>
+    memory.team_id === teamId ? { ...memory, team_id: null, scope: memory.scope === 'team' ? 'private' : memory.scope } : memory
+  );
+  await saveLocalStore(store);
+  return true;
+}
+
+export async function getLocalTeamMembership(userId, teamId) {
+  const store = await getLocalStore();
+  return (store.teamMembers || []).find((item) => item.team_id === teamId && item.user_id === userId) || null;
+}
+
+export async function listLocalTeamMembers(teamId) {
+  const store = await getLocalStore();
+  return (store.teamMembers || [])
+    .filter((item) => item.team_id === teamId)
+    .map((member) => ({
+      id: member.id,
+      role: member.role,
+      joined_at: member.joined_at,
+      user: {
+        id: member.user_id,
+        email: member.user_email,
+        raw_user_meta_data: {},
+      },
+    }));
+}
+
+export async function inviteLocalTeamMember(teamId, invitedBy, payload = {}) {
+  const store = await getLocalStore();
+  const invitation = {
+    id: crypto.randomUUID(),
+    team_id: teamId,
+    email: payload.email,
+    role: payload.role || 'member',
+    token: crypto.randomBytes(32).toString('hex'),
+    invited_by: invitedBy,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    accepted_at: null,
+    created_at: new Date().toISOString(),
+  };
+
+  store.teamInvitations = store.teamInvitations || [];
+  store.teamInvitations.push(invitation);
+  await saveLocalStore(store);
+  return invitation;
+}
+
+export async function listLocalTeamInvitations(teamId) {
+  const store = await getLocalStore();
+  const now = new Date();
+  return (store.teamInvitations || []).filter(
+    (item) => item.team_id === teamId && !item.accepted_at && new Date(item.expires_at) > now
+  );
+}
+
+export async function updateLocalTeamMemberRole(teamId, memberId, role) {
+  const store = await getLocalStore();
+  const index = (store.teamMembers || []).findIndex((item) => item.team_id === teamId && item.id === memberId);
+  if (index === -1) return false;
+  store.teamMembers[index] = { ...store.teamMembers[index], role };
+  await saveLocalStore(store);
+  return true;
+}
+
+export async function removeLocalTeamMember(teamId, memberId) {
+  const store = await getLocalStore();
+  const before = (store.teamMembers || []).length;
+  store.teamMembers = (store.teamMembers || []).filter((item) => !(item.team_id === teamId && item.id === memberId));
+  await saveLocalStore(store);
+  return (store.teamMembers || []).length !== before;
+}
+
+export async function listLocalTeamMemories(teamId, filters = {}) {
+  const store = await getLocalStore();
+  return (store.memories || [])
+    .filter((item) => item.team_id === teamId && item.status === 'active')
+    .filter((item) => (filters.type ? item.type === filters.type : true))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, filters.limit || 50);
+}
+
+export async function createLocalTeamMemory(user, teamId, payload = {}) {
+  const store = await getLocalStore();
+  const memory = buildLocalMemory(user.id, {
+    ...payload,
+    scope: 'team',
+    write_source: payload.write_source || 'team',
+    write_reason: payload.write_reason || `Created for team by ${user.email}`,
+  });
+  memory.team_id = teamId;
+  store.memories = store.memories || [];
+  store.memories.unshift(memory);
+  await saveLocalStore(store);
+  return memory;
+}
+
+export async function removeLocalTeamMemory(teamId, memoryId) {
+  const store = await getLocalStore();
+  const index = (store.memories || []).findIndex((item) => item.id === memoryId && item.team_id === teamId);
+  if (index === -1) return null;
+  store.memories[index] = { ...store.memories[index], status: 'deleted' };
+  await saveLocalStore(store);
+  return store.memories[index];
+}

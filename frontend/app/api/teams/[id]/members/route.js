@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import {
+  getLocalTeamMembership,
+  inviteLocalTeamMember,
+  listLocalTeamInvitations,
+  listLocalTeamMembers,
+  removeLocalTeamMember,
+  updateLocalTeamMemberRole,
+} from '@/lib/dev/local-data';
 
 /**
  * Team Members API
@@ -11,6 +21,27 @@ import crypto from 'crypto';
 // GET - List team members
 export async function GET(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      if (!membership) {
+        return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
+      }
+
+      const members = await listLocalTeamMembers(teamId);
+      const invitations = membership.role === 'admin' ? await listLocalTeamInvitations(teamId) : [];
+      return NextResponse.json({
+        members,
+        invitations,
+        currentUserRole: membership.role,
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -75,6 +106,38 @@ export async function GET(request, { params }) {
 // POST - Invite member
 export async function POST(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const body = await request.json();
+      const { email, role = 'member' } = body;
+
+      if (!email) {
+        return NextResponse.json({ error: 'Email required' }, { status: 400 });
+      }
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      if (!membership || membership.role !== 'admin') {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
+
+      const invitation = await inviteLocalTeamMember(teamId, user.id, { email, role });
+      return NextResponse.json({
+        invitation: {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          expires_at: invitation.expires_at,
+          inviteLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/team/invite/${invitation.token}`,
+        },
+        message: 'Invitation created',
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -162,6 +225,33 @@ export async function POST(request, { params }) {
 // PATCH - Update member role
 export async function PATCH(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const body = await request.json();
+      const { memberId, role } = body;
+
+      if (!memberId || !role) {
+        return NextResponse.json({ error: 'Member ID and role required' }, { status: 400 });
+      }
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      if (!membership || membership.role !== 'admin') {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
+
+      const updated = await updateLocalTeamMemberRole(teamId, memberId, role);
+      if (!updated) {
+        return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Role updated' });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -207,6 +297,38 @@ export async function PATCH(request, { params }) {
 // DELETE - Remove member
 export async function DELETE(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const teamId = params.id;
+      const { searchParams } = new URL(request.url);
+      const memberId = searchParams.get('memberId');
+
+      if (!memberId) {
+        return NextResponse.json({ error: 'Member ID required' }, { status: 400 });
+      }
+
+      const membership = await getLocalTeamMembership(user.id, teamId);
+      const members = await listLocalTeamMembers(teamId);
+      const targetMember = members.find((item) => item.id === memberId);
+      const isSelf = targetMember?.user?.id === user.id;
+      const isAdmin = membership?.role === 'admin';
+
+      if (!isSelf && !isAdmin) {
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+      }
+
+      const removed = await removeLocalTeamMember(teamId, memberId);
+      if (!removed) {
+        return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Member removed' });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

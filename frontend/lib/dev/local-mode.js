@@ -81,6 +81,9 @@ export async function getLocalStore() {
     apiKeys: [],
     apiKeyLogs: [],
     sharedLinks: [],
+    teams: [],
+    teamMembers: [],
+    teamInvitations: [],
   });
 }
 
