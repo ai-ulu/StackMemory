@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards';
 
 /**
  * Memory Marketplace API
@@ -15,6 +16,15 @@ import { createClient } from '@/lib/supabase/server';
 // GET - List marketplace packages
 export async function GET(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return NextResponse.json({
+        packages: SAMPLE_PACKAGES,
+        categories: CATEGORIES,
+        message: 'Marketplace is running in sample mode during local development.',
+        mode: 'local',
+      });
+    }
+
     const supabase = await createClient();
     
     const { searchParams } = new URL(request.url);
@@ -94,6 +104,10 @@ export async function GET(request) {
 // POST - Create memory package
 export async function POST(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('marketplace_publish');
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

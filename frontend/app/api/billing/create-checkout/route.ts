@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards'
 import Stripe from 'stripe'
 
 function getStripeClient() {
@@ -14,6 +15,10 @@ function getStripeClient() {
 
 export async function POST(req: NextRequest) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('billing_checkout')
+    }
+
     const stripe = getStripeClient()
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

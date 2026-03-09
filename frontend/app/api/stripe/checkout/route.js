@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards';
 import { createCheckoutSession } from '@/lib/stripe';
 
 export async function POST(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('stripe_checkout');
+    }
+
     // Get authenticated user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

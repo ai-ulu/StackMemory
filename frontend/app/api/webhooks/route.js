@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isLocalFeatureMode, getLocalFeatureUnavailableResponse } from '@/lib/dev/local-feature-guards';
 
 /**
  * Webhooks API
@@ -28,6 +29,10 @@ const VALID_EVENTS = [
 // GET - List user webhooks
 export async function GET(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('webhooks');
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -55,6 +60,10 @@ export async function GET(request) {
 // POST - Register new webhook
 export async function POST(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('webhooks');
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -120,6 +129,10 @@ export async function POST(request) {
 // DELETE - Remove webhook
 export async function DELETE(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('webhooks');
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -150,6 +163,10 @@ export async function DELETE(request) {
 // PATCH - Update webhook
 export async function PATCH(request) {
   try {
+    if (isLocalFeatureMode()) {
+      return getLocalFeatureUnavailableResponse('webhooks');
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
