@@ -1,4 +1,4 @@
-# 🎯 Manuel Deployment - Adım Adım
+# 🎯 StackMemory Manual Deployment Steps
 
 Sen SSH ile bağlan, ben sana ne yapacağını söyleyeyim!
 
@@ -159,17 +159,17 @@ Deployment çalıştıktan sonra:
 ```bash
 # SSH'dan Redis container oluştur
 docker run -d \
-  --name ai-ulu-redis \
+  --name stackmemory-redis \
   --network coolify \
   -e REDIS_PASSWORD=your-secure-password \
   redis:7-alpine \
   redis-server --appendonly yes --requirepass your-secure-password
 
 # Test et
-docker exec ai-ulu-redis redis-cli -a your-secure-password ping
+docker exec stackmemory-redis redis-cli -a your-secure-password ping
 
 # Coolify'da REDIS_URL ekle
-REDIS_URL=redis://:your-secure-password@ai-ulu-redis:6379
+REDIS_URL=redis://:your-secure-password@stackmemory-redis:6379
 ```
 
 ---

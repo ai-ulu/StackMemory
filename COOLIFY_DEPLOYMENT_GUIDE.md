@@ -123,9 +123,9 @@ TTL: 3600
 docker ps
 
 # Logları kontrol et
-docker logs ai-ulu-frontend
-docker logs ai-ulu-backend
-docker logs ai-ulu-redis
+docker logs stackmemory-frontend
+docker logs stackmemory-backend
+docker logs stackmemory-redis
 ```
 
 ---
@@ -186,13 +186,13 @@ Coolify dashboard'da:
 ### 7.2 Application Logs
 ```bash
 # Frontend logs
-docker logs -f ai-ulu-frontend
+docker logs -f stackmemory-frontend
 
 # Backend logs
-docker logs -f ai-ulu-backend
+docker logs -f stackmemory-backend
 
 # Nginx logs
-docker logs -f ai-ulu-nginx
+docker logs -f stackmemory-nginx
 ```
 
 ---
@@ -202,10 +202,10 @@ docker logs -f ai-ulu-nginx
 ### Problem 1: Build Hatası
 ```bash
 # Logs kontrol et
-docker logs ai-ulu-frontend
+docker logs stackmemory-frontend
 
 # Container'ı yeniden başlat
-docker restart ai-ulu-frontend
+docker restart stackmemory-frontend
 ```
 
 ### Problem 2: Environment Variables Yüklenmedi
@@ -283,7 +283,7 @@ Supabase otomatik backup yapar, ama manuel backup için:
 ### 2. Redis Backup
 ```bash
 # Redis AOF persistence aktif
-docker exec ai-ulu-redis redis-cli BGSAVE
+docker exec stackmemory-redis redis-cli BGSAVE
 ```
 
 ### 3. Environment Variables Backup
@@ -326,19 +326,19 @@ Artık StackMemory production'da çalışıyor:
 docker ps
 
 # Logs
-docker logs -f ai-ulu-frontend
+docker logs -f stackmemory-frontend
 
 # Restart
-docker restart ai-ulu-frontend
+docker restart stackmemory-frontend
 
 # Environment variables
-docker exec ai-ulu-frontend env
+docker exec stackmemory-frontend env
 
 # Redis CLI
-docker exec -it ai-ulu-redis redis-cli
+docker exec -it stackmemory-redis redis-cli
 
 # Nginx reload
-docker exec ai-ulu-nginx nginx -s reload
+docker exec stackmemory-nginx nginx -s reload
 
 # Disk kullanımı
 df -h

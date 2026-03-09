@@ -1,4 +1,4 @@
-# 🚀 EN BASİT DEPLOYMENT - TEK KOMUT
+# 🚀 StackMemory - En Basit Deployment
 
 Karmaşık şeyler yok, sadece 3 adım!
 
