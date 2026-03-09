@@ -1,7 +1,5 @@
-# AI-ULU Universal Deployment
+# StackMemory Universal Deployment
 # Deploy the entire ecosystem with one command: docker-compose up
-
-version: '3.8'
 
 services:
   # ==========================================================================
@@ -17,10 +15,17 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - APP_URL=${APP_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - DOMAIN=${DOMAIN}
+      - STACKMEMORY_LOCAL_MODE=${STACKMEMORY_LOCAL_MODE}
+      - NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE=${NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     healthcheck:
@@ -155,4 +160,4 @@ volumes:
 
 networks:
   default:
-    name: ai-ulu-network
+    name: stackmemory-network

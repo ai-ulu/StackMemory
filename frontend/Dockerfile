@@ -1,4 +1,4 @@
-# AI-ULU Frontend - Next.js 14 Production Build
+# StackMemory Frontend - Next.js 14 Production Build
 FROM node:18-alpine AS base
 
 # Dependencies
@@ -7,7 +7,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Builder
 FROM base AS builder
