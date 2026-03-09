@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import {
   createApiKey,
   listApiKeys,
   KEY_SCOPES,
   CLIENT_TYPES,
 } from '@/lib/api-keys';
+import {
+  createLocalApiKey,
+  listLocalApiKeys,
+  summarizeLocalApiKeyStats,
+} from '@/lib/dev/local-data';
 
 /**
  * API Keys Management Endpoint
@@ -17,6 +24,34 @@ import {
 // GET - List all API keys
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const keys = await listLocalApiKeys(user.id);
+      return NextResponse.json({
+        keys: keys.map(key => ({
+          id: key.id,
+          name: key.name,
+          keyPrefix: key.key_prefix,
+          scope: key.scope,
+          scopeInfo: KEY_SCOPES[key.scope],
+          clientType: key.client_type,
+          clientInfo: CLIENT_TYPES[key.client_type],
+          isActive: key.is_active,
+          expiresAt: key.expires_at,
+          lastUsedAt: key.last_used_at,
+          usageCount: key.usage_count,
+          createdAt: key.created_at,
+        })),
+        stats: summarizeLocalApiKeyStats(keys),
+        scopes: KEY_SCOPES,
+        clientTypes: CLIENT_TYPES,
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -63,6 +98,68 @@ export async function GET(request) {
 // POST - Create new API key
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { name, scope, clientType, expiresIn } = body;
+
+      if (scope && !KEY_SCOPES[scope]) {
+        return NextResponse.json({ error: 'Invalid scope' }, { status: 400 });
+      }
+
+      let expiresAt = null;
+      if (expiresIn) {
+        const now = new Date();
+        switch (expiresIn) {
+          case '7d':
+            expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            break;
+          case '30d':
+            expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            break;
+          case '90d':
+            expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+            break;
+          case '1y':
+            expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+            break;
+        }
+      }
+
+      const existingKeys = await listLocalApiKeys(user.id);
+      if (existingKeys.length >= 10) {
+        return NextResponse.json({
+          error: 'Local mode key limit reached. Remove an old key before creating another.',
+        }, { status: 403 });
+      }
+
+      const newKey = await createLocalApiKey(user.id, {
+        name: name || `${CLIENT_TYPES[clientType]?.name || 'API'} Key`,
+        scope: scope || CLIENT_TYPES[clientType]?.defaultScope || 'read',
+        clientType: clientType || 'api',
+        expiresAt,
+      });
+
+      return NextResponse.json({
+        success: true,
+        key: newKey.plain_key,
+        keyInfo: {
+          id: newKey.id,
+          name: newKey.name,
+          keyPrefix: newKey.key_prefix,
+          scope: newKey.scope,
+          clientType: newKey.client_type,
+          expiresAt: newKey.expires_at,
+          createdAt: newKey.created_at,
+        },
+        warning: 'Save this key now! It will not be shown again.',
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import { revokeApiKey, deleteApiKey } from '@/lib/api-keys';
+import {
+  deleteLocalApiKey,
+  getLocalApiKey,
+  listLocalApiKeyLogs,
+  updateLocalApiKey,
+} from '@/lib/dev/local-data';
 
 /**
  * Single API Key Management
@@ -13,6 +21,44 @@ import { revokeApiKey, deleteApiKey } from '@/lib/api-keys';
 // GET - Get key details and logs
 export async function GET(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { id } = params;
+      const key = await getLocalApiKey(user.id, id);
+      if (!key) {
+        return NextResponse.json({ error: 'Key not found' }, { status: 404 });
+      }
+
+      const logs = await listLocalApiKeyLogs(user.id, id);
+      return NextResponse.json({
+        key: {
+          id: key.id,
+          name: key.name,
+          keyPrefix: key.key_prefix,
+          scope: key.scope,
+          clientType: key.client_type,
+          isActive: key.is_active,
+          expiresAt: key.expires_at,
+          revokedAt: key.revoked_at,
+          lastUsedAt: key.last_used_at,
+          usageCount: key.usage_count,
+          lastIp: key.last_ip,
+          createdAt: key.created_at,
+          metadata: key.metadata,
+        },
+        logs,
+        stats: {
+          totalRequests: key.usage_count || 0,
+          last7Days: 0,
+          usageByDay: {},
+        },
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -88,6 +134,45 @@ export async function GET(request, { params }) {
 // PATCH - Update key
 export async function PATCH(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { id } = params;
+      const body = await request.json();
+      const { name, revoke } = body;
+
+      if (revoke === true) {
+        const revokedKey = await updateLocalApiKey(user.id, id, {
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+        });
+        if (!revokedKey) {
+          return NextResponse.json({ error: 'Key not found' }, { status: 404 });
+        }
+        return NextResponse.json({
+          success: true,
+          message: 'Key revoked successfully',
+          key: revokedKey,
+        });
+      }
+
+      if (name) {
+        const updatedKey = await updateLocalApiKey(user.id, id, { name });
+        if (!updatedKey) {
+          return NextResponse.json({ error: 'Key not found' }, { status: 404 });
+        }
+        return NextResponse.json({
+          success: true,
+          key: updatedKey,
+        });
+      }
+
+      return NextResponse.json({ error: 'No update provided' }, { status: 400 });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -139,6 +224,24 @@ export async function PATCH(request, { params }) {
 // DELETE - Permanently delete key
 export async function DELETE(request, { params }) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { id } = params;
+      const deleted = await deleteLocalApiKey(user.id, id);
+      if (!deleted) {
+        return NextResponse.json({ error: 'Key not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Key deleted permanently',
+      });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

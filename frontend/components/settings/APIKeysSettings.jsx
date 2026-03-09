@@ -183,6 +183,20 @@ export default function APIKeysSettings() {
         </button>
       </div>
 
+      <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 p-4">
+        <h4 className="font-semibold text-purple-200">Builder quick path</h4>
+        <div className="mt-2 space-y-2 text-sm text-gray-300">
+          <p>1. Create a `Custom API`, `LangChain/Agent`, or `CLI Tool` key.</p>
+          <p>2. Copy the key once and use it with the bridge endpoint: <code className="text-purple-200">http://localhost:8080/v1</code></p>
+          <p>3. Open the integration guide to test `memory`, `search`, or `query` calls from n8n or your own app.</p>
+        </div>
+        <div className="mt-3">
+          <a href="/integrations" className="text-sm font-medium text-purple-300 hover:text-purple-200">
+            Open builder integration guide →
+          </a>
+        </div>
+      </div>
+
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-4 gap-4">

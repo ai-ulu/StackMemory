@@ -73,7 +73,14 @@ export async function updateLocalUserPassword(userId, password) {
 }
 
 export async function getLocalStore() {
-  return readJson(STORE_FILE, { conversations: [], messages: [], memories: [], memorySettings: {} });
+  return readJson(STORE_FILE, {
+    conversations: [],
+    messages: [],
+    memories: [],
+    memorySettings: {},
+    apiKeys: [],
+    apiKeyLogs: [],
+  });
 }
 
 export async function saveLocalStore(store) {
