@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { listMemories } from '@/lib/dev/local-data';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -110,6 +113,36 @@ JSON formatında cevap ver:
 
 export async function POST(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const { question, limit = 10 } = body;
+      if (!question) {
+        return NextResponse.json({ error: 'Question is required' }, { status: 400 });
+      }
+
+      const normalized = question.toLowerCase();
+      const memories = (await listMemories(user.id))
+        .filter((memory) => memory.content.toLowerCase().includes(normalized))
+        .slice(0, limit);
+
+      const answer = memories.length
+        ? memories.map((memory) => memory.content).join('\n')
+        : 'Bu konuda hafizamda kayitli bir bilgi bulamadim.';
+
+      return NextResponse.json({
+        question,
+        answer,
+        confidence: memories.length ? 0.8 : 0,
+        sources: memories,
+        totalMemoriesSearched: memories.length,
+      });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -136,6 +169,28 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const memories = await listMemories(user.id);
+      const typeCounts = { identity: 0, preference: 0, fact: 0 };
+      memories.forEach((memory) => {
+        if (typeCounts[memory.type] !== undefined) {
+          typeCounts[memory.type]++;
+        }
+      });
+
+      const suggestions = [];
+      if (typeCounts.identity > 0) suggestions.push('Benim hakkimda ne biliyorsun?', 'Meslegim ne?');
+      if (typeCounts.preference > 0) suggestions.push('Tercihlerim neler?', 'Hangi kurallari tercih ediyorum?');
+      if (typeCounts.fact > 0) suggestions.push('Son ogrendigim bilgiler neler?', 'Hangi proje notlari kayitli?');
+
+      return NextResponse.json({ suggestions: suggestions.slice(0, 6), memoryCounts: typeCounts });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();

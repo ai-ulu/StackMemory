@@ -151,6 +151,26 @@ export async function createMemory(userId, payload) {
   return memory;
 }
 
+export async function getMemoryById(userId, memoryId) {
+  const store = await getLocalStore();
+  return (store.memories || []).find((item) => item.id === memoryId && item.user_id === userId) || null;
+}
+
+export async function updateMemoryById(userId, memoryId, updates = {}) {
+  const store = await getLocalStore();
+  const index = (store.memories || []).findIndex((item) => item.id === memoryId && item.user_id === userId);
+  if (index === -1) return null;
+
+  store.memories[index] = {
+    ...store.memories[index],
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  await saveLocalStore(store);
+  return store.memories[index];
+}
+
 export async function saveMemorySettingsForUser(userId, updates) {
   const store = await getLocalStore();
   const nextSettings = {

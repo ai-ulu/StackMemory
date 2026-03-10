@@ -61,6 +61,19 @@ export async function authenticateLocalUser(email, password) {
   return { user, error: null };
 }
 
+export async function findLocalUserByEmail(email) {
+  if (!email) return null;
+  const users = await getLocalUsers();
+  const normalizedEmail = email.trim().toLowerCase();
+  return users.find((item) => item.email === normalizedEmail) || null;
+}
+
+export async function findLocalUserById(userId) {
+  if (!userId) return null;
+  const users = await getLocalUsers();
+  return users.find((item) => item.id === userId) || null;
+}
+
 export async function updateLocalUserPassword(userId, password) {
   const users = await getLocalUsers();
   const index = users.findIndex((item) => item.id === userId);

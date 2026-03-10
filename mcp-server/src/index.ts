@@ -41,6 +41,7 @@ const config = {
   apiUrl: process.env.AI_ULU_API_URL || 'http://localhost:3000',
   apiKey: process.env.AI_ULU_API_KEY || '',
   userId: process.env.AI_ULU_USER_ID || '',
+  userEmail: process.env.AI_ULU_USER_EMAIL || '',
 };
 
 // API client for the StackMemory backend
@@ -60,6 +61,8 @@ class AIUluClient {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
+        ...(config.userId ? { 'X-StackMemory-Local-User': config.userId } : {}),
+        ...(config.userEmail ? { 'X-StackMemory-Local-Email': config.userEmail } : {}),
         ...options.headers,
       },
     });

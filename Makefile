@@ -87,6 +87,14 @@ health: ## Check service health
 	@curl -f http://localhost:3000/api/health || echo "❌ Frontend unhealthy"
 	@curl -f http://localhost:8080/health || echo "❌ Bridge unhealthy"
 
+local-start: ## Start local StackMemory app and bridge for MCP clients
+	@echo "Starting local StackMemory services..."
+	powershell -ExecutionPolicy Bypass -File scripts/start-local-stackmemory.ps1
+
+local-stop: ## Stop local StackMemory app and bridge
+	@echo "Stopping local StackMemory services..."
+	powershell -ExecutionPolicy Bypass -File scripts/stop-local-stackmemory.ps1
+
 smoke-prod: ## Run production smoke test (PowerShell)
 	@echo "🧪 Running production smoke test..."
 	powershell -ExecutionPolicy Bypass -File scripts/prod-smoke-test.ps1
@@ -147,6 +155,50 @@ benchmark: ## Run performance benchmarks
 docs: ## Generate documentation
 	@echo "📚 Generating docs..."
 	@echo "Docs available in this repository and product guides"
+
+context-bootstrap: ## Build a repo context packet (usage: make context-bootstrap DIFF=1)
+	@echo "Generating context bootstrap..."
+	powershell -ExecutionPolicy Bypass -File scripts/context-bootstrap.ps1 $(if $(DIFF),-IncludeGitDiff,)
+
+dev-fix: ## Build a dev-fix packet (usage: make dev-fix ISSUE="..." TARGET="frontend\\app" TESTS=1 BUILD=1)
+	@echo "Generating dev-fix packet..."
+	powershell -ExecutionPolicy Bypass -File scripts/dev-fix.ps1 -Issue "$(ISSUE)" -TargetPath "$(TARGET)" $(if $(TESTS),-RunFrontendTests,) $(if $(BUILD),-RunFrontendBuild,)
+
+pr-review: ## Build a PR review packet (usage: make pr-review BASE=origin/main DIFF=1)
+	@echo "Generating PR review packet..."
+	powershell -ExecutionPolicy Bypass -File scripts/pr-review.ps1 -BaseRef $(if $(BASE),$(BASE),HEAD~1) $(if $(DIFF),-IncludeDiff,)
+
+cowork-session: ## Build a full cowork workflow packet (usage: make cowork-session OBJECTIVE="..." TARGET="frontend" BASE=HEAD~1)
+	@echo "Generating cowork session..."
+	powershell -ExecutionPolicy Bypass -File scripts/cowork-session.ps1 -Objective "$(OBJECTIVE)" -TargetPath "$(TARGET)" -BaseRef $(if $(BASE),$(BASE),HEAD~1) $(if $(DIFF),-IncludeGitDiff,) $(if $(REVIEW_DIFF),-IncludeReviewDiff,)
+
+agi-bench-init: ## Create a forced AGI benchmark run bundle
+	@echo "Initializing AGI benchmark run..."
+	py -3 scripts/agi_benchmark.py init-run --mode forced
+
+agi-bench-codex: ## Create a Codex-native forced benchmark session
+	@echo "Initializing Codex-native AGI benchmark session..."
+	py -3 scripts/agi_benchmark.py init-codex-session --mode forced
+
+agi-bench-next: ## Print the next pending task packet (usage: make agi-bench-next RUN=benchmarks/agi-skills/runs/<run-id>)
+	@echo "Selecting next Codex benchmark task..."
+	py -3 scripts/agi_benchmark.py next-task --run-dir $(RUN)
+
+agi-bench-auto: ## Auto-run a forced AGI benchmark (usage: make agi-bench-auto MODEL=gpt-4.1-mini LIMIT=5)
+	@echo "Running AGI benchmark automatically..."
+	py -3 scripts/agi_benchmark.py auto-run --mode forced --model $(if $(MODEL),$(MODEL),gpt-4.1-mini) $(if $(LIMIT),--limit $(LIMIT),)
+
+agi-bench-score: ## Score an AGI benchmark run (usage: make agi-bench-score RUN=benchmarks/agi-skills/runs/<run-id>)
+	@echo "Scoring AGI benchmark run..."
+	py -3 scripts/agi_benchmark.py score-run --run-dir $(RUN)
+
+agi-bench-complete: ## Record a Codex task response (usage: make agi-bench-complete RUN=... TASK=... RESPONSE=...)
+	@echo "Recording Codex benchmark task response..."
+	py -3 scripts/agi_benchmark.py complete-task --run-dir $(RUN) --task-id $(TASK) --response-file $(RESPONSE)
+
+agi-bench-report: ## Aggregate scored AGI benchmark runs
+	@echo "Aggregating AGI benchmark reports..."
+	py -3 scripts/agi_benchmark.py report
 
 version: ## Show version
 	@echo "StackMemory - AI coding workflow memory layer"

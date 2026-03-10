@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { listMemories } from '@/lib/dev/local-data';
+export const dynamic = 'force-dynamic';
 
 // H(x,ψ) calculation for node sizing
 function calculateHScore(memory) {
@@ -43,6 +47,56 @@ function cosineSimilarity(a, b) {
 // GET - Fetch memory graph data for visualization
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const limit = parseInt(searchParams.get('limit') || '50');
+      const memories = (await listMemories(user.id)).slice(0, limit);
+
+      if (!memories.length) {
+        return NextResponse.json({ nodes: [], edges: [], stats: { total: 0 } });
+      }
+
+      const nodes = memories.map((memory) => ({
+        id: memory.id,
+        content: memory.content,
+        contentPreview: memory.content.length > 100 ? `${memory.content.slice(0, 100)}...` : memory.content,
+        type: memory.type,
+        confidence: memory.confidence,
+        hScore: {
+          total: Math.round((memory.confidence || 0.8) * 100),
+          decay: 100,
+          importance: 100,
+          frequency: Math.min(100, (memory.access_count || 0) * 10),
+        },
+        size: 10,
+        color: getTypeColor(memory.type),
+        accessCount: memory.access_count || 0,
+        lastAccessed: memory.last_accessed_at,
+        createdAt: memory.created_at,
+      }));
+
+      return NextResponse.json({
+        nodes,
+        edges: [],
+        stats: {
+          total: nodes.length,
+          byType: {
+            identity: nodes.filter((node) => node.type === 'identity').length,
+            preference: nodes.filter((node) => node.type === 'preference').length,
+            fact: nodes.filter((node) => node.type === 'fact').length,
+          },
+          connections: 0,
+          avgConfidence: Math.round(nodes.reduce((sum, node) => sum + node.confidence, 0) / nodes.length * 100),
+          avgHScore: Math.round(nodes.reduce((sum, node) => sum + node.hScore.total, 0) / nodes.length),
+        },
+      });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -1,12 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { getMemoryById, updateMemoryById } from '@/lib/dev/local-data';
 import { getAppApiUrl } from '@/lib/app-url';
 
 // GET - Get single memory with full details
 export async function GET(request, { params }) {
   try {
-    const supabase = await createClient();
     const { id } = await params;
+
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const memory = await getMemoryById(user.id, id);
+      if (!memory) {
+        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+      }
+
+      const tracked = await updateMemoryById(user.id, id, {
+        access_count: (memory.access_count || 0) + 1,
+        last_accessed_at: new Date().toISOString(),
+      });
+      return NextResponse.json(tracked || memory);
+    }
+
+    const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -37,8 +59,43 @@ export async function GET(request, { params }) {
 // PUT - Update memory (triggers versioning)
 export async function PUT(request, { params }) {
   try {
-    const supabase = await createClient();
     const { id } = await params;
+
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const updates = {};
+
+      if (body.confidence !== undefined) {
+        updates.confidence = Math.max(0, Math.min(1, body.confidence));
+      }
+      if (body.status && ['active', 'pending', 'deprecated'].includes(body.status)) {
+        updates.status = body.status;
+      }
+      if (body.content) {
+        updates.content = body.content;
+      }
+      if (body.scope && ['private', 'team', 'org'].includes(body.scope)) {
+        updates.scope = body.scope;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
+      }
+
+      const memory = await updateMemoryById(user.id, id, updates);
+      if (!memory) {
+        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+      }
+
+      return NextResponse.json(memory);
+    }
+
+    const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -121,8 +178,34 @@ export async function PUT(request, { params }) {
 // DELETE - Shadow delete (never hard delete)
 export async function DELETE(request, { params }) {
   try {
-    const supabase = await createClient();
     const { id } = await params;
+
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const reason = searchParams.get('reason') || 'User requested deletion';
+      const memory = await updateMemoryById(user.id, id, {
+        is_shadow: true,
+        status: 'deprecated',
+        shadow_reason: reason,
+        shadowed_at: new Date().toISOString(),
+      });
+
+      if (!memory) {
+        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Memory moved to shadow (retained but hidden)',
+      });
+    }
+
+    const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {

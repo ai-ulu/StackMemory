@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { listMemories } from '@/lib/dev/local-data';
 import OpenAI from 'openai';
+export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -51,6 +55,45 @@ function calculateHScore(memory, similarity) {
 
 export async function GET(request) {
   try {
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const query = (searchParams.get('q') || searchParams.get('query') || '').trim();
+      const limit = parseInt(searchParams.get('limit') || '10');
+      const type = searchParams.get('type');
+
+      if (!query) {
+        return NextResponse.json({ error: 'Query parameter (q) is required' }, { status: 400 });
+      }
+
+      const normalized = query.toLowerCase();
+      const memories = await listMemories(user.id, { type: type || undefined });
+      const results = memories
+        .filter((memory) => memory.content.toLowerCase().includes(normalized))
+        .slice(0, limit)
+        .map((memory) => ({
+          id: memory.id,
+          content: memory.content,
+          type: memory.type,
+          confidence: memory.confidence,
+          similarity: 100,
+          hScore: {
+            total: Math.round((memory.confidence || 0.8) * 100),
+            decay: 100,
+            importance: 100,
+            frequency: Math.min(100, (memory.access_count || 0) * 10),
+          },
+          scope: memory.scope,
+          createdAt: memory.created_at,
+        }));
+
+      return NextResponse.json({ query, results, total: results.length });
+    }
+
     const supabase = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
