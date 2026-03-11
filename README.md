@@ -101,8 +101,8 @@ These are the clearest demo paths for the current product direction:
 ### Local App
 
 ```bash
-git clone https://github.com/ai-ulu/emergent-ai-ulu.com
-cd emergent-ai-ulu.com
+git clone https://github.com/ai-ulu/StackMemory.git
+cd StackMemory
 cp .env.example .env
 docker-compose up -d
 ```

@@ -50,7 +50,7 @@ StackMemory, AI coding workflow'leri için ortak proje hafızası sağlayan fron
 ### 1. Projeyi klonlayın
 ```bash
 git clone <repo-url>
-cd emergent-ai-ulu.com/frontend
+cd StackMemory/frontend
 ```
 
 ### 2. Bağımlılıkları yükleyin

@@ -60,7 +60,7 @@ Login yap (Coolify credentials)
 ## 🔗 Adım 5: Repository Ayarları
 
 ```
-Repository URL: https://github.com/ai-ulu/emergent-ai-ulu.com
+Repository URL: https://github.com/ai-ulu/StackMemory
 Branch: main
 Docker Compose File: docker-compose.coolify-no-redis.yml
 ```

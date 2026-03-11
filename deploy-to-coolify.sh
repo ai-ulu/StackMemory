@@ -64,7 +64,7 @@ curl -s http://localhost:8000/api/health || echo "Coolify API'ye erişilemiyor"
 
 # 9. GitHub Erişim Kontrolü
 echo -e "\n${YELLOW}🐙 GitHub Erişim Kontrolü...${NC}"
-curl -s https://api.github.com/repos/ai-ulu/emergent-ai-ulu.com | grep -q "full_name" && \
+curl -s https://api.github.com/repos/ai-ulu/StackMemory | grep -q "full_name" && \
     echo -e "${GREEN}✅ GitHub repo erişilebilir${NC}" || \
     echo -e "${RED}❌ GitHub repo erişilemiyor${NC}"
 
@@ -87,7 +87,7 @@ echo "[ ] Redis: Upstash mı yoksa Redis'siz mi?"
 echo -e "\n${GREEN}🎯 Önerilen Deployment:${NC}"
 echo "1. Coolify dashboard'a git: http://187.77.64.91:8000"
 echo "2. New Resource → Docker Compose"
-echo "3. Repository: https://github.com/ai-ulu/emergent-ai-ulu.com"
+echo "3. Repository: https://github.com/ai-ulu/StackMemory"
 echo "4. Docker Compose File: docker-compose.coolify-no-redis.yml"
 echo "5. Environment Variables ekle (minimum 9 değişken)"
 echo "6. Deploy tıkla"

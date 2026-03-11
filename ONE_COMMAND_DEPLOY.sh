@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 🚀 TEK KOMUT DEPLOYMENT - SIFIR KONFIGÜRASYON
-# Kullanım: curl -s https://raw.githubusercontent.com/ai-ulu/emergent-ai-ulu.com/main/ONE_COMMAND_DEPLOY.sh | bash
+# Kullanım: curl -s https://raw.githubusercontent.com/ai-ulu/StackMemory/main/ONE_COMMAND_DEPLOY.sh | bash
 
 set -e
 
@@ -28,9 +28,9 @@ read -p "Upstash Redis URL var mı? (varsa gir, yoksa ENTER): " REDIS_URL
 # 3. Repo'yu clone et
 echo -e "\n${YELLOW}📦 Repo clone ediliyor...${NC}"
 cd /tmp
-rm -rf emergent-ai-ulu.com
-git clone https://github.com/ai-ulu/emergent-ai-ulu.com.git
-cd emergent-ai-ulu.com
+rm -rf StackMemory
+git clone https://github.com/ai-ulu/StackMemory.git
+cd StackMemory
 
 # 4. .env dosyası oluştur
 echo -e "\n${YELLOW}🔧 Environment variables ayarlanıyor...${NC}"

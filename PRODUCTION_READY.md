@@ -216,8 +216,8 @@ Implemented per API key scope. Configure in `frontend/lib/api-keys.js`.
 
 ```bash
 # On your server
-git clone https://github.com/ai-ulu/emergent-ai-ulu.com
-cd emergent-ai-ulu.com
+git clone https://github.com/ai-ulu/StackMemory.git
+cd StackMemory
 cp .env.example .env
 # Edit .env
 docker-compose up -d
@@ -358,7 +358,7 @@ services:
 
 - **Docs:** https://docs.ai-ulu.com
 - **Discord:** https://discord.gg/aiulu
-- **GitHub Issues:** https://github.com/ai-ulu/emergent-ai-ulu.com/issues
+- **GitHub Issues:** https://github.com/ai-ulu/StackMemory/issues
 
 ---
 

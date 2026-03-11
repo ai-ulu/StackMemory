@@ -32,7 +32,7 @@ https://your-coolify-instance.com
 
 ### 1.3 Repository Ayarları
 ```
-Repository: https://github.com/ai-ulu/emergent-ai-ulu.com
+Repository: https://github.com/ai-ulu/StackMemory
 Branch: main
 Docker Compose File: docker-compose.coolify.yml
 ```
@@ -302,7 +302,7 @@ docker exec stackmemory-redis redis-cli BGSAVE
 - Product docs and guides in this repository
 
 ### GitHub Issues
-- https://github.com/ai-ulu/emergent-ai-ulu.com/issues
+- https://github.com/ai-ulu/StackMemory/issues
 
 ---
 

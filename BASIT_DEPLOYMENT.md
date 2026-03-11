@@ -32,7 +32,7 @@ ssh root@187.77.64.91
 ## Adım 3: TEK KOMUT - ÇALIŞTIR!
 
 ```bash
-curl -s https://raw.githubusercontent.com/ai-ulu/emergent-ai-ulu.com/main/ONE_COMMAND_DEPLOY.sh | bash
+curl -s https://raw.githubusercontent.com/ai-ulu/StackMemory/main/ONE_COMMAND_DEPLOY.sh | bash
 ```
 
 Script sana soracak:
@@ -73,7 +73,7 @@ docker restart $(docker ps | grep frontend | awk '{print $1}')
 Temizle ve tekrar:
 ```bash
 docker compose down
-curl -s https://raw.githubusercontent.com/ai-ulu/emergent-ai-ulu.com/main/ONE_COMMAND_DEPLOY.sh | bash
+curl -s https://raw.githubusercontent.com/ai-ulu/StackMemory/main/ONE_COMMAND_DEPLOY.sh | bash
 ```
 
 ---
@@ -88,8 +88,8 @@ ssh root@187.77.64.91
 
 # Repo clone
 cd /tmp
-git clone https://github.com/ai-ulu/emergent-ai-ulu.com.git
-cd emergent-ai-ulu.com
+git clone https://github.com/ai-ulu/StackMemory.git
+cd StackMemory
 
 # .env oluştur
 nano .env
