@@ -13,9 +13,17 @@ test.describe('Landing Page', () => {
   test('should have working navigation links', async ({ page }) => {
     const nav = page.locator('nav');
     await expect(page.getByRole('link', { name: 'StackMemory' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Features' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Use Cases' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Pricing' })).toBeVisible();
+    const viewport = page.viewportSize();
+    const isMobile = !!viewport && viewport.width < 768;
+
+    if (isMobile) {
+      await expect(page.getByRole('link', { name: 'Log In' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Get Started' }).first()).toBeVisible();
+    } else {
+      await expect(nav.getByRole('link', { name: 'Features' })).toBeVisible();
+      await expect(nav.getByRole('link', { name: 'Use Cases' })).toBeVisible();
+      await expect(nav.getByRole('link', { name: 'Pricing' })).toBeVisible();
+    }
   });
 
   test('should have CTA buttons', async ({ page }) => {

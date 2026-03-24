@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Smoke', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.describe('Login Page', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/login');
