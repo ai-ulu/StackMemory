@@ -247,7 +247,7 @@ export async function validateApiKey(supabase, plainKey) {
 export async function listApiKeys(supabase, userId) {
   const { data, error } = await supabase
     .from('api_keys')
-    .select('*')
+    .select('id, user_id, key_hash, scope, name, enabled, last_used_at, failure_count, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
