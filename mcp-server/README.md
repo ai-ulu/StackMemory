@@ -49,6 +49,7 @@ Example Claude Desktop config:
 - `delete_memory`
 - `query_memories`
 - `health_check`
+- `bulk_store_memories`
 - `list_memories`
 - `get_memory_graph`
 

@@ -194,6 +194,21 @@ const ListMemoriesSchema = z.object({
 const GetMemoryGraphSchema = z.object({
   limit: z.number().int().positive().max(200).optional(),
 });
+const BulkStoreMemoriesSchema = z.object({
+  memories: z.array(
+    z.object({
+      content: z.string().min(1),
+      type: z.enum(['identity', 'preference', 'fact']).optional().default('fact'),
+      confidence: z.number().min(0).max(1).optional().default(0.8),
+    })
+  ).min(1).max(50),
+});
+
+function textResult(text: string) {
+  return {
+    content: [{ type: 'text' as const, text }],
+  };
+}
 
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -271,6 +286,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: 'bulk_store_memories',
+        description: 'Store multiple memories in one request (up to 50 items).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            memories: {
+              type: 'array',
+              description: 'Array of memories to store',
+              items: {
+                type: 'object',
+                properties: {
+                  content: { type: 'string', description: 'Memory content' },
+                  type: {
+                    type: 'string',
+                    enum: ['identity', 'preference', 'fact'],
+                    description: 'Memory type',
+                  },
+                  confidence: { type: 'number', description: 'Confidence 0-1' },
+                },
+                required: ['content'],
+              },
+            },
+          },
+          required: ['memories'],
+        },
+      },
+      {
         name: 'list_memories',
         description: 'List all memories, optionally filtered by type.',
         inputSchema: {
@@ -308,105 +350,61 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'search_memories': {
         const { query, limit } = SearchMemoriesSchema.parse(args);
         const results = await client.searchMemories(query, limit);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
+        return textResult(JSON.stringify(results, null, 2));
       }
 
       case 'store_memory': {
         const { content, type, confidence } = StoreMemorySchema.parse(args);
         const result = await client.storeMemory(content, type, confidence);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Memory stored successfully:\n${JSON.stringify(result, null, 2)}`,
-            },
-          ],
-        };
+        return textResult(`Memory stored successfully:\n${JSON.stringify(result, null, 2)}`);
       }
 
       case 'update_memory': {
         const { id, content } = UpdateMemorySchema.parse(args);
         const result = await client.updateMemory(id, content);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Memory updated:\n${JSON.stringify(result, null, 2)}`,
-            },
-          ],
-        };
+        return textResult(`Memory updated:\n${JSON.stringify(result, null, 2)}`);
       }
 
       case 'delete_memory': {
         const { id } = DeleteMemorySchema.parse(args);
         await client.deleteMemory(id);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Memory ${id} deleted (moved to shadow).`,
-            },
-          ],
-        };
+        return textResult(`Memory ${id} deleted (moved to shadow).`);
       }
 
       case 'query_memories': {
         const { question } = QueryMemoriesSchema.parse(args);
         const result = await client.queryNaturalLanguage(question);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return textResult(JSON.stringify(result, null, 2));
       }
 
       case 'health_check': {
         HealthCheckSchema.parse(args ?? {});
         const result = await client.healthCheck();
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `StackMemory health:\n${JSON.stringify(result, null, 2)}`,
-            },
-          ],
-        };
+        return textResult(`StackMemory health:\n${JSON.stringify(result, null, 2)}`);
+      }
+
+      case 'bulk_store_memories': {
+        const { memories } = BulkStoreMemoriesSchema.parse(args ?? {});
+        const results = await Promise.all(
+          memories.map((memory) => client.storeMemory(memory.content, memory.type, memory.confidence))
+        );
+        return textResult(
+          `Stored ${results.length} memories successfully.\n${JSON.stringify(results, null, 2)}`
+        );
       }
 
       case 'list_memories': {
         const { type, limit } = ListMemoriesSchema.parse(args ?? {});
         const results = await client.getMemories(type, limit);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
+        return textResult(JSON.stringify(results, null, 2));
       }
 
       case 'get_memory_graph': {
         const { limit } = GetMemoryGraphSchema.parse(args ?? {});
         const graph = await client.getMemoryGraph(limit);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Memory Graph:\n- Nodes: ${graph.nodes?.length || 0}\n- Edges: ${graph.edges?.length || 0}\n\n${JSON.stringify(graph.stats, null, 2)}`,
-            },
-          ],
-        };
+        return textResult(
+          `Memory Graph:\n- Nodes: ${graph.nodes?.length || 0}\n- Edges: ${graph.edges?.length || 0}\n\n${JSON.stringify(graph.stats, null, 2)}`
+        );
       }
 
       default:
