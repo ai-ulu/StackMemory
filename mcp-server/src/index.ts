@@ -131,6 +131,10 @@ class AIUluClient {
   async getSettings() {
     return this.request('/api/memory-settings');
   }
+
+  async healthCheck() {
+    return this.request('/api/health');
+  }
 }
 
 // Initialize client
@@ -181,6 +185,8 @@ const DeleteMemorySchema = z.object({
 const QueryMemoriesSchema = z.object({
   question: z.string().describe('Natural language question about memories'),
 });
+
+const HealthCheckSchema = z.object({});
 
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -247,6 +253,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             question: { type: 'string', description: 'Natural language question' },
           },
           required: ['question'],
+        },
+      },
+      {
+        name: 'health_check',
+        description: 'Check StackMemory API connectivity and health status.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
         },
       },
       {
@@ -344,6 +358,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'health_check': {
+        HealthCheckSchema.parse(args ?? {});
+        const result = await client.healthCheck();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `StackMemory health:\n${JSON.stringify(result, null, 2)}`,
             },
           ],
         };
