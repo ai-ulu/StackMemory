@@ -131,6 +131,10 @@ class AIUluClient {
   async getSettings() {
     return this.request('/api/memory-settings');
   }
+
+  async healthCheck() {
+    return this.request('/api/health');
+  }
 }
 
 // Initialize client
@@ -180,6 +184,15 @@ const DeleteMemorySchema = z.object({
 
 const QueryMemoriesSchema = z.object({
   question: z.string().describe('Natural language question about memories'),
+});
+
+const HealthCheckSchema = z.object({});
+const ListMemoriesSchema = z.object({
+  type: z.enum(['identity', 'preference', 'fact']).optional(),
+  limit: z.number().int().positive().max(100).optional(),
+});
+const GetMemoryGraphSchema = z.object({
+  limit: z.number().int().positive().max(200).optional(),
 });
 
 // List available tools
@@ -247,6 +260,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             question: { type: 'string', description: 'Natural language question' },
           },
           required: ['question'],
+        },
+      },
+      {
+        name: 'health_check',
+        description: 'Check StackMemory API connectivity and health status.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
         },
       },
       {
@@ -349,8 +370,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case 'health_check': {
+        HealthCheckSchema.parse(args ?? {});
+        const result = await client.healthCheck();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `StackMemory health:\n${JSON.stringify(result, null, 2)}`,
+            },
+          ],
+        };
+      }
+
       case 'list_memories': {
-        const { type, limit } = args as { type?: string; limit?: number };
+        const { type, limit } = ListMemoriesSchema.parse(args ?? {});
         const results = await client.getMemories(type, limit);
         return {
           content: [
@@ -363,7 +397,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_memory_graph': {
-        const { limit } = args as { limit?: number };
+        const { limit } = GetMemoryGraphSchema.parse(args ?? {});
         const graph = await client.getMemoryGraph(limit);
         return {
           content: [
