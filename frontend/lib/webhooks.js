@@ -1,7 +1,9 @@
 /**
- * Webhook trigger utility
- * Call this from other APIs when memory events occur
+ * Webhook trigger utility with exponential backoff retry
  */
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
 
 async function generateSignature(secret, payload) {
   const encoder = new TextEncoder();
@@ -19,11 +21,31 @@ async function generateSignature(secret, payload) {
     .join('');
 }
 
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options, retries = MAX_RETRIES) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      // 4xx hataları retry etme
+      if (res.status >= 400 && res.status < 500) throw new Error(`Client error: ${res.status}`);
+      throw new Error(`Server error: ${res.status}`);
+    } catch (err) {
+      if (attempt === retries) throw err;
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 100;
+      await sleep(delay);
+    }
+  }
+}
+
 export async function triggerWebhooks(supabase, userId, event, payload) {
   try {
     const { data: webhooks } = await supabase
       .from('webhooks')
-      .select('*')
+      .select('id, url, secret, events, enabled, failure_count')
       .eq('user_id', userId)
       .eq('enabled', true)
       .contains('events', [event]);
@@ -33,14 +55,14 @@ export async function triggerWebhooks(supabase, userId, event, payload) {
     for (const webhook of webhooks) {
       try {
         const signature = await generateSignature(webhook.secret, payload);
-        
-        await fetch(webhook.url, {
+
+        await fetchWithRetry(webhook.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-AI-ULU-Event': event,
-            'X-AI-ULU-Signature': signature,
-            'X-AI-ULU-Timestamp': Date.now().toString(),
+            'X-StackMemory-Event': event,
+            'X-StackMemory-Signature': signature,
+            'X-StackMemory-Timestamp': Date.now().toString(),
           },
           body: JSON.stringify({
             event,
@@ -54,10 +76,12 @@ export async function triggerWebhooks(supabase, userId, event, payload) {
           .update({ last_triggered_at: new Date().toISOString(), failure_count: 0 })
           .eq('id', webhook.id);
       } catch (err) {
+        const newFailCount = (webhook.failure_count || 0) + 1;
         await supabase
           .from('webhooks')
-          .update({ failure_count: (webhook.failure_count || 0) + 1 })
+          .update({ failure_count: newFailCount, last_error: err.message })
           .eq('id', webhook.id);
+        console.error(`Webhook ${webhook.id} failed after retries:`, err.message);
       }
     }
   } catch (error) {
