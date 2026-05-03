@@ -147,11 +147,11 @@ async function searchMemories(supabase, embedding, userId, limit = 3, emotionalC
     const topMemories = scored.slice(0, limit);
 
     // Track access for decay
-    for (const mem of topMemories) {
-      try {
-        await supabase.rpc('track_memory_access', { memory_uuid: mem.id });
-      } catch (e) {}
-    }
+    // Batch track memory access (N+1 fix)
+    try {
+      const memoryIds = topMemories.map(m => m.id);
+      await supabase.rpc('batch_track_memory_access', { memory_uuids: memoryIds });
+    } catch (e) {}
 
     return topMemories.map(mem => ({
       ...mem,
