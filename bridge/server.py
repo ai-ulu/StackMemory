@@ -31,6 +31,19 @@ from pydantic import BaseModel, Field
 
 # Async HTTP client
 import httpx
+import hashlib
+
+# Redis cache (optional - gracefully disabled if not available)
+try:
+    import redis.asyncio as aioredis
+    _redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
+    redis_client = aioredis.from_url(_redis_url, decode_responses=True)
+    REDIS_ENABLED = True
+except ImportError:
+    redis_client = None
+    REDIS_ENABLED = False
+
+CACHE_TTL = int(os.getenv('QUERY_CACHE_TTL', '300'))  # 5 dakika default
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
