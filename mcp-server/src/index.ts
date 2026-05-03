@@ -210,6 +210,73 @@ function textResult(text: string) {
   };
 }
 
+async function handleToolCall(name: string, args: unknown) {
+  switch (name) {
+    case 'search_memories': {
+      const { query, limit } = SearchMemoriesSchema.parse(args);
+      const results = await client.searchMemories(query, limit);
+      return textResult(JSON.stringify(results, null, 2));
+    }
+
+    case 'store_memory': {
+      const { content, type, confidence } = StoreMemorySchema.parse(args);
+      const result = await client.storeMemory(content, type, confidence);
+      return textResult(`Memory stored successfully:\n${JSON.stringify(result, null, 2)}`);
+    }
+
+    case 'update_memory': {
+      const { id, content } = UpdateMemorySchema.parse(args);
+      const result = await client.updateMemory(id, content);
+      return textResult(`Memory updated:\n${JSON.stringify(result, null, 2)}`);
+    }
+
+    case 'delete_memory': {
+      const { id } = DeleteMemorySchema.parse(args);
+      await client.deleteMemory(id);
+      return textResult(`Memory ${id} deleted (moved to shadow).`);
+    }
+
+    case 'query_memories': {
+      const { question } = QueryMemoriesSchema.parse(args);
+      const result = await client.queryNaturalLanguage(question);
+      return textResult(JSON.stringify(result, null, 2));
+    }
+
+    case 'health_check': {
+      HealthCheckSchema.parse(args ?? {});
+      const result = await client.healthCheck();
+      return textResult(`StackMemory health:\n${JSON.stringify(result, null, 2)}`);
+    }
+
+    case 'bulk_store_memories': {
+      const { memories } = BulkStoreMemoriesSchema.parse(args ?? {});
+      const results = await Promise.all(
+        memories.map((memory) => client.storeMemory(memory.content, memory.type, memory.confidence))
+      );
+      return textResult(
+        `Stored ${results.length} memories successfully.\n${JSON.stringify(results, null, 2)}`
+      );
+    }
+
+    case 'list_memories': {
+      const { type, limit } = ListMemoriesSchema.parse(args ?? {});
+      const results = await client.getMemories(type, limit);
+      return textResult(JSON.stringify(results, null, 2));
+    }
+
+    case 'get_memory_graph': {
+      const { limit } = GetMemoryGraphSchema.parse(args ?? {});
+      const graph = await client.getMemoryGraph(limit);
+      return textResult(
+        `Memory Graph:\n- Nodes: ${graph.nodes?.length || 0}\n- Edges: ${graph.edges?.length || 0}\n\n${JSON.stringify(graph.stats, null, 2)}`
+      );
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+}
+
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -346,70 +413,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
-    switch (name) {
-      case 'search_memories': {
-        const { query, limit } = SearchMemoriesSchema.parse(args);
-        const results = await client.searchMemories(query, limit);
-        return textResult(JSON.stringify(results, null, 2));
-      }
-
-      case 'store_memory': {
-        const { content, type, confidence } = StoreMemorySchema.parse(args);
-        const result = await client.storeMemory(content, type, confidence);
-        return textResult(`Memory stored successfully:\n${JSON.stringify(result, null, 2)}`);
-      }
-
-      case 'update_memory': {
-        const { id, content } = UpdateMemorySchema.parse(args);
-        const result = await client.updateMemory(id, content);
-        return textResult(`Memory updated:\n${JSON.stringify(result, null, 2)}`);
-      }
-
-      case 'delete_memory': {
-        const { id } = DeleteMemorySchema.parse(args);
-        await client.deleteMemory(id);
-        return textResult(`Memory ${id} deleted (moved to shadow).`);
-      }
-
-      case 'query_memories': {
-        const { question } = QueryMemoriesSchema.parse(args);
-        const result = await client.queryNaturalLanguage(question);
-        return textResult(JSON.stringify(result, null, 2));
-      }
-
-      case 'health_check': {
-        HealthCheckSchema.parse(args ?? {});
-        const result = await client.healthCheck();
-        return textResult(`StackMemory health:\n${JSON.stringify(result, null, 2)}`);
-      }
-
-      case 'bulk_store_memories': {
-        const { memories } = BulkStoreMemoriesSchema.parse(args ?? {});
-        const results = await Promise.all(
-          memories.map((memory) => client.storeMemory(memory.content, memory.type, memory.confidence))
-        );
-        return textResult(
-          `Stored ${results.length} memories successfully.\n${JSON.stringify(results, null, 2)}`
-        );
-      }
-
-      case 'list_memories': {
-        const { type, limit } = ListMemoriesSchema.parse(args ?? {});
-        const results = await client.getMemories(type, limit);
-        return textResult(JSON.stringify(results, null, 2));
-      }
-
-      case 'get_memory_graph': {
-        const { limit } = GetMemoryGraphSchema.parse(args ?? {});
-        const graph = await client.getMemoryGraph(limit);
-        return textResult(
-          `Memory Graph:\n- Nodes: ${graph.nodes?.length || 0}\n- Edges: ${graph.edges?.length || 0}\n\n${JSON.stringify(graph.stats, null, 2)}`
-        );
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
+    return await handleToolCall(name, args);
   } catch (error) {
     return {
       content: [
