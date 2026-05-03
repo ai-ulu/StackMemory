@@ -123,7 +123,7 @@ async function syncToRemote(
       // Check if exists remotely
       const { data: existing } = await supabase
         .from('memories')
-        .select('*')
+        .select('id, user_id, content, embedding, metadata, created_at, updated_at, access_count, last_accessed_at')
         .eq('id', local.id)
         .single();
 
@@ -193,7 +193,7 @@ async function syncFromRemote(
   // Get memories updated since last sync
   let query = supabase
     .from('memories')
-    .select('*')
+    .select('id, user_id, content, embedding, metadata, created_at, updated_at, access_count, last_accessed_at')
     .eq('user_id', userId)
     .eq('status', 'active');
 
