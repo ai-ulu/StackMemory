@@ -262,3 +262,38 @@ export async function updateMemoryConfidence(
   
   return !error;
 }
+
+/**
+ * Filter memories by tag
+ */
+export async function filterMemoriesByTag(
+  supabase: SupabaseClient,
+  userId: string,
+  tag: string
+) {
+  const { data, error } = await supabase
+    .from('memories')
+    .select('id, user_id, content, tags, type, created_at, updated_at')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .contains('tags', [tag])
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Manually set tags on a memory
+ */
+export async function setMemoryTags(
+  supabase: SupabaseClient,
+  memoryId: string,
+  tags: string[]
+) {
+  const { error } = await supabase
+    .from('memories')
+    .update({ tags, updated_at: new Date().toISOString() })
+    .eq('id', memoryId);
+  if (error) throw error;
+}
