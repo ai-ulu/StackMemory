@@ -278,6 +278,19 @@ function classifyForMemory(content) {
   return { shouldStore: false, type: 'normal' };
 }
 
+// Auto-tag generation (client-side, fast rule-based)
+function generateMemoryTags(content, type) {
+  const tags = [type];
+  const lower = content.toLowerCase();
+  if (/kod|code|github|deploy|bug|api|veritaban|database|server|docker/.test(lower)) tags.push('technical');
+  if (/para|fiyat|ödeme|budget|fatura|salary|maaş/.test(lower)) tags.push('finance');
+  if (/toplantı|meeting|takvim|calendar|randevu|deadline|teslim/.test(lower)) tags.push('work');
+  if (/sağlık|health|doktor|ilaç|spor|egzersiz|uyku|sleep/.test(lower)) tags.push('health');
+  if (/aile|family|arkadaş|friend|sevgili|partner|çocuk|anne|baba/.test(lower)) tags.push('personal');
+  if (/öğren|learn|kitap|book|kurs|course|üniversite|okul/.test(lower)) tags.push('education');
+  return [...new Set(tags)];
+}
+
 // Store memory with Write-Intent Guard (with fallback)
 async function storeMemory(supabase, userId, content, embedding, classification) {
   if (!classification.shouldStore) return null;
@@ -295,6 +308,7 @@ async function storeMemory(supabase, userId, content, embedding, classification)
         scope: 'private',
         embedding,
         language: 'tr',
+        tags: generateMemoryTags(content, classification.type),
         write_reason: 'Kullanıcı sohbet sırasında kişisel bilgi paylaştı',
         write_intent: classification.intent || 'auto_capture',
         write_source: 'chat',
