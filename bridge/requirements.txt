@@ -13,6 +13,9 @@ websockets>=12.0
 # Data Validation
 pydantic>=2.5.0
 
+# Cache (optional)
+redis[hiredis]>=5.0.0
+
 # Utilities
 python-dotenv>=1.0.0
 python-multipart>=0.0.6
