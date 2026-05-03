@@ -374,3 +374,118 @@ export async function getSyncStats(userId: string): Promise<{
     lastSyncTime: settings.lastSyncAt || null,
   };
 }
+
+// ============================================================
+// Cross-Device Sync Visibility
+// ============================================================
+
+export interface DeviceInfo {
+  device_id: string;
+  device_name: string;
+  device_type: 'mobile' | 'tablet' | 'desktop' | 'browser' | 'cli' | 'unknown';
+  platform?: string;
+}
+
+/**
+ * Generate a stable device fingerprint for this browser/client
+ */
+export function getDeviceId(): string {
+  const key = 'stackmemory_device_id';
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+/**
+ * Detect current device info from browser
+ */
+export function detectDeviceInfo(): DeviceInfo {
+  const ua = navigator.userAgent;
+  const device_id = getDeviceId();
+
+  let device_type: DeviceInfo['device_type'] = 'browser';
+  let platform = 'Web';
+  let device_name = 'Browser';
+
+  if (/iPhone|iPad|iPod/.test(ua)) {
+    device_type = /iPad/.test(ua) ? 'tablet' : 'mobile';
+    platform = 'iOS';
+    device_name = /iPad/.test(ua) ? 'iPad' : 'iPhone';
+  } else if (/Android/.test(ua)) {
+    device_type = /tablet|Tablet/.test(ua) ? 'tablet' : 'mobile';
+    platform = 'Android';
+    device_name = 'Android Device';
+  } else if (/Macintosh/.test(ua)) {
+    device_type = 'desktop';
+    platform = 'macOS';
+    device_name = 'Mac';
+  } else if (/Windows/.test(ua)) {
+    device_type = 'desktop';
+    platform = 'Windows';
+    device_name = 'Windows PC';
+  } else if (/Linux/.test(ua)) {
+    device_type = 'desktop';
+    platform = 'Linux';
+    device_name = 'Linux PC';
+  }
+
+  // Add browser name
+  const browserMatch = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/);
+  if (browserMatch) device_name += ;
+
+  return { device_id, device_name, device_type, platform };
+}
+
+/**
+ * Register or update this device in Supabase
+ */
+export async function registerDevice(supabase: any, userId: string): Promise<void> {
+  const info = detectDeviceInfo();
+  await supabase
+    .from('user_devices')
+    .upsert({
+      user_id: userId,
+      device_id: info.device_id,
+      device_name: info.device_name,
+      device_type: info.device_type,
+      platform: info.platform,
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,device_id' });
+}
+
+/**
+ * Log a sync operation
+ */
+export async function logSyncOperation(
+  supabase: any,
+  userId: string,
+  stats: {
+    memories_pushed: number;
+    memories_pulled: number;
+    conflicts_resolved: number;
+    duration_ms: number;
+    status: 'success' | 'partial' | 'error';
+    error_message?: string;
+  }
+): Promise<void> {
+  const device_id = getDeviceId();
+  await supabase.from('sync_log').insert({
+    user_id: userId,
+    device_id,
+    ...stats,
+  });
+}
+
+/**
+ * Get sync summary for all devices
+ */
+export async function getDeviceSyncSummary(supabase: any, userId: string) {
+  const { data, error } = await supabase.rpc('get_device_sync_summary', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
