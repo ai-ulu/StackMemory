@@ -1,184 +1,112 @@
-# StackMemory
+# StackMemory MCP v2.0
 
-**Shared Memory Layer For AI Coding Workflows**
+<p align="center">
+  <strong>Shared Memory Layer for AI Coding Workflows</strong><br>
+  <em>One memory. Many tools. Same project context.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-2.0-blue?style=for-the-badge" alt="Version 2.0">
+  <img src="https://img.shields.io/badge/MCP-Streamable_HTTP-green?style=for-the-badge" alt="MCP Streamable HTTP">
+  <img src="https://img.shields.io/badge/Cloudflare-Pages-orange?style=for-the-badge" alt="Cloudflare Pages">
+  <img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="MIT License">
+</p>
+
+---
+
+## 🚀 Live Endpoint
 
 ```
-One memory. Many tools. Same project context.
+https://stackmemory-mcp.pages.dev/mcp
 ```
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-blue)](docker-compose.yml)
-[![MCP](https://img.shields.io/badge/MCP-supported-green)](mcp-server/README.md)
-[![API](https://img.shields.io/badge/API-bridge-ready-blue)](bridge/server.py)
+Connect any MCP-compatible client using **Streamable HTTP** transport.
 
-## What It Is
+## 🛠️ Tools (14)
 
-StackMemory is a shared memory layer for developers, AI power users, and builders working across multiple AI coding tools.
+### Core Memory Operations
 
-It is designed for workflows that span tools such as:
-- Claude Desktop and MCP-compatible clients
-- Cursor and VS Code AI-assisted development
-- Codex-style agents and internal developer copilots
-- Bolt, Lovable, and Replit-style builder environments
-- Custom AI apps that need persistent user or project memory
+| # | Tool | Description |
+|---|------|-------------|
+| 1 | `search_memories` | Search memories by keyword or semantic query |
+| 2 | `store_memory` | Store a new memory with metadata and tags |
+| 3 | `update_memory` | Update an existing memory entry |
+| 4 | `delete_memory` | Delete a memory by ID |
+| 5 | `query_memories` | Advanced query with filters and sorting |
+| 6 | `list_memories` | List all memories with pagination |
 
-StackMemory can be used in two ways:
-- As a **developer-facing memory workspace**
-- As a **memory backend** through REST API, WebSocket, MCP, and SDK
+### Graph & Relationship
 
-## Core Value
+| # | Tool | Description |
+|---|------|-------------|
+| 7 | `get_memory_graph` | Retrieve the memory relationship graph |
+| 8 | `link_memories` | Create a link between two memories |
 
-AI tools are good at generating output and bad at preserving durable context across sessions and surfaces.
+### v2.0 — Advanced Operations
 
-StackMemory gives you one place to store and retrieve:
-- project context
-- coding preferences
-- architecture decisions
-- active work items
-- reusable instructions
+| # | Tool | Description |
+|---|------|-------------|
+| 9 | `sm_time_query` | Query memories by time range and temporal patterns |
+| 10 | `sm_memory_summary` | Generate AI-powered summary of memory collections |
+| 11 | `sm_batch_operations` | Perform batch create/update/delete operations |
+| 12 | `sm_export_memories` | Export memories to JSON/CSV formats |
+| 13 | `sm_concept_cluster` | Cluster memories by conceptual similarity |
+| 14 | `sm_import_memories` | Import memories from external data sources |
 
-The goal is simple:
+## 📦 Installation
 
-**Stop re-explaining your project to every AI tool.**
+### Claude Desktop Configuration
 
-## Core Product Surfaces
+```json
+{
+  "mcpServers": {
+    "stackmemory": {
+      "url": "https://stackmemory-mcp.pages.dev/mcp"
+    }
+  }
+}
+```
 
-- [frontend](frontend) - user-facing memory workspace
-- [bridge](bridge) - REST and WebSocket bridge for apps and agents
-- [bridge/README.md](bridge/README.md) - quick start for n8n and custom app integration
-- [mcp-server](mcp-server) - MCP server for compatible tools
-- [sdk/python](sdk/python) - Python SDK for custom integrations
+### Cursor / VS Code
 
-## Key Features
+```json
+{
+  "mcp": {
+    "servers": {
+      "stackmemory": {
+        "url": "https://stackmemory-mcp.pages.dev/mcp",
+        "transport": "streamable-http"
+      }
+    }
+  }
+}
+```
 
-- **Shared project memory** across coding workflows
-- **Semantic recall** for prior decisions and preferences
-- **Memory write + search APIs** for custom tools
-- **MCP integration** for AI coding clients
-- **User-controlled memory** with inspect, edit, export, and delete flows
-- **Security-oriented design** with encryption and access control layers
-
-## Example Use Cases
-
-### For End Users
-
-- Resume work in Claude after starting in Cursor
-- Keep your coding style and project rules available across sessions
-- Preserve architecture choices and stack preferences
-- Reuse the same context in IDE agents, web tools, and custom workflows
-
-### For Builders
-
-- Add persistent memory to your own AI coding assistant
-- Store project-specific constraints and user preferences
-- Use StackMemory as a retrieval layer behind your agent system
-- Expose memory through API, bridge, or MCP depending on the client
-
-## Demo Flows
-
-These are the clearest demo paths for the current product direction:
-
-### 1. Claude Code -> Cursor handoff
-
-- Write repo rules, active tasks, and recent decisions during a Claude Code session
-- Query the same project memory before opening the next Cursor workflow
-- Start the next editor session with the same project context, without rewriting the prompt
-
-### 2. Replit -> Codex-style prompt memory
-
-- Save deployment notes, runtime limits, and stack expectations from a Replit session
-- Pull that context into a Codex-style agent prompt before the next run
-- Keep cloud IDE facts durable instead of leaving them trapped in chat history
-
-### 3. Custom App / n8n -> memory write + recall
-
-- Write durable project rules or user preferences through the bridge API
-- Search or query memory before each automation or agent step
-- Send back new decisions and task updates after each meaningful run
-
-## Quick Start
-
-### Local App
+## 🔧 Local Development
 
 ```bash
-git clone https://github.com/ai-ulu/StackMemory.git
-cd StackMemory
-cp .env.example .env
-docker-compose up -d
+pnpm install
+pnpm build
+pnpm deploy
+pnpm start
 ```
 
-### Python SDK
+## 🏗️ Architecture
 
-```python
-from ai_ulu import AIULU
+- **Runtime**: Cloudflare Workers (Edge)
+- **Database**: Cloudflare D1 (SQLite)
+- **Transport**: MCP Streamable HTTP
+- **Protocol**: JSON-RPC 2.0
 
-ulu = AIULU(api_key="ulu_full_xxx...")
+## 📋 Version History
 
-result = ulu.ask("What project constraints have I already defined?")
-print(result.answer)
+| Version | Changes |
+|---------|---------|
+| v2.0 | Added time queries, batch ops, export/import, concept clustering, AI summaries; migrated to Cloudflare Pages |
+| v1.0 | Initial release with core CRUD and graph operations |
 
-ulu.remember("Prefer TypeScript and small diffs", type="preference")
-```
+---
 
-### MCP Server
-
-See [mcp-server/README.md](mcp-server/README.md) for Claude Desktop and MCP-compatible configuration.
-
-### n8n / Custom App Bridge
-
-See [bridge/README.md](bridge/README.md) for HTTP examples covering:
-- memory writes from automation flows
-- memory search before agent execution
-- query orchestration for custom AI apps
-
-The frontend also includes a builder-focused integration guide at `/integrations`.
-
-## Product Direction
-
-This repository is being shaped around a focused product direction:
-
-**StackMemory is for AI-native development workflows first.**
-
-That means the primary focus is:
-- developers using multiple AI coding tools
-- teams that need shared project context
-- builders embedding memory into their own AI applications
-
-It is not being optimized first for generic consumer chat memory, bots, or broad non-technical use cases.
-
-## Architecture
-
-```text
-AI Coding Tools / Agents
-        |
-        v
-   MCP / API / SDK
-        |
-        v
-    StackMemory Bridge
-        |
-        v
-    Memory Engine
-        |
-        v
-   Storage + Retrieval
-```
-
-## Repository Notes
-
-Important directories:
-- [frontend](frontend)
-- [backend](backend)
-- [bridge](bridge)
-- [mcp-server](mcp-server)
-- [sdk](sdk)
-- [chrome-extension](chrome-extension)
-
-Secondary or later-stage surfaces:
-- [bots](bots)
-- [monitoring](monitoring)
-- [nginx](nginx)
-
-## License
-
-MIT
+<p align="center">
+  Built by <a href="https://github.com/ai-ulu">ai-ulu</a> · Part of the MCP Toolkit
+</p>
