@@ -1,0 +1,8 @@
+name = "stackmemory-mcp"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stackmemory-mcp-db"
+database_id = "d2c0a1f2-7556-4ec0-8bf2-5dbbbb6a8e8b"
