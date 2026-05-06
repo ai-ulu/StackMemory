@@ -4,6 +4,66 @@
 
 interface Env {
   DB: D1Database;
+  AI?: any;        // Workers AI binding (optional — graceful fallback)
+  VECTORIZE?: any;  // Vectorize index binding (optional — graceful fallback)
+}
+
+// ============================================================
+// Vectorize / Workers AI Helpers (graceful degradation)
+// ============================================================
+const EMBEDDING_MODEL = '@cf/baai/bge-base-en-v1.5'; // 768-dim
+const EMBEDDING_DIM = 768;
+
+async function generateEmbedding(text: string, env: Env): Promise<number[] | null> {
+  if (!env.AI) return null;
+  try {
+    const truncated = text.slice(0, 512);
+    const result = await env.AI.run(EMBEDDING_MODEL, { text: [truncated] });
+    if (result?.data?.[0]) return result.data[0];
+    return null;
+  } catch (e) {
+    console.error('[Vectorize] Embedding generation failed:', e);
+    return null;
+  }
+}
+
+async function vectorUpsert(id: string, embedding: number[], metadata: Record<string, string>, env: Env): Promise<boolean> {
+  if (!env.VECTORIZE) return false;
+  try {
+    await env.VECTORIZE.upsert([{ id, values: embedding, metadata }]);
+    return true;
+  } catch (e) {
+    console.error('[Vectorize] Upsert failed:', e);
+    return false;
+  }
+}
+
+async function vectorQuery(embedding: number[], topK: number, filter: Record<string, string>, env: Env): Promise<{ id: string; score: number }[]> {
+  if (!env.VECTORIZE) return [];
+  try {
+    const results = await env.VECTORIZE.query(embedding, { topK, filter });
+    return (results.matches || []).map((m: any) => ({ id: m.id, score: m.score }));
+  } catch (e) {
+    console.error('[Vectorize] Query failed:', e);
+    return [];
+  }
+}
+
+async function vectorDelete(ids: string[], env: Env): Promise<void> {
+  if (!env.VECTORIZE) return;
+  try { await env.VECTORIZE.deleteByIds(ids); } catch { /* best-effort */ }
+}
+
+// ============================================================
+// Memory Decay Constants
+// ============================================================
+const DECAY_HALF_LIFE_DAYS = 30;
+
+function calculateDecayScore(lastAccessed: string | null, createdAt: string): number {
+  const ref = lastAccessed || createdAt;
+  if (!ref) return 0.5;
+  const daysSince = (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24);
+  return Math.exp(-daysSince / DECAY_HALF_LIFE_DAYS);
 }
 
 // ============================================================
@@ -318,6 +378,21 @@ const TOOLS = [
       required: ['data', 'duplicate_handling'],
     },
   },
+  {
+    name: 'sm_prefetch',
+    description: 'Proactive memory injection: given a raw user message, automatically finds the most relevant memories to inject into the LLM context. Returns top memories ranked by semantic + keyword + decay scoring. Ideal for router-level pre-fetch before model call.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Raw user message to find relevant memories for' },
+        top_k: { type: 'number', description: 'Number of memories to return (default: 5, max: 20)' },
+        user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
+        min_score: { type: 'number', description: 'Minimum relevance score threshold 0.0-1.0 (default: 0.1)' },
+      },
+      required: ['message'],
+    },
+  },
 ];
 
 // ============================================================
@@ -414,6 +489,9 @@ async function initDatabase(db: D1Database): Promise<void> {
         confidence REAL NOT NULL DEFAULT 0.8,
         user_id TEXT NOT NULL DEFAULT 'default',
         namespace TEXT NOT NULL DEFAULT 'global',
+        importance_score REAL NOT NULL DEFAULT 0.5,
+        last_accessed TEXT,
+        access_count INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         deleted_at TEXT,
@@ -437,13 +515,30 @@ async function initDatabase(db: D1Database): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_memory_links_source ON memory_links(source_id);
       CREATE INDEX IF NOT EXISTS idx_memory_links_target ON memory_links(target_id);
     `);
-    // Migration: add namespace column to existing tables (safe if already exists)
-    try {
-      await db.exec(`ALTER TABLE memories ADD COLUMN namespace TEXT NOT NULL DEFAULT 'global'`);
-    } catch { /* column already exists */ }
+    // Migrations: add columns for existing tables (safe if already exists)
+    const migrations = [
+      `ALTER TABLE memories ADD COLUMN namespace TEXT NOT NULL DEFAULT 'global'`,
+      `ALTER TABLE memories ADD COLUMN importance_score REAL NOT NULL DEFAULT 0.5`,
+      `ALTER TABLE memories ADD COLUMN last_accessed TEXT`,
+      `ALTER TABLE memories ADD COLUMN access_count INTEGER NOT NULL DEFAULT 0`,
+    ];
+    for (const m of migrations) {
+      try { await db.exec(m); } catch { /* column already exists */ }
+    }
   } catch (e) {
     console.error('DB init (may be ok):', e);
   }
+}
+
+// Helper: bump access stats on retrieved memories (fire-and-forget)
+async function touchMemories(ids: string[], db: D1Database): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    await db.prepare(
+      `UPDATE memories SET last_accessed = datetime('now'), access_count = access_count + 1 WHERE id IN (${placeholders})`
+    ).bind(...ids).run();
+  } catch { /* best-effort, don't block response */ }
 }
 
 // Helper: build namespace filter SQL clause
@@ -485,15 +580,48 @@ async function searchMemories(params: Record<string, unknown>, env: Env): Promis
     .bind(...bindParams)
     .all();
 
-  // Re-rank by relevance score
+  // Vectorize: semantic search if available
+  const queryEmbedding = await generateEmbedding(keyword, env);
+  const vectorFilter: Record<string, string> = { user_id: userId };
+  if (namespace && namespace !== 'global') vectorFilter.namespace = namespace;
+  const vectorHits = queryEmbedding ? await vectorQuery(queryEmbedding, limit * 2, vectorFilter, env) : [];
+
+  // Merge vector results into keyword results
+  const keywordIds = new Set((results.results as Record<string, unknown>[]).map(m => String(m.id)));
+  if (vectorHits.length > 0) {
+    const missingIds = vectorHits.filter(v => !keywordIds.has(v.id)).map(v => v.id);
+    if (missingIds.length > 0) {
+      const placeholders = missingIds.map(() => '?').join(',');
+      const extra = await env.DB.prepare(
+        `SELECT id, content, type, confidence, user_id, namespace, created_at, updated_at, tags, last_accessed FROM memories WHERE id IN (${placeholders}) AND deleted_at IS NULL`
+      ).bind(...missingIds).all();
+      results.results.push(...extra.results);
+    }
+  }
+
+  // Build vector score lookup
+  const vectorScoreMap = new Map(vectorHits.map(v => [v.id, v.score]));
+
+  // Re-rank: keyword relevance + vector similarity + confidence + decay
   const keywords = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-  const scored = (results.results as Record<string, unknown>[]).map(m => ({
-    ...m,
-    relevance_score: Math.round(scoreRelevance(String(m.content), keywords) * 100) / 100,
-  }));
+  const scored = (results.results as Record<string, unknown>[]).map(m => {
+    const kwScore = scoreRelevance(String(m.content), keywords);
+    const vecScore = vectorScoreMap.get(String(m.id)) || 0;
+    const decay = calculateDecayScore(m.last_accessed as string | null, String(m.created_at));
+    const conf = Number(m.confidence || 0);
+    // Weighted combination: vector 40% + keyword 30% + confidence 15% + recency 15%
+    const finalScore = (vecScore > 0)
+      ? vecScore * 0.4 + kwScore * 0.3 + conf * 0.15 + decay * 0.15
+      : kwScore * 0.5 + conf * 0.3 + decay * 0.2;
+    return { ...m, relevance_score: Math.round(finalScore * 100) / 100 };
+  });
   scored.sort((a, b) => (b.relevance_score as number) - (a.relevance_score as number));
 
-  const truncated = truncateMemoryResults(scored.slice(0, limit));
+  const topResults = scored.slice(0, limit);
+  const truncated = truncateMemoryResults(topResults);
+
+  // Touch accessed memories (fire-and-forget)
+  touchMemories(topResults.map(m => String((m as Record<string, unknown>).id)), env.DB);
 
   return {
     content: [{
@@ -502,6 +630,7 @@ async function searchMemories(params: Record<string, unknown>, env: Env): Promis
         keyword,
         namespace: namespace || 'global',
         total: truncated.length,
+        semantic_search: vectorHits.length > 0,
         memories: truncated,
       }, null, 2),
     }],
@@ -532,14 +661,22 @@ async function storeMemory(params: Record<string, unknown>, env: Env): Promise<u
   const tagsJson = JSON.stringify(tags);
 
   await env.DB.prepare(
-    `INSERT INTO memories (id, content, type, confidence, user_id, namespace, tags) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO memories (id, content, type, confidence, user_id, namespace, tags, importance_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, namespace, tagsJson)
+    .bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, namespace, tagsJson, 0.5)
     .run();
+
+  // Vectorize: generate embedding and upsert (async, non-blocking)
+  let vectorized = false;
+  const embedding = await generateEmbedding(content, env);
+  if (embedding) {
+    vectorized = await vectorUpsert(id, embedding, { user_id: userId, namespace, type }, env);
+  }
 
   const result: Record<string, unknown> = {
     success: true,
     memory: { id, content, type, confidence, user_id: userId, namespace, tags },
+    vectorized,
   };
   if (hadPII) {
     result.pii_warning = `Sensitive data detected and redacted: ${detected.join(', ')}`;
@@ -630,6 +767,9 @@ async function deleteMemory(params: Record<string, unknown>, env: Env): Promise<
     .bind(id)
     .run();
 
+  // Cleanup from Vectorize
+  vectorDelete([id], env);
+
   return {
     content: [{
       type: 'text',
@@ -683,18 +823,46 @@ async function queryMemories(params: Record<string, unknown>, env: Env): Promise
 
   const results = await env.DB.prepare(sql).bind(...bindParams).all();
 
-  // Re-rank by keyword relevance score
-  const scored = (results.results as Record<string, unknown>[]).map(m => ({
-    ...m,
-    relevance_score: Math.round(
-      (scoreRelevance(String(m.content), keywords) * 0.6 +
-       scoreRelevance(String(m.tags || ''), keywords) * 0.2 +
-       Number(m.confidence || 0) * 0.2) * 100
-    ) / 100,
-  }));
+  // Vectorize: semantic search if available
+  const queryEmbedding = await generateEmbedding(query, env);
+  const vectorFilter: Record<string, string> = { user_id: userId };
+  if (namespace && namespace !== 'global') vectorFilter.namespace = namespace;
+  const vectorHits = queryEmbedding ? await vectorQuery(queryEmbedding, limit * 2, vectorFilter, env) : [];
+
+  // Merge vector results
+  const keywordIds = new Set((results.results as Record<string, unknown>[]).map(m => String(m.id)));
+  if (vectorHits.length > 0) {
+    const missingIds = vectorHits.filter(v => !keywordIds.has(v.id)).map(v => v.id);
+    if (missingIds.length > 0) {
+      const placeholders = missingIds.map(() => '?').join(',');
+      const extra = await env.DB.prepare(
+        `SELECT id, content, type, confidence, user_id, namespace, created_at, updated_at, tags, last_accessed FROM memories WHERE id IN (${placeholders}) AND deleted_at IS NULL`
+      ).bind(...missingIds).all();
+      results.results.push(...extra.results);
+    }
+  }
+
+  const vectorScoreMap = new Map(vectorHits.map(v => [v.id, v.score]));
+
+  // Re-rank: vector + keyword + tags + confidence + decay
+  const scored = (results.results as Record<string, unknown>[]).map(m => {
+    const kwScore = scoreRelevance(String(m.content), keywords);
+    const tagScore = scoreRelevance(String(m.tags || ''), keywords);
+    const vecScore = vectorScoreMap.get(String(m.id)) || 0;
+    const decay = calculateDecayScore(m.last_accessed as string | null, String(m.created_at));
+    const conf = Number(m.confidence || 0);
+    const finalScore = (vecScore > 0)
+      ? vecScore * 0.35 + kwScore * 0.25 + tagScore * 0.1 + conf * 0.15 + decay * 0.15
+      : kwScore * 0.45 + tagScore * 0.15 + conf * 0.2 + decay * 0.2;
+    return { ...m, relevance_score: Math.round(finalScore * 100) / 100 };
+  });
   scored.sort((a, b) => (b.relevance_score as number) - (a.relevance_score as number));
 
-  const truncated = truncateMemoryResults(scored.slice(0, limit));
+  const topResults = scored.slice(0, limit);
+  const truncated = truncateMemoryResults(topResults);
+
+  // Touch accessed memories
+  touchMemories(topResults.map(m => String((m as Record<string, unknown>).id)), env.DB);
 
   return {
     content: [{
@@ -704,6 +872,7 @@ async function queryMemories(params: Record<string, unknown>, env: Env): Promise
         namespace: namespace || 'global',
         extracted_keywords: keywords,
         total: truncated.length,
+        semantic_search: vectorHits.length > 0,
         memories: truncated,
       }, null, 2),
     }],
@@ -1599,6 +1768,118 @@ function handlePromptGet(name: string, args: Record<string, string>): unknown {
   }
 }
 
+// 15. sm_prefetch — Proactive Memory Injection
+async function prefetchMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const message = String(params.message || '');
+  const topK = Math.min(Number(params.top_k) || 5, 20);
+  const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const minScore = Number(params.min_score) || 0.1;
+
+  if (!message.trim()) {
+    return { content: [{ type: 'text', text: 'Error: message parameter is required' }], isError: true };
+  }
+
+  const ns = nsFilter(namespace);
+
+  // Extract keywords from the user message
+  const keywords = message
+    .toLowerCase()
+    .replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, ' ')
+    .split(/\s+/)
+    .filter((w: string) => w.length > 2 && !STOP_WORDS.has(w));
+
+  // 1. Vectorize semantic search (primary, if available)
+  const queryEmbedding = await generateEmbedding(message, env);
+  const vectorFilter: Record<string, string> = { user_id: userId };
+  if (namespace && namespace !== 'global') vectorFilter.namespace = namespace;
+  const vectorHits = queryEmbedding ? await vectorQuery(queryEmbedding, topK * 3, vectorFilter, env) : [];
+
+  // 2. Keyword fallback search
+  const fetchLimit = topK * 3;
+  let keywordResults: Record<string, unknown>[] = [];
+  if (keywords.length > 0) {
+    const conditions = keywords.slice(0, 5).map(() => `content LIKE ?`).join(' OR ');
+    const bindParams: (string | number)[] = keywords.slice(0, 5).map(kw => `%${kw}%`);
+    bindParams.push(userId);
+    if (ns.param) bindParams.push(ns.param);
+    bindParams.push(fetchLimit);
+
+    const kwResults = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, last_accessed, importance_score, tags
+       FROM memories WHERE (${conditions}) AND user_id = ? AND deleted_at IS NULL${ns.clause}
+       ORDER BY confidence DESC, created_at DESC LIMIT ?`
+    ).bind(...bindParams).all();
+    keywordResults = kwResults.results as Record<string, unknown>[];
+  }
+
+  // 3. Merge and deduplicate
+  const allIds = new Set<string>();
+  const allMemories: Record<string, unknown>[] = [];
+
+  // Add vector hits (fetch full records from D1)
+  if (vectorHits.length > 0) {
+    const vecIds = vectorHits.map(v => v.id);
+    const placeholders = vecIds.map(() => '?').join(',');
+    const vecRecords = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, last_accessed, importance_score, tags
+       FROM memories WHERE id IN (${placeholders}) AND deleted_at IS NULL`
+    ).bind(...vecIds).all();
+    for (const m of vecRecords.results as Record<string, unknown>[]) {
+      allIds.add(String(m.id));
+      allMemories.push(m);
+    }
+  }
+
+  // Add keyword results
+  for (const m of keywordResults) {
+    if (!allIds.has(String(m.id))) {
+      allIds.add(String(m.id));
+      allMemories.push(m);
+    }
+  }
+
+  // 4. Score all memories: vector + keyword + confidence + decay + importance
+  const vectorScoreMap = new Map(vectorHits.map(v => [v.id, v.score]));
+  const scored = allMemories.map(m => {
+    const vecScore = vectorScoreMap.get(String(m.id)) || 0;
+    const kwScore = keywords.length > 0 ? scoreRelevance(String(m.content), keywords) : 0;
+    const decay = calculateDecayScore(m.last_accessed as string | null, String(m.created_at));
+    const conf = Number(m.confidence || 0);
+    const importance = Number(m.importance_score || 0.5);
+
+    const finalScore = (vecScore > 0)
+      ? vecScore * 0.35 + kwScore * 0.2 + conf * 0.15 + decay * 0.15 + importance * 0.15
+      : kwScore * 0.35 + conf * 0.2 + decay * 0.2 + importance * 0.25;
+
+    return { ...m, prefetch_score: Math.round(finalScore * 100) / 100 };
+  });
+
+  scored.sort((a, b) => (b.prefetch_score as number) - (a.prefetch_score as number));
+
+  // 5. Filter by minimum score and take top_k
+  const filtered = scored
+    .filter(m => (m.prefetch_score as number) >= minScore)
+    .slice(0, topK);
+
+  // Touch accessed memories
+  touchMemories(filtered.map(m => String((m as Record<string, unknown>).id)), env.DB);
+
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify({
+        message_preview: message.slice(0, 100),
+        namespace: namespace || 'global',
+        semantic_search: vectorHits.length > 0,
+        total_candidates: allMemories.length,
+        returned: filtered.length,
+        memories: truncateMemoryResults(filtered),
+      }, null, 2),
+    }],
+  };
+}
+
 // ============================================================
 // Tool Call Router
 // ============================================================
@@ -1618,6 +1899,7 @@ async function handleToolCall(name: string, args: Record<string, unknown>, env: 
     case 'sm_export_memories': return await exportMemories(args, env);
     case 'sm_concept_cluster': return await conceptCluster(args, env);
     case 'sm_import_memories': return await importMemories(args, env);
+    case 'sm_prefetch': return await prefetchMemories(args, env);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],
