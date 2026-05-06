@@ -830,6 +830,63 @@ GRANT EXECUTE ON FUNCTION transfer_conversation_ownership TO authenticated;
 GRANT EXECUTE ON FUNCTION restore_memory_version TO authenticated;
 
 -- ============================================
+-- 17. BRAIN CONFIG (Ulu-Brain v3.0 — Adaptive Weights)
+-- ============================================
+CREATE TABLE IF NOT EXISTS brain_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  namespace TEXT NOT NULL DEFAULT 'global',
+  weight_similarity FLOAT NOT NULL DEFAULT 0.35,
+  weight_decay FLOAT NOT NULL DEFAULT 0.15,
+  weight_importance FLOAT NOT NULL DEFAULT 0.25,
+  weight_frequency FLOAT NOT NULL DEFAULT 0.10,
+  weight_emotional FLOAT NOT NULL DEFAULT 0.15,
+  total_feedback INTEGER NOT NULL DEFAULT 0,
+  useful_feedback INTEGER NOT NULL DEFAULT 0,
+  last_adapted TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, namespace)
+);
+
+-- ============================================
+-- 18. BRAIN FEEDBACK (Ulu-Brain v3.0 — Feedback History)
+-- ============================================
+CREATE TABLE IF NOT EXISTS brain_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  memory_id UUID REFERENCES memories(id) ON DELETE CASCADE NOT NULL,
+  namespace TEXT NOT NULL DEFAULT 'global',
+  feedback TEXT NOT NULL CHECK (feedback IN ('useful', 'not_useful', 'critical')),
+  memory_type TEXT,
+  context TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_config_user ON brain_config(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_config_user_ns ON brain_config(user_id, namespace);
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_user ON brain_feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_ns ON brain_feedback(namespace);
+CREATE INDEX IF NOT EXISTS idx_brain_feedback_created ON brain_feedback(created_at);
+
+-- RLS for brain tables
+ALTER TABLE brain_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_feedback ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own brain config"
+  ON brain_config FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own brain feedback"
+  ON brain_feedback FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+GRANT ALL ON brain_config TO authenticated;
+GRANT ALL ON brain_feedback TO authenticated;
+
+-- ============================================
 -- DONE
 -- ============================================
--- Schema v4 ready for enterprise deployment
+-- Schema v5 ready with Ulu-Brain cognitive tables
