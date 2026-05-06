@@ -1483,14 +1483,18 @@ export default {
       // POST: JSON-RPC request
       if (request.method === 'POST') {
         const accept = request.headers.get('Accept') || '';
-        if (!accept.includes('application/json') && !accept.includes('text/event-stream') && accept !== '*/*') {
+        // Lenient Accept header: default to SSE if no Accept or wildcard
+        const wantsJson = accept.includes('application/json');
+        const wantsSSE = accept.includes('text/event-stream');
+        const isWildcard = accept === '' || accept === '*/*' || accept.includes('*/*');
+        if (!wantsJson && !wantsSSE && !isWildcard) {
           return corsResponse(
             JSON.stringify({
               jsonrpc: '2.0',
               error: { code: -32000, message: 'Not Acceptable: Client must accept application/json and/or text/event-stream' },
               id: null,
             }),
-            400,
+            406,
             { 'Content-Type': 'application/json' }
           );
         }
@@ -1618,8 +1622,8 @@ export default {
               );
           }
 
-          // Return response based on Accept header
-          const isSSE = accept.includes('text/event-stream');
+          // Return response based on Accept header - default to SSE for broad compatibility
+          const isSSE = accept.includes('text/event-stream') || (!accept.includes('application/json') || isWildcard);
           if (isSSE) {
             return corsResponse(
               `event: message\ndata: ${JSON.stringify({ jsonrpc: '2.0', id, result })}\n\n`,
@@ -1646,6 +1650,31 @@ export default {
           );
         }
       }
+    }
+
+    // /sse endpoint - alias for /mcp (some clients use /sse)
+    if (url.pathname === '/sse') {
+      if (request.method === 'GET') {
+        const stream = new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(encoder.encode('event: connected\ndata: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n'));
+            let intervalId: ReturnType<typeof setInterval>;
+            intervalId = setInterval(() => {
+              try { controller.enqueue(encoder.encode(': keepalive\n\n')); } catch { clearInterval(intervalId); }
+            }, 30000);
+            setTimeout(() => { clearInterval(intervalId); try { controller.close(); } catch {} }, 300000);
+          },
+        });
+        return new Response(stream, {
+          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive', ...CORS_HEADERS },
+        });
+      }
+      // POST to /sse - treat same as /mcp
+      const mcpUrl = new URL(request.url);
+      mcpUrl.pathname = '/mcp';
+      const newRequest = new Request(mcpUrl.toString(), request);
+      return this.fetch!(newRequest, env);
     }
 
     // 404 for unknown paths
