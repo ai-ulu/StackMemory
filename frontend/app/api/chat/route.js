@@ -37,28 +37,32 @@ async function generateEmbedding(text) {
   }
 }
 
-// Quantum-Inspired Heuristic Scoring (StackMemory v2.1)
+// H-Score Weights — configurable via environment variables for A/B testing
 // H(x,ψ,E) = α·S + β·D + γ·I + δ·F + ε·E
-// Extended with Emotional Resonance parameter
-// Referans: StackMemory teknik blueprint - algoritmik detaylandırma
+// Override defaults: HSCORE_ALPHA=0.40, HSCORE_BETA=0.10, etc. in .env
+const H_WEIGHTS = {
+  α: parseFloat(process.env.HSCORE_ALPHA || '0.35'),
+  β: parseFloat(process.env.HSCORE_BETA  || '0.15'),
+  γ: parseFloat(process.env.HSCORE_GAMMA || '0.25'),
+  δ: parseFloat(process.env.HSCORE_DELTA || '0.10'),
+  ε: parseFloat(process.env.HSCORE_EPSILON || '0.15'),
+  λ: parseFloat(process.env.HSCORE_DECAY_RATE || '0.02'),
+};
+
 function calculateHScore(memory, similarity, emotionalContext = null) {
-  // v2.1 Optimized weights (A/B test ready)
-  const α = 0.35;  // similarity weight
-  const β = 0.15;  // decay weight
-  const γ = 0.25;  // importance weight
-  const δ = 0.10;  // frequency weight
-  const ε = 0.15;  // emotional resonance weight (NEW)
+  const { α, β, γ, δ, ε } = H_WEIGHTS;
 
   // Age decay (decoherence): D(x) = e^(-λ·Δt)
   const daysSinceAccess = memory.last_accessed_at 
     ? (Date.now() - new Date(memory.last_accessed_at).getTime()) / (1000 * 60 * 60 * 24)
     : (Date.now() - new Date(memory.created_at).getTime()) / (1000 * 60 * 60 * 24);
-  const λ = 0.02; // decay rate (configurable)
-  const decayFactor = Math.exp(-λ * daysSinceAccess);
+  const decayFactor = Math.exp(-H_WEIGHTS.λ * daysSinceAccess);
 
-  // Importance based on type (v2.0 values)
-  // Kimlik=1.0, Tercih=0.7, Bilgi=0.4
-  const importanceMap = { identity: 1.0, preference: 0.7, fact: 0.4 };
+  // Importance based on type (v2.1 values — all 7 types)
+  const importanceMap = {
+    identity: 1.0, preference: 0.7, fact: 0.4,
+    rule: 0.9, decision: 0.8, project: 0.6, task: 0.5,
+  };
   const importance = importanceMap[memory.type] || 0.4;
 
   // Frequency: F(x) = min(1, log(frequency) / log(F_max))
@@ -72,12 +76,12 @@ function calculateHScore(memory, similarity, emotionalContext = null) {
   let emotionalResonance = 0.5; // neutral default
   if (emotionalContext) {
     const moodTypeMap = {
-      happy: { preference: 1.0, identity: 0.7, fact: 0.5 },
-      stressed: { identity: 1.0, preference: 0.5, fact: 0.7 },
-      focused: { fact: 1.0, identity: 0.6, preference: 0.4 },
-      curious: { fact: 0.9, preference: 0.8, identity: 0.6 },
-      nostalgic: { identity: 0.9, preference: 0.9, fact: 0.5 },
-      neutral: { identity: 0.7, preference: 0.7, fact: 0.7 },
+      happy:     { preference: 1.0, identity: 0.7, fact: 0.5, project: 0.6, rule: 0.4, decision: 0.5, task: 0.5 },
+      stressed:  { identity: 1.0, preference: 0.5, fact: 0.7, project: 0.6, rule: 0.8, decision: 0.7, task: 0.8 },
+      focused:   { fact: 1.0, identity: 0.6, preference: 0.4, project: 0.8, rule: 0.9, decision: 0.8, task: 0.9 },
+      curious:   { fact: 0.9, preference: 0.8, identity: 0.6, project: 0.8, rule: 0.7, decision: 0.7, task: 0.6 },
+      nostalgic: { identity: 0.9, preference: 0.9, fact: 0.5, project: 0.7, rule: 0.5, decision: 0.8, task: 0.4 },
+      neutral:   { identity: 0.7, preference: 0.7, fact: 0.7, project: 0.7, rule: 0.7, decision: 0.7, task: 0.7 },
     };
     const moodMap = moodTypeMap[emotionalContext] || moodTypeMap.neutral;
     emotionalResonance = moodMap[memory.type] || 0.5;

@@ -30,8 +30,7 @@ export default function MemoryGraphPage() {
       setMemories(data.memories || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bilinmeyen hata');
-      // Demo data kullan
-      setMemories(generateDemoData());
+      setMemories([]);
     } finally {
       setLoading(false);
     }
@@ -158,21 +157,21 @@ export default function MemoryGraphPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Konuşmalar</CardTitle>
+            <CardTitle className="text-sm font-medium">Kimlik</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {memories.filter((m) => m.type === 'CONVERSATION').length}
+              {memories.filter((m) => m.type === 'IDENTITY').length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Bilgi Tabanı</CardTitle>
+            <CardTitle className="text-sm font-medium">Bilgi</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {memories.filter((m) => m.type === 'KNOWLEDGE').length}
+              {memories.filter((m) => m.type === 'FACT').length}
             </div>
           </CardContent>
         </Card>
@@ -194,27 +193,4 @@ export default function MemoryGraphPage() {
       </div>
     </div>
   );
-}
-
-// Demo data generator
-function generateDemoData(): MemoryData[] {
-  const types = ['CONVERSATION', 'KNOWLEDGE', 'COMMAND', 'PREFERENCE', 'FEEDBACK'];
-  const memories: MemoryData[] = [];
-
-  for (let i = 0; i < 20; i++) {
-    const id = `mem-${Date.now()}-${i}`;
-    memories.push({
-      id,
-      type: types[Math.floor(Math.random() * types.length)],
-      content: { text: `Demo bellek ${i}` },
-      metadata: {
-        timestamp: Date.now() - Math.random() * 86400000 * 7,
-        tags: ['demo', `tag-${i % 3}`],
-        score: Math.random(),
-      },
-      connections: i > 0 ? [`mem-${Date.now()}-${Math.floor(Math.random() * i)}`] : [],
-    });
-  }
-
-  return memories;
 }
