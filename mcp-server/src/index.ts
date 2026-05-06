@@ -9,6 +9,17 @@ interface Env {
 }
 
 // ============================================================
+// Structured Logger
+// ============================================================
+const LOG_LEVEL = { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' } as const;
+
+function log(level: string, component: string, message: string, data?: Record<string, unknown>) {
+  const entry = { ts: new Date().toISOString(), level, component, message, ...data };
+  if (level === LOG_LEVEL.ERROR) console.error(JSON.stringify(entry));
+  else console.log(JSON.stringify(entry));
+}
+
+// ============================================================
 // Vectorize / Workers AI Helpers (graceful degradation)
 // ============================================================
 const EMBEDDING_MODEL = '@cf/baai/bge-base-en-v1.5'; // 768-dim
@@ -22,7 +33,7 @@ async function generateEmbedding(text: string, env: Env): Promise<number[] | nul
     if (result?.data?.[0]) return result.data[0];
     return null;
   } catch (e) {
-    console.error('[Vectorize] Embedding generation failed:', e);
+    log(LOG_LEVEL.ERROR, 'vectorize', 'Embedding generation failed', { error: String(e) });
     return null;
   }
 }
@@ -33,7 +44,7 @@ async function vectorUpsert(id: string, embedding: number[], metadata: Record<st
     await env.VECTORIZE.upsert([{ id, values: embedding, metadata }]);
     return true;
   } catch (e) {
-    console.error('[Vectorize] Upsert failed:', e);
+    log(LOG_LEVEL.ERROR, 'vectorize', 'Upsert failed', { error: String(e) });
     return false;
   }
 }
@@ -44,7 +55,7 @@ async function vectorQuery(embedding: number[], topK: number, filter: Record<str
     const results = await env.VECTORIZE.query(embedding, { topK, filter });
     return (results.matches || []).map((m: any) => ({ id: m.id, score: m.score }));
   } catch (e) {
-    console.error('[Vectorize] Query failed:', e);
+    log(LOG_LEVEL.ERROR, 'vectorize', 'Query failed', { error: String(e) });
     return [];
   }
 }
@@ -192,7 +203,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         content: { type: 'string', description: 'The memory content to store (PII/secrets auto-redacted)' },
-        type: { type: 'string', description: 'Memory type: identity, preference, or fact (default: "fact")', enum: ['identity', 'preference', 'fact'] },
+        type: { type: 'string', description: 'Memory type (default: "fact")', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
         confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0 (default: 0.8)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
         user_id: { type: 'string', description: 'User ID (default: "default")' },
@@ -209,7 +220,7 @@ const TOOLS = [
       properties: {
         id: { type: 'string', description: 'Memory ID to update' },
         content: { type: 'string', description: 'New content for the memory (PII/secrets auto-redacted)' },
-        type: { type: 'string', description: 'New type (identity/preference/fact)', enum: ['identity', 'preference', 'fact'] },
+        type: { type: 'string', description: 'New memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
         confidence: { type: 'number', description: 'New confidence score (0.0-1.0)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'New tags array (replaces existing)' },
       },
@@ -247,7 +258,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        type: { type: 'string', description: 'Filter by type: identity, preference, fact', enum: ['identity', 'preference', 'fact'] },
+        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
         limit: { type: 'number', description: 'Maximum results (default: 20, max: 200)' },
         offset: { type: 'number', description: 'Offset for pagination (default: 0)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
@@ -293,7 +304,7 @@ const TOOLS = [
         period: { type: 'string', description: 'Predefined period: last_day, last_week, last_month, last_year, custom', enum: ['last_day', 'last_week', 'last_month', 'last_year', 'custom'] },
         from_date: { type: 'string', description: 'Start date for custom period (ISO 8601 format, e.g., 2024-01-01)' },
         to_date: { type: 'string', description: 'End date for custom period (ISO 8601 format)' },
-        type: { type: 'string', description: 'Optional type filter: identity, preference, fact', enum: ['identity', 'preference', 'fact'] },
+        type: { type: 'string', description: 'Optional type filter', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
         limit: { type: 'number', description: 'Maximum results (default: 50, max: 200)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
         namespace: { type: 'string', description: 'Project namespace for isolation' },
@@ -338,7 +349,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         format: { type: 'string', description: 'Export format: json or csv', enum: ['json', 'csv'] },
-        type: { type: 'string', description: 'Filter by type: identity, preference, fact', enum: ['identity', 'preference', 'fact'] },
+        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
         include_deleted: { type: 'boolean', description: 'Include soft-deleted memories (default: false)' },
         include_links: { type: 'boolean', description: 'Include memory links in export (default: false)' },
         from_date: { type: 'string', description: 'Start date filter (ISO 8601)' },
@@ -526,7 +537,7 @@ async function initDatabase(db: D1Database): Promise<void> {
       try { await db.exec(m); } catch { /* column already exists */ }
     }
   } catch (e) {
-    console.error('DB init (may be ok):', e);
+    log(LOG_LEVEL.WARN, 'db', 'Table init (may already exist)', { error: String(e) });
   }
 }
 
@@ -650,7 +661,7 @@ async function storeMemory(params: Record<string, unknown>, env: Env): Promise<u
     return { content: [{ type: 'text', text: 'Error: content parameter is required' }], isError: true };
   }
 
-  if (!['identity', 'preference', 'fact'].includes(type)) {
+  if (!['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
     return { content: [{ type: 'text', text: 'Error: type must be identity, preference, or fact' }], isError: true };
   }
 
@@ -903,7 +914,7 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
     sql += ns.clause;
     bindParams.push(ns.param);
   }
-  if (type && ['identity', 'preference', 'fact'].includes(type)) {
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
   }
@@ -918,7 +929,7 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
   const countParams: (string | number)[] = [userId];
   if (!includeDeleted) countSql += ` AND deleted_at IS NULL`;
   if (ns.param) { countSql += ns.clause; countParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact'].includes(type)) { countSql += ` AND type = ?`; countParams.push(type); }
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) { countSql += ` AND type = ?`; countParams.push(type); }
   const countResult = await env.DB.prepare(countSql).bind(...countParams).first();
 
   return {
@@ -1087,7 +1098,7 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
   const bindParams: (string | number)[] = [userId, fromDate, toDate];
 
   if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact'].includes(type)) { sql += ` AND type = ?`; bindParams.push(type); }
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) { sql += ` AND type = ?`; bindParams.push(type); }
   sql += ` ORDER BY created_at DESC LIMIT ?`;
   bindParams.push(limit);
 
@@ -1359,7 +1370,7 @@ async function exportMemories(params: Record<string, unknown>, env: Env): Promis
     sql += ` AND deleted_at IS NULL`;
   }
   if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact'].includes(type)) {
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
   }
@@ -1612,7 +1623,7 @@ async function importMemories(params: Record<string, unknown>, env: Env): Promis
     const { cleaned: content, hadPII } = scrubPII(rawContent);
     if (hadPII) piiRedacted++;
 
-    const type = ['identity', 'preference', 'fact'].includes(String(item.type)) ? String(item.type) : 'fact';
+    const type = ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(String(item.type)) ? String(item.type) : 'fact';
     const confidence = Number(item.confidence) || 0.8;
     const tags = Array.isArray(item.tags) ? item.tags : [];
 

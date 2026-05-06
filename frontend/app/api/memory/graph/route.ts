@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
+import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
+import { listMemories } from '@/lib/dev/local-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +21,44 @@ interface MemoryData {
 
 /**
  * GET /api/memory/graph
- * Hafıza sisteminden bellek verilerini ve ilişkilerini getirir
+ * Fetch real memories from Supabase (hosted) or local store (dev mode)
+ * and format them as graph-compatible data.
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Gerçek hafıza sisteminden veri çek
-    // Şimdilik demo data döndür
-    const memories: MemoryData[] = generateDemoMemories();
+    let memories: MemoryData[] = [];
+
+    if (isLocalAuthMode()) {
+      const user = await getLocalRequestUser(request);
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const localData = await listMemories(user.id, {});
+      memories = (localData || []).map(formatMemory);
+    } else {
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      // Fetch real memories with connections
+      const { data, error } = await supabase
+        .from('memories')
+        .select('id, content, type, confidence, status, created_at, updated_at, last_accessed_at, access_count, tags, scope')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) {
+        console.error('[graph] Supabase query error:', error.message);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      memories = (data || []).map(formatMemory);
+    }
 
     return NextResponse.json({
       success: true,
@@ -32,139 +67,40 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Memory graph error:', error);
+    console.error('[graph] Error:', error);
     return NextResponse.json(
       {
         success: false,
         error: 'Bellek verileri alınamadı',
-        message: error instanceof Error ? error.message : 'Bilinmeyen hata',
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
   }
 }
 
-/**
- * Demo bellek verileri oluştur
- * Gerçek implementasyonda ~/.kiro/memory/ klasöründen okunacak
- */
-function generateDemoMemories(): MemoryData[] {
-  const types = [
-    'CONVERSATION',
-    'KNOWLEDGE',
-    'COMMAND',
-    'PREFERENCE',
-    'FEEDBACK',
-    'PATTERN',
-    'SOLUTION',
-  ];
-
-  const memories: MemoryData[] = [];
-  const baseTime = Date.now();
-
-  // Ana konuşma bellekleri
-  for (let i = 0; i < 10; i++) {
-    const id = `conv-${baseTime}-${i}`;
-    memories.push({
-      id,
-      type: 'CONVERSATION',
-      content: {
-        messages: [
-          { role: 'user', content: `Kullanıcı mesajı ${i}` },
-          { role: 'assistant', content: `Asistan yanıtı ${i}` },
-        ],
-        summary: `Konuşma özeti ${i}`,
-      },
-      metadata: {
-        timestamp: baseTime - i * 3600000,
-        tags: ['conversation', `topic-${i % 3}`],
-        score: 0.7 + Math.random() * 0.3,
-      },
-      connections: i > 0 ? [`conv-${baseTime}-${i - 1}`] : [],
-    });
+/** Transform a DB memory row into the graph MemoryData shape */
+function formatMemory(row: any): MemoryData {
+  const tags: string[] = [];
+  if (row.tags) {
+    try {
+      const parsed = typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags;
+      if (Array.isArray(parsed)) tags.push(...parsed);
+    } catch { /* ignore parse errors */ }
   }
+  if (row.type) tags.push(row.type);
 
-  // Bilgi tabanı bellekleri
-  for (let i = 0; i < 8; i++) {
-    const id = `know-${baseTime}-${i}`;
-    memories.push({
-      id,
-      type: 'KNOWLEDGE',
-      content: {
-        title: `Bilgi ${i}`,
-        description: `Öğrenilen bilgi açıklaması ${i}`,
-        source: 'user-interaction',
-      },
-      metadata: {
-        timestamp: baseTime - i * 7200000,
-        tags: ['knowledge', `category-${i % 4}`],
-        score: 0.8 + Math.random() * 0.2,
-      },
-      connections: [`conv-${baseTime}-${i % 10}`],
-    });
-  }
-
-  // Komut bellekleri
-  for (let i = 0; i < 5; i++) {
-    const id = `cmd-${baseTime}-${i}`;
-    memories.push({
-      id,
-      type: 'COMMAND',
-      content: {
-        command: `npm run ${['dev', 'build', 'test', 'lint', 'start'][i]}`,
-        exitCode: 0,
-        duration: Math.floor(Math.random() * 5000),
-      },
-      metadata: {
-        timestamp: baseTime - i * 1800000,
-        tags: ['command', 'npm'],
-        score: 0.6 + Math.random() * 0.2,
-      },
-      connections: [`know-${baseTime}-${i % 8}`],
-    });
-  }
-
-  // Tercih bellekleri
-  for (let i = 0; i < 3; i++) {
-    const id = `pref-${baseTime}-${i}`;
-    memories.push({
-      id,
-      type: 'PREFERENCE',
-      content: {
-        key: ['theme', 'language', 'editor'][i],
-        value: ['dark', 'tr', 'vscode'][i],
-      },
-      metadata: {
-        timestamp: baseTime - i * 86400000,
-        tags: ['preference', 'user-settings'],
-        score: 0.9 + Math.random() * 0.1,
-      },
-      connections: [],
-    });
-  }
-
-  // Pattern bellekleri
-  for (let i = 0; i < 4; i++) {
-    const id = `pat-${baseTime}-${i}`;
-    memories.push({
-      id,
-      type: 'PATTERN',
-      content: {
-        pattern: `Pattern ${i}`,
-        frequency: Math.floor(Math.random() * 10) + 1,
-        context: `Kullanım bağlamı ${i}`,
-      },
-      metadata: {
-        timestamp: baseTime - i * 43200000,
-        tags: ['pattern', `type-${i % 2}`],
-        score: 0.75 + Math.random() * 0.25,
-      },
-      connections: [
-        `know-${baseTime}-${i % 8}`,
-        `conv-${baseTime}-${i % 10}`,
-      ],
-    });
-  }
-
-  return memories;
+  return {
+    id: row.id,
+    type: (row.type || 'fact').toUpperCase(),
+    content: { text: row.content || '' },
+    metadata: {
+      timestamp: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      tags,
+      score: row.confidence ?? 0.8,
+      access_count: row.access_count ?? 0,
+      scope: row.scope ?? 'private',
+    },
+    connections: [],
+  };
 }

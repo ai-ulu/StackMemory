@@ -2,6 +2,35 @@
 
 All notable changes to StackMemory will be documented in this file.
 
+## [4.1.0] - 2026-05-06 - Audit Fixes: Type Consistency, Real Graph API, Configurable H-Score 🔧
+
+### Fixed — Architecture Consistency (Audit §4.1)
+- 🗂 **Memory type CHECK constraint** expanded from 3 → 7 types across all layers:
+  - `schema.sql`: Added `project`, `rule`, `decision`, `task` to CHECK constraint
+  - `mcp-server`: All 11 type validation points updated (enum, filter, store, import)
+  - `chat/route.js`: H-score `importanceMap` and `moodTypeMap` extended for all 7 types
+
+### Fixed — Stale Demo Code Removal (Audit §4.2)
+- 🗑 **`/api/memory/graph`** — Replaced 130 lines of hardcoded demo data with real Supabase query
+  - Supports both hosted (Supabase) and local dev mode
+  - Auth-gated, returns max 200 active memories
+  - Memory types aligned to actual schema (`IDENTITY`, `FACT`, `PREFERENCE`, etc.)
+- 🗑 **`memory-graph/page.tsx`** — Removed client-side `generateDemoData()` function
+  - Stats cards updated from `CONVERSATION`/`KNOWLEDGE` to `IDENTITY`/`FACT`
+
+### Changed — Configurable H-Score Weights (Audit §4.4)
+- ⚙️ **H-score weights** now configurable via environment variables for A/B testing:
+  - `HSCORE_ALPHA` (similarity), `HSCORE_BETA` (decay), `HSCORE_GAMMA` (importance)
+  - `HSCORE_DELTA` (frequency), `HSCORE_EPSILON` (emotional), `HSCORE_DECAY_RATE`
+  - Defaults unchanged: α=0.35, β=0.15, γ=0.25, δ=0.10, ε=0.15, λ=0.02
+  - Added to `.env.example` with documentation
+
+### Changed — Structured Logging (Audit §4.5)
+- 📊 **MCP Server** — Added structured JSON logger (`log()` function)
+  - All `console.error` calls replaced with `log(level, component, message, data)`
+  - Output format: `{"ts":"...","level":"ERROR","component":"vectorize","message":"..."}`
+  - Enables Cloudflare Logpush / Sentry integration
+
 ## [4.0.0] - 2026-05-06 - MCP Server v2.1 Production Hardening 🛡️🧠
 
 ### Added — Security
