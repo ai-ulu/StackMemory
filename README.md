@@ -1,61 +1,51 @@
-# StackMemory MCP v2.0
+<div align="center">
 
-<p align="center">
-  <strong>Shared Memory Layer for AI Coding Workflows</strong><br>
-  <em>One memory. Many tools. Same project context.</em>
-</p>
+# StackMemory
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-2.0-blue?style=for-the-badge" alt="Version 2.0">
-  <img src="https://img.shields.io/badge/MCP-Streamable_HTTP-green?style=for-the-badge" alt="MCP Streamable HTTP">
-  <img src="https://img.shields.io/badge/Cloudflare-Pages-orange?style=for-the-badge" alt="Cloudflare Pages">
-  <img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="MIT License">
-</p>
+**Persistent memory infrastructure for AI agents and coding tools.**
+
+Give your AI the ability to remember — across sessions, projects, and tools.
+
+[![Version](https://img.shields.io/badge/MCP_Server-v2.1-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
+[![MCP](https://img.shields.io/badge/Protocol-MCP_2025--03--26-green?style=for-the-badge)](https://spec.modelcontextprotocol.io)
+[![Runtime](https://img.shields.io/badge/Runtime-Cloudflare_Workers-orange?style=for-the-badge)](https://workers.cloudflare.com)
+[![License](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](LICENSE)
+
+[Quick Start](#-quick-start) · [Tools](#-tools-15) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
+
+</div>
 
 ---
 
-## 🚀 Live Endpoint
+## What is StackMemory?
+
+StackMemory is a **shared memory layer** that connects to any MCP-compatible AI tool. Your agent stores what it learns — project decisions, user preferences, code patterns — and retrieves it when relevant, automatically.
+
+**The problem:** AI tools forget everything between sessions. You repeat yourself. Context is lost. Mistakes are repeated.
+
+**The fix:** StackMemory gives your AI persistent, searchable, project-isolated memory with automatic PII scrubbing and semantic search.
+
+```
+Claude Desktop ─┐
+Cursor ──────────┤
+Windsurf ────────┼──→ StackMemory MCP ──→ Cloudflare D1 + Vectorize
+VS Code ─────────┤         │
+Custom Agent ────┘    15 tools, <50ms edge latency
+```
+
+---
+
+## 🚀 Quick Start
+
+### Live Endpoint (no setup required)
 
 ```
 https://stackmemory-mcp.pages.dev/mcp
 ```
 
-Connect any MCP-compatible client using **Streamable HTTP** transport.
+### Claude Desktop
 
-## 🛠️ Tools (14)
-
-### Core Memory Operations
-
-| # | Tool | Description |
-|---|------|-------------|
-| 1 | `search_memories` | Search memories by keyword or semantic query |
-| 2 | `store_memory` | Store a new memory with metadata and tags |
-| 3 | `update_memory` | Update an existing memory entry |
-| 4 | `delete_memory` | Delete a memory by ID |
-| 5 | `query_memories` | Advanced query with filters and sorting |
-| 6 | `list_memories` | List all memories with pagination |
-
-### Graph & Relationship
-
-| # | Tool | Description |
-|---|------|-------------|
-| 7 | `get_memory_graph` | Retrieve the memory relationship graph |
-| 8 | `link_memories` | Create a link between two memories |
-
-### v2.0 — Advanced Operations
-
-| # | Tool | Description |
-|---|------|-------------|
-| 9 | `sm_time_query` | Query memories by time range and temporal patterns |
-| 10 | `sm_memory_summary` | Generate AI-powered summary of memory collections |
-| 11 | `sm_batch_operations` | Perform batch create/update/delete operations |
-| 12 | `sm_export_memories` | Export memories to JSON/CSV formats |
-| 13 | `sm_concept_cluster` | Cluster memories by conceptual similarity |
-| 14 | `sm_import_memories` | Import memories from external data sources |
-
-## 📦 Installation
-
-### Claude Desktop Configuration
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -68,6 +58,8 @@ Connect any MCP-compatible client using **Streamable HTTP** transport.
 ```
 
 ### Cursor / VS Code
+
+Add to MCP settings:
 
 ```json
 {
@@ -82,31 +74,238 @@ Connect any MCP-compatible client using **Streamable HTTP** transport.
 }
 ```
 
-## 🔧 Local Development
+### Python SDK
 
 ```bash
-pnpm install
-pnpm build
-pnpm deploy
-pnpm start
+pip install ai-ulu
 ```
 
-## 🏗️ Architecture
+```python
+from ai_ulu import StackMemory
 
-- **Runtime**: Cloudflare Workers (Edge)
-- **Database**: Cloudflare D1 (SQLite)
-- **Transport**: MCP Streamable HTTP
-- **Protocol**: JSON-RPC 2.0
-
-## 📋 Version History
-
-| Version | Changes |
-|---------|---------|
-| v2.0 | Added time queries, batch ops, export/import, concept clustering, AI summaries; migrated to Cloudflare Pages |
-| v1.0 | Initial release with core CRUD and graph operations |
+memory = StackMemory(api_url="https://stackmemory-mcp.pages.dev")
+memory.store("Project uses Next.js 15 with App Router", namespace="my-project")
+results = memory.search("routing", namespace="my-project")
+```
 
 ---
 
-<p align="center">
-  Built by <a href="https://github.com/ai-ulu">ai-ulu</a> · Part of the MCP Toolkit
-</p>
+## 🛠 Tools (15)
+
+### Core
+
+| Tool | What it does |
+|------|-------------|
+| `search_memories` | Hybrid search — keyword relevance + vector similarity + recency decay |
+| `store_memory` | Store with automatic PII scrubbing and optional namespace isolation |
+| `update_memory` | Update content, type, confidence, or tags (PII scrubbed) |
+| `delete_memory` | Soft-delete with Vectorize index cleanup |
+| `query_memories` | Natural language query with multi-signal ranking |
+| `list_memories` | Paginated list with type/namespace filtering |
+
+### Graph
+
+| Tool | What it does |
+|------|-------------|
+| `get_memory_graph` | Relationship graph with sub-graph filtering via `filter_keyword` |
+| `link_memories` | Create typed relationships between memories |
+
+### Advanced
+
+| Tool | What it does |
+|------|-------------|
+| `sm_time_query` | Query by time range and temporal patterns |
+| `sm_memory_summary` | Statistics with type/namespace distribution |
+| `sm_batch_operations` | Bulk update, delete, or tag operations |
+| `sm_export_memories` | Export to JSON or CSV (max 500 records) |
+| `sm_concept_cluster` | Group memories by conceptual similarity |
+| `sm_import_memories` | Import with duplicate handling and PII scrubbing |
+| `sm_prefetch` | **Proactive injection** — pre-fetch relevant memories for LLM context |
+
+---
+
+## 🔐 Security
+
+Every memory goes through automatic PII/secret detection before storage:
+
+| Category | Patterns detected |
+|----------|------------------|
+| Personal data | Email, phone numbers, credit cards, SSN |
+| API keys | GitHub, GitLab, Slack, Supabase, AWS, Google |
+| Auth tokens | JWT, generic API keys/secrets, passwords |
+
+Detected values are replaced with `[TYPE_REDACTED]` — the original is never stored.
+
+---
+
+## 🏗 Namespace Isolation
+
+Every tool accepts an optional `namespace` parameter to isolate memories by project:
+
+```json
+{ "content": "Uses Tailwind CSS v4", "namespace": "marketing-site" }
+{ "content": "API rate limit is 100/min", "namespace": "backend-api" }
+```
+
+Memories from different namespaces never mix in search results. Default namespace is `global`.
+
+---
+
+## 🧠 Semantic Search
+
+When Cloudflare Workers AI + Vectorize are configured, StackMemory uses hybrid search:
+
+| Signal | Weight | Source |
+|--------|--------|--------|
+| Vector similarity | 40% | Cloudflare Vectorize (`bge-base-en-v1.5`, 768-dim) |
+| Keyword relevance | 30% | Density + position + occurrence scoring |
+| Confidence | 15% | Per-memory confidence score |
+| Recency | 15% | Exponential decay, 30-day half-life |
+
+Falls back to keyword-only search if vector bindings are unavailable.
+
+---
+
+## 📉 Memory Decay
+
+Memories age naturally. Frequently accessed, high-importance memories surface first:
+
+- **`last_accessed`** — auto-updated on every retrieval
+- **`access_count`** — tracks retrieval frequency
+- **`importance_score`** — per-memory weight (0.0–1.0)
+- **Decay function** — exponential with 30-day half-life
+
+---
+
+## 🏛 Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    StackMemory Platform                   │
+├──────────────┬──────────────┬────────────┬──────────────┤
+│  MCP Server  │   Frontend   │  Backend   │    Bridge    │
+│  (Cloudflare │  (Next.js)   │  (FastAPI) │  (Python)    │
+│   Workers)   │              │            │              │
+├──────────────┼──────────────┼────────────┼──────────────┤
+│ D1 + Vector  │   Supabase   │  MongoDB   │  REST proxy  │
+│   ize        │   pgvector   │  numpy     │              │
+└──────────────┴──────────────┴────────────┴──────────────┘
+        ↑               ↑            ↑
+   MCP clients     Web dashboard   API consumers
+```
+
+| Component | Stack | Purpose |
+|-----------|-------|---------|
+| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 15 tools |
+| **frontend** | Next.js, Supabase, Tailwind | Web dashboard and memory visualization |
+| **backend** | FastAPI, MongoDB, numpy | REST API, H(x,ψ) scoring, orchestration |
+| **bridge** | Python, FastAPI | Protocol bridge between frontend and backend |
+| **sdk** | Python | `pip install ai-ulu` — client library |
+| **bots** | Slack, Discord, Telegram | Chat integrations |
+| **chrome-extension** | Manifest V3 | Browser-based memory capture |
+
+---
+
+## 🐍 Python SDK
+
+```bash
+pip install ai-ulu
+```
+
+```python
+from ai_ulu import StackMemory
+
+mem = StackMemory(api_url="https://your-instance.com")
+
+# Store
+mem.store("User prefers dark mode", type="preference")
+
+# Search
+results = mem.search("dark mode", limit=5)
+
+# Query (natural language)
+results = mem.query("What are the user's UI preferences?")
+```
+
+### LangChain Integration
+
+```python
+from ai_ulu.langchain import StackMemoryRetriever
+
+retriever = StackMemoryRetriever(api_url="https://your-instance.com")
+# Use as any LangChain retriever
+```
+
+### CLI
+
+```bash
+ulu store "Project uses React 19"
+ulu search "framework"
+ulu list --type preference
+```
+
+---
+
+## 🖥 Self-Hosting
+
+### MCP Server Only (Cloudflare)
+
+```bash
+cd mcp-server
+npm install
+npx wrangler d1 create stackmemory-mcp-db
+npx wrangler vectorize create stackmemory-embeddings --dimensions=768 --metric=cosine
+npx wrangler deploy
+```
+
+### Full Platform (Docker)
+
+```bash
+cp .env.example .env
+# Fill in your Supabase, OpenAI, and other keys
+docker compose up -d
+```
+
+Services:
+- **Frontend**: `http://localhost:3000`
+- **Backend**: `http://localhost:8000`
+- **Bridge**: `http://localhost:8001`
+
+### Makefile Commands
+
+```bash
+make install    # Install all dependencies
+make dev        # Start development servers
+make build      # Build Docker images
+make deploy     # Deploy to production
+make test       # Run tests
+make health     # Check service health
+```
+
+---
+
+## 📋 Version History
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| **v2.1** | 2026-05-06 | PII scrubbing, namespace isolation, Vectorize semantic search, memory decay, `sm_prefetch`, smart truncation |
+| v2.0 | 2026-02-11 | Time queries, batch ops, export/import, concept clustering, H(x,ψ) scoring |
+| v1.0 | 2026-01-15 | Core CRUD, graph operations, MCP protocol |
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+---
+
+## 📄 License
+
+MIT
+
+---
+
+<div align="center">
+
+Built by [ai-ulu](https://github.com/ai-ulu)
+
+**One memory. Many tools. Same project context.**
+
+</div>
