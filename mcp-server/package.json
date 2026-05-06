@@ -1,43 +1,19 @@
 {
-  "name": "@ai-ulu/mcp-server",
-  "version": "1.0.0",
-  "description": "StackMemory MCP server for shared memory across AI coding workflows",
+  "name": "@stackmemory/mcp-server-cloudflare",
+  "version": "2.0.0",
+  "description": "StackMemory MCP Server v2.0.0 - AI Memory Management with Time Query, Clustering, Batch Ops",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "mcp-server-ai-ulu": "./dist/index.js"
-  },
   "scripts": {
-    "build": "tsc",
-    "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js",
-    "test": "jest"
+    "dev": "wrangler pages dev ./dist --d1=DB",
+    "build": "esbuild src/index.ts --bundle --outdir=dist --format=esm --target=esnext --sourcemap",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=stackmemory-mcp"
   },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "ai-memory",
-    "claude",
-    "anthropic",
-    "stackmemory"
-  ],
-  "author": "StackMemory Team",
-  "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.5.0",
-    "zod": "^3.22.4"
+    "@cloudflare/workers-types": "^4.20241205.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.3.0",
-    "ts-node": "^10.9.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ai-ulu/mcp-server"
+    "wrangler": "^3.99.0"
   }
 }
