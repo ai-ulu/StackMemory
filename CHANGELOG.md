@@ -2,6 +2,36 @@
 
 All notable changes to StackMemory will be documented in this file.
 
+## [5.1.0] - 2026-05-06 - Ulu-Brain v2: Simulation & Imagination 🔮
+
+### Added — brain_simulate: Decision Simulation Engine
+- 🎯 **Risk-scored decision testing** before committing to major changes
+  - Retrieves past `decision`, `rule`, and `insight` memories for the topic
+  - Hybrid search: keyword + vector + cross-namespace (optional)
+  - **Positive/negative signal detection** — bilingual patterns (EN/TR):
+    - 🔴 Negative: `avoid, failed, deprecated, mistake, yapma, kaçın, hata, başarısız`
+    - 🟢 Positive: `prefer, success, recommended, best, tercih, başarılı, önerilen`
+  - **Decision conflict finder** — flags existing decisions that would be overridden
+  - **Affected namespace mapping** — shows which projects are impacted
+  - **5-level verdict system**: 🔴 HIGH RISK → 🟡 MODERATE → 🟠 CAUTION → 🟢 LOW RISK → ⚪ UNCHARTED
+  - Overall risk score: 0.0 - 1.0 (weighted: high_risk×0.4, medium×0.2, contradictions×0.15)
+
+### Added — brain_dream: Cross-Namespace Ideation Engine
+- 💭 **Creative cross-pollination** between isolated project namespaces
+  - Gathers high-value memories from each namespace (up to 10 namespaces, 30 memories each)
+  - Extracts keyword signatures per namespace (word frequency + tag weighting)
+  - **Bridge discovery** — finds shared concepts between namespace pairs (Jaccard threshold: 2+ shared keywords with freq ≥ 2)
+  - **Bridge strength scoring** — `shared_keywords / min(ns_a_size, ns_b_size)`
+  - **Unique pattern detection** — concepts with freq ≥ 3 that exist ONLY in one namespace
+  - Focus mode: optional topic filter to guide the dream
+  - Namespace filter: dream between specific namespaces
+  - Example output: `💡 "e-commerce" and "game-engine" share [cache, latency, queue]`
+
+### Changed
+- MCP Server version: v3.0 → **v3.1.0**
+- Total tools: 19 → **21**
+- Bundle size: 100.9kb → 117.4kb
+
 ## [5.0.0] - 2026-05-06 - Ulu-Brain v1: Cognitive Layer 🧠
 
 ### Added — Ulu-Brain: 4 New Cognitive Tools

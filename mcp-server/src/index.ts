@@ -1,6 +1,6 @@
-// StackMemory MCP Server v3.0.0 (Ulu-Brain) - Cloudflare Pages Worker
+// StackMemory MCP Server v3.1.0 (Ulu-Brain v2) - Cloudflare Pages Worker
 // MCP Protocol 2025-03-26 with Streamable HTTP Transport
-// v3.0: Cognitive layer — brain_think, brain_adapt, brain_consolidate, brain_status
+// v3.1: brain_simulate (decision risk scoring), brain_dream (cross-namespace ideation)
 
 interface Env {
   DB: D1Database;
@@ -455,6 +455,37 @@ const TOOLS = [
       properties: {
         user_id: { type: 'string', description: 'User ID (default: "default")' },
         namespace: { type: 'string', description: 'Filter to specific namespace' },
+      },
+    },
+  },
+  {
+    name: 'brain_simulate',
+    description: 'Decision simulation engine. Before committing to a decision, simulates the outcome by analyzing past decisions, rules, and patterns in memory. Finds similar historical decisions and their results, detects potential risks from past failures, maps which namespaces/projects would be affected, and returns a risk-scored forecast. Use before any significant architectural or strategic decision.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        decision: { type: 'string', description: 'The proposed decision or action to simulate (e.g., "Switch from REST to GraphQL")' },
+        namespace: { type: 'string', description: 'Primary namespace context' },
+        user_id: { type: 'string', description: 'User ID (default: "default")' },
+        include_cross_namespace: { type: 'boolean', description: 'Also check other namespaces for related patterns (default: true)' },
+      },
+      required: ['decision'],
+    },
+  },
+  {
+    name: 'brain_dream',
+    description: 'Cross-namespace ideation engine. Explores connections between different projects/namespaces to discover unexpected patterns, transferable insights, and novel ideas. Like a brain dreaming — makes creative leaps by cross-pollinating knowledge across isolated domains. Run when seeking inspiration or fresh perspectives.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        focus: { type: 'string', description: 'Optional focus topic to guide the dream (leave empty for free association)' },
+        user_id: { type: 'string', description: 'User ID (default: "default")' },
+        max_ideas: { type: 'number', description: 'Maximum number of creative connections to generate (default: 5, max: 10)' },
+        namespaces: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific namespaces to cross-pollinate (default: all)',
+        },
       },
     },
   },
@@ -2524,6 +2555,401 @@ async function brainStatus(params: Record<string, unknown>, env: Env): Promise<u
 }
 
 // ============================================================
+// 20. brain_simulate — Decision Simulation Engine
+// ============================================================
+async function brainSimulate(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const decision = String(params.decision || '');
+  const namespace = params.namespace as string | undefined;
+  const userId = String(params.user_id || 'default');
+  const crossNs = params.include_cross_namespace !== false; // default true
+
+  if (!decision.trim()) {
+    return { content: [{ type: 'text', text: 'Error: decision parameter is required' }], isError: true };
+  }
+
+  const ns = nsFilter(namespace);
+  const keywords = decision.toLowerCase()
+    .replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, ' ')
+    .split(/\s+/)
+    .filter((w: string) => w.length > 2 && !STOP_WORDS.has(w));
+
+  // 1. Find past decisions and rules in the primary namespace
+  const decisionTypes = ['decision', 'rule', 'insight'];
+  const typeFilter = decisionTypes.map(() => '?').join(',');
+  const baseParams: (string | number)[] = [...decisionTypes, userId];
+  if (ns.param) baseParams.push(ns.param);
+  baseParams.push(50);
+
+  const pastDecisions = await env.DB.prepare(
+    `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+     FROM memories WHERE type IN (${typeFilter}) AND user_id = ? AND deleted_at IS NULL${ns.clause}
+     ORDER BY importance_score DESC, created_at DESC LIMIT ?`
+  ).bind(...baseParams).all();
+
+  // 2. Keyword search across ALL types for relevant context
+  let relatedMemories: Record<string, unknown>[] = [];
+  if (keywords.length > 0) {
+    const kwConditions = keywords.slice(0, 5).map(() => `content LIKE ?`).join(' OR ');
+    const kwParams: (string | number)[] = keywords.slice(0, 5).map(kw => `%${kw}%`);
+    kwParams.push(userId);
+    if (!crossNs && ns.param) kwParams.push(ns.param);
+    kwParams.push(30);
+
+    const kwResult = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+       FROM memories WHERE (${kwConditions}) AND user_id = ? AND deleted_at IS NULL${!crossNs ? ns.clause : ''}
+       ORDER BY confidence DESC, created_at DESC LIMIT ?`
+    ).bind(...kwParams).all();
+    relatedMemories = kwResult.results as Record<string, unknown>[];
+  }
+
+  // 3. Vector search for semantic similarity
+  const queryEmbedding = await generateEmbedding(decision, env);
+  const vectorFilter: Record<string, string> = { user_id: userId };
+  if (!crossNs && namespace && namespace !== 'global') vectorFilter.namespace = namespace;
+  const vectorHits = queryEmbedding ? await vectorQuery(queryEmbedding, 20, vectorFilter, env) : [];
+
+  // Fetch full records for vector hits
+  let vectorMemories: Record<string, unknown>[] = [];
+  if (vectorHits.length > 0) {
+    const vecIds = vectorHits.map(v => v.id);
+    const ph = vecIds.map(() => '?').join(',');
+    const vecResult = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+       FROM memories WHERE id IN (${ph}) AND deleted_at IS NULL`
+    ).bind(...vecIds).all();
+    vectorMemories = vecResult.results as Record<string, unknown>[];
+  }
+
+  // 4. Merge and deduplicate all sources
+  const allSeen = new Set<string>();
+  const allMemories: Record<string, unknown>[] = [];
+  for (const src of [pastDecisions.results, relatedMemories, vectorMemories]) {
+    for (const m of src as Record<string, unknown>[]) {
+      if (!allSeen.has(String(m.id))) { allSeen.add(String(m.id)); allMemories.push(m); }
+    }
+  }
+
+  // 5. Score by relevance to the proposed decision
+  const vecMap = new Map(vectorHits.map(v => [v.id, v.score]));
+  const scored: (Record<string, unknown> & { sim_score: number })[] = allMemories.map(m => {
+    const vec = vecMap.get(String(m.id)) || 0;
+    const kw = keywords.length > 0 ? scoreRelevance(String(m.content), keywords) : 0;
+    const typeBoost = ['decision', 'rule', 'insight'].includes(String(m.type)) ? 0.2 : 0;
+    const score = (vec > 0 ? vec * 0.35 : 0) + kw * 0.3 + Number(m.importance_score || 0.5) * 0.15 + typeBoost;
+    return { ...m, sim_score: Math.round(score * 100) / 100 };
+  });
+  scored.sort((a, b) => b.sim_score - a.sim_score);
+  const topScored = scored.slice(0, 15);
+
+  // 6. Analyze risk patterns
+  const risks: { level: string; description: string; source_memory: string }[] = [];
+  const supports: { description: string; source_memory: string; confidence: number }[] = [];
+  const affectedNamespaces = new Set<string>();
+
+  for (const m of topScored) {
+    const content = String(m.content).toLowerCase();
+    const memNs = String(m.namespace || 'global');
+    affectedNamespaces.add(memNs);
+
+    // Check for negative signals
+    const negativePatterns = ['don\'t', 'avoid', 'problem', 'failed', 'deprecated', 'mistake',
+      'yapma', 'kaçın', 'sorun', 'hata', 'başarısız', 'terk', 'riskli', 'bug', 'error', 'broke'];
+    const hasNegative = negativePatterns.some(p => content.includes(p));
+    const isLowConfidence = Number(m.confidence) < 0.5;
+
+    if (hasNegative || isLowConfidence) {
+      risks.push({
+        level: isLowConfidence && hasNegative ? 'high' : hasNegative ? 'medium' : 'low',
+        description: truncateContent(String(m.content), 200),
+        source_memory: `${String(m.id).slice(0, 8)} (${m.type}, ${memNs})`,
+      });
+    }
+
+    // Check for supporting signals
+    const positivePatterns = ['should', 'prefer', 'good', 'success', 'recommended', 'best',
+      'kullan', 'tercih', 'iyi', 'başarılı', 'önerilen', 'en iyi', 'approved'];
+    const hasPositive = positivePatterns.some(p => content.includes(p));
+    if (hasPositive && Number(m.confidence) >= 0.6) {
+      supports.push({
+        description: truncateContent(String(m.content), 200),
+        source_memory: `${String(m.id).slice(0, 8)} (${m.type}, ${memNs})`,
+        confidence: Number(m.confidence),
+      });
+    }
+  }
+
+  // 7. Check for direct contradictions with the proposed decision
+  const contradictions: { existing: string; memory_id: string; type: string }[] = [];
+  for (const m of topScored) {
+    if (!['decision', 'rule'].includes(String(m.type))) continue;
+    const overlap = keywords.filter(kw => String(m.content).toLowerCase().includes(kw)).length;
+    if (overlap >= 2) {
+      // This is a past decision on a similar topic — flag as potential override
+      contradictions.push({
+        existing: truncateContent(String(m.content), 200),
+        memory_id: String(m.id).slice(0, 8),
+        type: String(m.type),
+      });
+    }
+  }
+
+  // 8. Calculate overall risk score
+  const highRisks = risks.filter(r => r.level === 'high').length;
+  const medRisks = risks.filter(r => r.level === 'medium').length;
+  const riskScore = Math.min(1.0, (highRisks * 0.4 + medRisks * 0.2 + contradictions.length * 0.15) / Math.max(topScored.length, 1));
+  const confidenceScore = supports.length > 0
+    ? Math.round(supports.reduce((s, x) => s + x.confidence, 0) / supports.length * 100) / 100
+    : 0;
+
+  let verdict: string;
+  if (riskScore > 0.6) {
+    verdict = '🔴 HIGH RISK — Multiple historical warnings and contradictions detected. Strongly recommend reviewing flagged memories before proceeding.';
+  } else if (riskScore > 0.3) {
+    verdict = '🟡 MODERATE RISK — Some historical concerns found. Proceed with awareness of flagged patterns.';
+  } else if (contradictions.length > 0) {
+    verdict = '🟠 CAUTION — This would override existing decisions. Ensure the change is intentional.';
+  } else if (supports.length >= 2) {
+    verdict = '🟢 LOW RISK — Historical evidence supports this direction. Past experiences align positively.';
+  } else {
+    verdict = '⚪ UNCHARTED — Limited historical data on this topic. This is a novel decision area.';
+  }
+
+  const simulation = {
+    decision_preview: decision.slice(0, 200),
+    namespace: namespace || 'global',
+    cross_namespace_scan: crossNs,
+    semantic_search: vectorHits.length > 0,
+
+    historical_context: {
+      memories_analyzed: topScored.length,
+      past_decisions_found: topScored.filter(m => m.type === 'decision').length,
+      rules_found: topScored.filter(m => m.type === 'rule').length,
+      insights_found: topScored.filter(m => m.type === 'insight').length,
+    },
+
+    risk_assessment: {
+      overall_risk_score: Math.round(riskScore * 100) / 100,
+      confidence_score: confidenceScore,
+      risks: risks.slice(0, 5),
+      supports: supports.slice(0, 5),
+    },
+
+    decision_conflicts: contradictions,
+    affected_namespaces: [...affectedNamespaces],
+
+    verdict,
+
+    top_relevant_memories: truncateMemoryResults(topScored.slice(0, 8)),
+  };
+
+  log(LOG_LEVEL.INFO, 'brain', 'Simulation completed', {
+    decision: decision.slice(0, 100), risk_score: riskScore, risks: risks.length, supports: supports.length,
+  });
+
+  return { content: [{ type: 'text', text: JSON.stringify(simulation, null, 2) }] };
+}
+
+// ============================================================
+// 21. brain_dream — Cross-Namespace Ideation Engine
+// ============================================================
+async function brainDream(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const focus = String(params.focus || '');
+  const userId = String(params.user_id || 'default');
+  const maxIdeas = Math.min(10, Number(params.max_ideas) || 5);
+  const targetNamespaces = Array.isArray(params.namespaces) ? params.namespaces.map(String) : null;
+
+  // 1. Get all active namespaces for this user
+  const nsResult = await env.DB.prepare(
+    `SELECT namespace, COUNT(*) as count FROM memories
+     WHERE user_id = ? AND deleted_at IS NULL AND namespace != 'global'
+     GROUP BY namespace HAVING count >= 3 ORDER BY count DESC LIMIT 20`
+  ).bind(userId).all();
+  const namespaces = nsResult.results as Record<string, unknown>[];
+
+  if (namespaces.length < 2 && !focus) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          message: 'Need at least 2 namespaces with 3+ memories each for cross-pollination. Try adding a focus topic instead.',
+          namespaces_found: namespaces.length,
+          tip: 'Store memories with different namespace values to enable cross-namespace dreaming.',
+        }, null, 2),
+      }],
+    };
+  }
+
+  // Filter to requested namespaces if specified
+  const activeNs = targetNamespaces
+    ? namespaces.filter(n => targetNamespaces.includes(String(n.namespace)))
+    : namespaces;
+
+  // 2. Gather high-value memories from each namespace
+  type NsMemory = Record<string, unknown> & { _ns: string };
+  const nsPools: Map<string, NsMemory[]> = new Map();
+
+  for (const nsObj of activeNs.slice(0, 10)) {
+    const nsName = String(nsObj.namespace);
+    const focusFilter = focus
+      ? ` AND content LIKE ?`
+      : '';
+    const bindParams: (string | number)[] = [userId, nsName];
+    if (focus) bindParams.push(`%${focus}%`);
+    bindParams.push(30);
+
+    const pool = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+       FROM memories WHERE user_id = ? AND namespace = ? AND deleted_at IS NULL${focusFilter}
+       ORDER BY importance_score DESC, confidence DESC LIMIT ?`
+    ).bind(...bindParams).all();
+
+    nsPools.set(nsName, (pool.results as Record<string, unknown>[]).map(m => ({ ...m, _ns: nsName })));
+  }
+
+  // Also include 'global' namespace if it has content
+  const globalPool = await env.DB.prepare(
+    `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+     FROM memories WHERE user_id = ? AND namespace = 'global' AND deleted_at IS NULL
+     ORDER BY importance_score DESC LIMIT 20`
+  ).bind(userId).all();
+  if (globalPool.results.length > 0) {
+    nsPools.set('global', (globalPool.results as Record<string, unknown>[]).map(m => ({ ...m, _ns: 'global' })));
+  }
+
+  // 3. Extract keyword signatures per namespace
+  type NsSignature = { namespace: string; keywords: Map<string, number>; memories: NsMemory[] };
+  const signatures: NsSignature[] = [];
+
+  for (const [nsName, memories] of nsPools) {
+    const kwMap = new Map<string, number>();
+    for (const m of memories) {
+      const words = String(m.content).toLowerCase()
+        .replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+      for (const w of words) kwMap.set(w, (kwMap.get(w) || 0) + 1);
+
+      // Include tags
+      try {
+        const tags = typeof m.tags === 'string' ? JSON.parse(String(m.tags)) : m.tags;
+        if (Array.isArray(tags)) for (const t of tags) kwMap.set(String(t).toLowerCase(), (kwMap.get(String(t).toLowerCase()) || 0) + 2);
+      } catch { /* ignore */ }
+    }
+    signatures.push({ namespace: nsName, keywords: kwMap, memories });
+  }
+
+  // 4. Find cross-namespace keyword bridges (unexpected overlaps)
+  type DreamConnection = {
+    type: string;
+    ns_a: string;
+    ns_b: string;
+    bridge_keywords: string[];
+    bridge_strength: number;
+    memory_a: { id: string; content: string; type: string };
+    memory_b: { id: string; content: string; type: string };
+    insight: string;
+  };
+  const connections: DreamConnection[] = [];
+
+  for (let i = 0; i < signatures.length; i++) {
+    for (let j = i + 1; j < signatures.length; j++) {
+      const sigA = signatures[i], sigB = signatures[j];
+
+      // Find shared keywords between namespaces (excluding very common ones)
+      const shared: string[] = [];
+      for (const [kw, countA] of sigA.keywords) {
+        const countB = sigB.keywords.get(kw);
+        if (countB && countA >= 2 && countB >= 2) shared.push(kw);
+      }
+
+      if (shared.length < 2) continue;
+
+      // Find the most relevant memory from each namespace for the bridge
+      const bridgeWords = shared.slice(0, 5);
+      const bestA = sigA.memories
+        .map(m => ({ m, score: bridgeWords.filter(w => String(m.content).toLowerCase().includes(w)).length }))
+        .sort((a, b) => b.score - a.score)[0];
+      const bestB = sigB.memories
+        .map(m => ({ m, score: bridgeWords.filter(w => String(m.content).toLowerCase().includes(w)).length }))
+        .sort((a, b) => b.score - a.score)[0];
+
+      if (!bestA || !bestB || bestA.score < 1 || bestB.score < 1) continue;
+
+      const strength = Math.round((shared.length / Math.min(sigA.keywords.size, sigB.keywords.size)) * 100) / 100;
+
+      connections.push({
+        type: 'cross_pollination',
+        ns_a: sigA.namespace,
+        ns_b: sigB.namespace,
+        bridge_keywords: bridgeWords,
+        bridge_strength: strength,
+        memory_a: {
+          id: String(bestA.m.id).slice(0, 8),
+          content: truncateContent(String(bestA.m.content), 150),
+          type: String(bestA.m.type),
+        },
+        memory_b: {
+          id: String(bestB.m.id).slice(0, 8),
+          content: truncateContent(String(bestB.m.content), 150),
+          type: String(bestB.m.type),
+        },
+        insight: `💡 "${sigA.namespace}" and "${sigB.namespace}" share concepts: [${bridgeWords.join(', ')}]. ` +
+          `Knowledge from one may transfer to the other.`,
+      });
+    }
+  }
+
+  // Sort by bridge strength and take top ideas
+  connections.sort((a, b) => b.bridge_strength - a.bridge_strength);
+  const topConnections = connections.slice(0, maxIdeas);
+
+  // 5. Find isolated patterns (concepts in one namespace that have NO presence elsewhere)
+  const uniquePatterns: { namespace: string; unique_keywords: string[]; suggestion: string }[] = [];
+  for (const sig of signatures) {
+    const unique: string[] = [];
+    for (const [kw, count] of sig.keywords) {
+      if (count < 3) continue;
+      const existsElsewhere = signatures.some(s => s.namespace !== sig.namespace && s.keywords.has(kw));
+      if (!existsElsewhere) unique.push(kw);
+    }
+    if (unique.length >= 3) {
+      uniquePatterns.push({
+        namespace: sig.namespace,
+        unique_keywords: unique.slice(0, 8),
+        suggestion: `🔮 "${sig.namespace}" has unique expertise in [${unique.slice(0, 4).join(', ')}]. ` +
+          `Consider applying these patterns to other projects.`,
+      });
+    }
+  }
+
+  const dreamResult = {
+    focus: focus || 'free association',
+    namespaces_scanned: signatures.map(s => ({ namespace: s.namespace, memory_count: s.memories.length, keyword_count: s.keywords.size })),
+    total_memories_analyzed: [...nsPools.values()].reduce((s, p) => s + p.length, 0),
+
+    dream_connections: topConnections,
+    connections_found: connections.length,
+
+    unique_patterns: uniquePatterns.slice(0, 5),
+
+    dream_summary: topConnections.length > 0
+      ? `🧠 Found ${connections.length} cross-namespace connection(s). ` +
+        `Top bridge: "${topConnections[0].ns_a}" ↔ "${topConnections[0].ns_b}" via [${topConnections[0].bridge_keywords.join(', ')}]. ` +
+        (uniquePatterns.length > 0 ? `${uniquePatterns.length} namespace(s) have unique expertise worth sharing.` : '')
+      : namespaces.length < 2
+        ? '💭 Not enough namespaces for cross-pollination. Store memories across different projects to enable dreaming.'
+        : '💭 No strong cross-namespace patterns found yet. Keep building knowledge in each namespace.',
+  };
+
+  log(LOG_LEVEL.INFO, 'brain', 'Dream completed', {
+    focus: focus.slice(0, 50), namespaces: signatures.length, connections: connections.length,
+  });
+
+  return { content: [{ type: 'text', text: JSON.stringify(dreamResult, null, 2) }] };
+}
+
+// ============================================================
 // Tool Call Router
 // ============================================================
 async function handleToolCall(name: string, args: Record<string, unknown>, env: Env): Promise<unknown> {
@@ -2548,6 +2974,9 @@ async function handleToolCall(name: string, args: Record<string, unknown>, env: 
     case 'brain_adapt': return await brainAdapt(args, env);
     case 'brain_consolidate': return await brainConsolidate(args, env);
     case 'brain_status': return await brainStatus(args, env);
+    // Ulu-Brain v2: Simulation & Imagination
+    case 'brain_simulate': return await brainSimulate(args, env);
+    case 'brain_dream': return await brainDream(args, env);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],
