@@ -59,3 +59,16 @@ backend/.hypothesis/
 .vercel
 frontend/.local-dev/
 .playwright-cli/
+
+# Platform metadata (should never be committed)
+.emergent/
+.gitconfig
+.hypothesis/
+
+# Test artifacts
+backend/data/test_ab/
+backend/lib/data/test_ab/
+
+# Supabase internal docs (not public)
+SUPABASE_AUTH_ANALYSIS.md
+SUPABASE_KEYS_GUIDE.md
