@@ -1,8 +1,92 @@
-// StackMemory MCP Server v2.0.0 - Cloudflare Pages Worker
+// StackMemory MCP Server v2.1.0 - Cloudflare Pages Worker
 // MCP Protocol 2025-03-26 with Streamable HTTP Transport
+// v2.1: PII filter, namespace isolation, smart truncation, relevance scoring
 
 interface Env {
   DB: D1Database;
+}
+
+// ============================================================
+// PII / Secret Scrubbing
+// ============================================================
+const PII_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, label: 'EMAIL' },
+  { pattern: /\b(?:\d[ -]*?){13,19}\b/g, label: 'CREDIT_CARD' },
+  { pattern: /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g, label: 'PHONE' },
+  { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, label: 'SSN' },
+  // API keys & tokens (generic patterns)
+  { pattern: /\b(sk|pk|api|key|token|secret|password|bearer|auth)[-_]?[a-zA-Z0-9]{16,}\b/gi, label: 'API_KEY' },
+  { pattern: /\bghp_[a-zA-Z0-9]{36,}\b/g, label: 'GITHUB_TOKEN' },
+  { pattern: /\bgho_[a-zA-Z0-9]{36,}\b/g, label: 'GITHUB_OAUTH' },
+  { pattern: /\bglpat-[a-zA-Z0-9\-_]{20,}\b/g, label: 'GITLAB_TOKEN' },
+  { pattern: /\bxoxb-[a-zA-Z0-9\-]{20,}\b/g, label: 'SLACK_TOKEN' },
+  { pattern: /\bxoxp-[a-zA-Z0-9\-]{20,}\b/g, label: 'SLACK_TOKEN' },
+  { pattern: /\bsbp_[a-zA-Z0-9]{20,}\b/g, label: 'SUPABASE_KEY' },
+  { pattern: /\beyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\b/g, label: 'JWT' },
+  { pattern: /\bAKIA[A-Z0-9]{16}\b/g, label: 'AWS_KEY' },
+  { pattern: /\bAIza[a-zA-Z0-9_-]{35}\b/g, label: 'GOOGLE_API_KEY' },
+  // Passwords in common formats
+  { pattern: /(?:password|passwd|pwd|şifre|sifre)\s*[:=]\s*\S+/gi, label: 'PASSWORD' },
+];
+
+function scrubPII(content: string): { cleaned: string; detected: string[]; hadPII: boolean } {
+  let cleaned = content;
+  const detected: string[] = [];
+
+  for (const { pattern, label } of PII_PATTERNS) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    if (regex.test(cleaned)) {
+      detected.push(label);
+      cleaned = cleaned.replace(new RegExp(pattern.source, pattern.flags), `[${label}_REDACTED]`);
+    }
+  }
+
+  return { cleaned, detected, hadPII: detected.length > 0 };
+}
+
+// ============================================================
+// Smart Content Truncation
+// ============================================================
+const MAX_CONTENT_PREVIEW = 500;  // chars per memory in search results
+const MAX_RESPONSE_ITEMS = 200;   // hard cap on items in any response
+
+function truncateContent(content: string, maxLen: number = MAX_CONTENT_PREVIEW): string {
+  if (content.length <= maxLen) return content;
+  return content.slice(0, maxLen) + '…[truncated]';
+}
+
+function truncateMemoryResults(
+  memories: Record<string, unknown>[],
+  maxItems: number = MAX_RESPONSE_ITEMS,
+  truncateFields: boolean = true
+): Record<string, unknown>[] {
+  const limited = memories.slice(0, maxItems);
+  if (!truncateFields) return limited;
+  return limited.map(m => ({
+    ...m,
+    content: truncateContent(String(m.content || ''), MAX_CONTENT_PREVIEW),
+  }));
+}
+
+// ============================================================
+// Relevance Scoring (keyword-based ranking)
+// ============================================================
+function scoreRelevance(content: string, keywords: string[]): number {
+  const lower = content.toLowerCase();
+  let score = 0;
+  for (const kw of keywords) {
+    // Exact phrase match
+    const idx = lower.indexOf(kw);
+    if (idx === -1) continue;
+    score += 1;
+    // Bonus for match at start of content
+    if (idx < 50) score += 0.5;
+    // Bonus for multiple occurrences
+    const occurrences = lower.split(kw).length - 1;
+    if (occurrences > 1) score += Math.min(occurrences * 0.2, 1);
+  }
+  // Normalize by keyword count
+  return keywords.length > 0 ? score / keywords.length : 0;
 }
 
 // ============================================================
@@ -26,43 +110,45 @@ function corsResponse(body: string, status = 200, extraHeaders: Record<string, s
 // Tool Definitions
 // ============================================================
 const TOOLS = [
-  // --- 8 Existing Tools ---
+  // --- 8 Core Tools (v2.1 with namespace + PII) ---
   {
     name: 'search_memories',
-    description: 'Search memories by keyword. Uses SQL LIKE query on content field to find matching memories.',
+    description: 'Search memories by keyword with relevance scoring. Results ranked by keyword density, position and confidence.',
     inputSchema: {
       type: 'object',
       properties: {
         keyword: { type: 'string', description: 'Search keyword to find in memory content' },
         limit: { type: 'number', description: 'Maximum number of results (default: 10)' },
         user_id: { type: 'string', description: 'Filter by user ID (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation (e.g. "ulu-router", "koltuk-yikama"). Omit for global.' },
       },
       required: ['keyword'],
     },
   },
   {
     name: 'store_memory',
-    description: 'Store a new memory with type classification and confidence score. Types: identity, preference, fact.',
+    description: 'Store a new memory with PII auto-scrubbing, type classification, and confidence score. Sensitive data (API keys, passwords, emails) is automatically redacted before storage.',
     inputSchema: {
       type: 'object',
       properties: {
-        content: { type: 'string', description: 'The memory content to store' },
+        content: { type: 'string', description: 'The memory content to store (PII/secrets auto-redacted)' },
         type: { type: 'string', description: 'Memory type: identity, preference, or fact (default: "fact")', enum: ['identity', 'preference', 'fact'] },
         confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0 (default: 0.8)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
         user_id: { type: 'string', description: 'User ID (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation (e.g. "ulu-router")' },
       },
       required: ['content'],
     },
   },
   {
     name: 'update_memory',
-    description: 'Update an existing memory\'s content by ID.',
+    description: 'Update an existing memory\'s content by ID. PII auto-scrubbing applied to new content.',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Memory ID to update' },
-        content: { type: 'string', description: 'New content for the memory' },
+        content: { type: 'string', description: 'New content for the memory (PII/secrets auto-redacted)' },
         type: { type: 'string', description: 'New type (identity/preference/fact)', enum: ['identity', 'preference', 'fact'] },
         confidence: { type: 'number', description: 'New confidence score (0.0-1.0)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'New tags array (replaces existing)' },
@@ -83,39 +169,43 @@ const TOOLS = [
   },
   {
     name: 'query_memories',
-    description: 'Natural language query for memories. Extracts keywords and performs intelligent search across content, type, and tags.',
+    description: 'Natural language query for memories with relevance scoring. Extracts keywords, searches content and tags, ranks by keyword relevance and confidence.',
     inputSchema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Natural language query string' },
         limit: { type: 'number', description: 'Maximum results (default: 10)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
       },
       required: ['query'],
     },
   },
   {
     name: 'list_memories',
-    description: 'List memories filtered by type, with pagination support.',
+    description: 'List memories filtered by type and namespace, with pagination support. Content truncated to prevent context overflow.',
     inputSchema: {
       type: 'object',
       properties: {
         type: { type: 'string', description: 'Filter by type: identity, preference, fact', enum: ['identity', 'preference', 'fact'] },
-        limit: { type: 'number', description: 'Maximum results (default: 20)' },
+        limit: { type: 'number', description: 'Maximum results (default: 20, max: 200)' },
         offset: { type: 'number', description: 'Offset for pagination (default: 0)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
         include_deleted: { type: 'boolean', description: 'Include soft-deleted memories (default: false)' },
       },
     },
   },
   {
     name: 'get_memory_graph',
-    description: 'Retrieve the memory graph with nodes (memories) and edges (links). Returns graph data with statistics.',
+    description: 'Retrieve the memory graph with optional keyword filter for sub-graph extraction. Returns nodes, edges, and statistics.',
     inputSchema: {
       type: 'object',
       properties: {
-        limit: { type: 'number', description: 'Maximum nodes to return (default: 50)' },
+        limit: { type: 'number', description: 'Maximum nodes to return (default: 50, max: 200)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
+        filter_keyword: { type: 'string', description: 'Optional keyword to extract a sub-graph of related nodes only' },
       },
     },
   },
@@ -133,7 +223,7 @@ const TOOLS = [
       required: ['source_id', 'target_id'],
     },
   },
-  // --- 6 New Tools ---
+  // --- 6 Extended Tools (v2.1) ---
   {
     name: 'sm_time_query',
     description: 'Time-based memory query. Find memories within a specific time period or date range.',
@@ -144,8 +234,9 @@ const TOOLS = [
         from_date: { type: 'string', description: 'Start date for custom period (ISO 8601 format, e.g., 2024-01-01)' },
         to_date: { type: 'string', description: 'End date for custom period (ISO 8601 format)' },
         type: { type: 'string', description: 'Optional type filter: identity, preference, fact', enum: ['identity', 'preference', 'fact'] },
-        limit: { type: 'number', description: 'Maximum results (default: 50)' },
+        limit: { type: 'number', description: 'Maximum results (default: 50, max: 200)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
       },
       required: ['period'],
     },
@@ -157,6 +248,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
       },
     },
   },
@@ -174,13 +266,14 @@ const TOOLS = [
           age_days: { type: 'number', description: 'Age threshold in days (for delete_old)' },
         }},
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
       },
       required: ['operation'],
     },
   },
   {
     name: 'sm_export_memories',
-    description: 'Export memories to JSON or CSV format with optional filters.',
+    description: 'Export memories to JSON or CSV format with optional filters. Limited to 500 records per export.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -191,31 +284,36 @@ const TOOLS = [
         from_date: { type: 'string', description: 'Start date filter (ISO 8601)' },
         to_date: { type: 'string', description: 'End date filter (ISO 8601)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
+        limit: { type: 'number', description: 'Maximum records to export (default: 500, max: 500)' },
       },
       required: ['format'],
     },
   },
   {
     name: 'sm_concept_cluster',
-    description: 'Concept clustering of memories. Groups memories by shared keywords and tags into semantic clusters.',
+    description: 'Concept clustering of memories. Groups memories by shared keywords and tags into semantic clusters. Limited to 500 most recent memories.',
     inputSchema: {
       type: 'object',
       properties: {
         min_cluster_size: { type: 'number', description: 'Minimum memories per cluster (default: 2)' },
         max_clusters: { type: 'number', description: 'Maximum number of clusters (default: 10)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
+        limit: { type: 'number', description: 'Maximum memories to analyze (default: 500, max: 500)' },
       },
     },
   },
   {
     name: 'sm_import_memories',
-    description: 'Import memories from a JSON string. Supports duplicate handling strategies.',
+    description: 'Import memories from a JSON string. PII auto-scrubbing applied. Supports duplicate handling strategies.',
     inputSchema: {
       type: 'object',
       properties: {
         data: { type: 'string', description: 'JSON string containing array of memory objects with: content, type, confidence, tags' },
         duplicate_handling: { type: 'string', description: 'How to handle duplicates: skip, update, or create_new', enum: ['skip', 'update', 'create_new'] },
         user_id: { type: 'string', description: 'User ID for imported memories (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for imported memories' },
       },
       required: ['data', 'duplicate_handling'],
     },
@@ -307,8 +405,6 @@ const STOP_WORDS = new Set([
 // Database Initialization
 // ============================================================
 async function initDatabase(db: D1Database): Promise<void> {
-  // D1 .exec() supports multiple statements but each must be separated properly
-  // Use individual prepared statements for reliability
   try {
     await db.exec(`
       CREATE TABLE IF NOT EXISTS memories (
@@ -317,6 +413,7 @@ async function initDatabase(db: D1Database): Promise<void> {
         type TEXT NOT NULL DEFAULT 'fact',
         confidence REAL NOT NULL DEFAULT 0.8,
         user_id TEXT NOT NULL DEFAULT 'default',
+        namespace TEXT NOT NULL DEFAULT 'global',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         deleted_at TEXT,
@@ -335,13 +432,26 @@ async function initDatabase(db: D1Database): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_memories_deleted ON memories(deleted_at);
       CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
       CREATE INDEX IF NOT EXISTS idx_memories_content ON memories(content);
+      CREATE INDEX IF NOT EXISTS idx_memories_namespace ON memories(namespace);
+      CREATE INDEX IF NOT EXISTS idx_memories_user_ns ON memories(user_id, namespace);
       CREATE INDEX IF NOT EXISTS idx_memory_links_source ON memory_links(source_id);
       CREATE INDEX IF NOT EXISTS idx_memory_links_target ON memory_links(target_id);
     `);
+    // Migration: add namespace column to existing tables (safe if already exists)
+    try {
+      await db.exec(`ALTER TABLE memories ADD COLUMN namespace TEXT NOT NULL DEFAULT 'global'`);
+    } catch { /* column already exists */ }
   } catch (e) {
-    // Tables may already exist - that's fine
     console.error('DB init (may be ok):', e);
   }
+}
+
+// Helper: build namespace filter SQL clause
+function nsFilter(namespace: string | undefined): { clause: string; param: string | null } {
+  if (!namespace || namespace === 'global' || namespace === '') {
+    return { clause: '', param: null };
+  }
+  return { clause: ` AND namespace = ?`, param: namespace };
 }
 
 // ============================================================
@@ -351,44 +461,63 @@ async function initDatabase(db: D1Database): Promise<void> {
 // 1. search_memories
 async function searchMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const keyword = String(params.keyword || '');
-  const limit = Number(params.limit) || 10;
+  const limit = Math.min(Number(params.limit) || 10, MAX_RESPONSE_ITEMS);
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
 
   if (!keyword.trim()) {
     return { content: [{ type: 'text', text: 'Error: keyword parameter is required' }], isError: true };
   }
 
+  const ns = nsFilter(namespace);
+  const fetchLimit = limit * 3; // fetch extra for re-ranking
+  const bindParams: (string | number)[] = [`%${keyword}%`, userId];
+  if (ns.param) bindParams.push(ns.param);
+  bindParams.push(fetchLimit);
+
   const results = await env.DB.prepare(
-    `SELECT id, content, type, confidence, user_id, created_at, updated_at, tags
+    `SELECT id, content, type, confidence, user_id, namespace, created_at, updated_at, tags
      FROM memories 
-     WHERE content LIKE ? AND user_id = ? AND deleted_at IS NULL 
+     WHERE content LIKE ? AND user_id = ? AND deleted_at IS NULL${ns.clause}
      ORDER BY confidence DESC, created_at DESC 
      LIMIT ?`
   )
-    .bind(`%${keyword}%`, userId, limit)
+    .bind(...bindParams)
     .all();
+
+  // Re-rank by relevance score
+  const keywords = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+  const scored = (results.results as Record<string, unknown>[]).map(m => ({
+    ...m,
+    relevance_score: Math.round(scoreRelevance(String(m.content), keywords) * 100) / 100,
+  }));
+  scored.sort((a, b) => (b.relevance_score as number) - (a.relevance_score as number));
+
+  const truncated = truncateMemoryResults(scored.slice(0, limit));
 
   return {
     content: [{
       type: 'text',
       text: JSON.stringify({
         keyword,
-        total: results.results.length,
-        memories: results.results,
+        namespace: namespace || 'global',
+        total: truncated.length,
+        memories: truncated,
       }, null, 2),
     }],
   };
 }
 
-// 2. store_memory
+// 2. store_memory (with PII scrubbing + namespace)
 async function storeMemory(params: Record<string, unknown>, env: Env): Promise<unknown> {
-  const content = String(params.content || '');
+  const rawContent = String(params.content || '');
   const type = String(params.type || 'fact');
   const confidence = Number(params.confidence) || 0.8;
   const tags = Array.isArray(params.tags) ? params.tags : [];
   const userId = String(params.user_id || 'default');
+  const namespace = String(params.namespace || 'global');
 
-  if (!content.trim()) {
+  if (!rawContent.trim()) {
     return { content: [{ type: 'text', text: 'Error: content parameter is required' }], isError: true };
   }
 
@@ -396,27 +525,35 @@ async function storeMemory(params: Record<string, unknown>, env: Env): Promise<u
     return { content: [{ type: 'text', text: 'Error: type must be identity, preference, or fact' }], isError: true };
   }
 
+  // PII / Secret scrubbing
+  const { cleaned: content, detected, hadPII } = scrubPII(rawContent);
+
   const id = crypto.randomUUID();
   const tagsJson = JSON.stringify(tags);
 
   await env.DB.prepare(
-    `INSERT INTO memories (id, content, type, confidence, user_id, tags) VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO memories (id, content, type, confidence, user_id, namespace, tags) VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, tagsJson)
+    .bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, namespace, tagsJson)
     .run();
+
+  const result: Record<string, unknown> = {
+    success: true,
+    memory: { id, content, type, confidence, user_id: userId, namespace, tags },
+  };
+  if (hadPII) {
+    result.pii_warning = `Sensitive data detected and redacted: ${detected.join(', ')}`;
+  }
 
   return {
     content: [{
       type: 'text',
-      text: JSON.stringify({
-        success: true,
-        memory: { id, content, type, confidence, user_id: userId, tags },
-      }, null, 2),
+      text: JSON.stringify(result, null, 2),
     }],
   };
 }
 
-// 3. update_memory
+// 3. update_memory (with PII scrubbing)
 async function updateMemory(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const id = String(params.id || '');
 
@@ -434,7 +571,17 @@ async function updateMemory(params: Record<string, unknown>, env: Env): Promise<
     return { content: [{ type: 'text', text: `Error: Memory with id ${id} not found or deleted` }], isError: true };
   }
 
-  const content = params.content !== undefined ? String(params.content) : String(existing.content);
+  // PII scrub new content if provided
+  let content: string;
+  let piiWarning: string | null = null;
+  if (params.content !== undefined) {
+    const { cleaned, detected, hadPII } = scrubPII(String(params.content));
+    content = cleaned;
+    if (hadPII) piiWarning = `Sensitive data detected and redacted: ${detected.join(', ')}`;
+  } else {
+    content = String(existing.content);
+  }
+
   const type = params.type !== undefined ? String(params.type) : String(existing.type);
   const confidence = params.confidence !== undefined ? Number(params.confidence) : Number(existing.confidence);
   const tags = params.tags !== undefined ? JSON.stringify(params.tags) : String(existing.tags);
@@ -445,13 +592,16 @@ async function updateMemory(params: Record<string, unknown>, env: Env): Promise<
     .bind(content, type, Math.min(1, Math.max(0, confidence)), tags, id)
     .run();
 
+  const result: Record<string, unknown> = {
+    success: true,
+    memory: { id, content, type, confidence, tags: JSON.parse(tags) },
+  };
+  if (piiWarning) result.pii_warning = piiWarning;
+
   return {
     content: [{
       type: 'text',
-      text: JSON.stringify({
-        success: true,
-        memory: { id, content, type, confidence, tags: JSON.parse(tags) },
-      }, null, 2),
+      text: JSON.stringify(result, null, 2),
     }],
   };
 }
@@ -488,11 +638,12 @@ async function deleteMemory(params: Record<string, unknown>, env: Env): Promise<
   };
 }
 
-// 5. query_memories
+// 5. query_memories (with relevance scoring + namespace + truncation)
 async function queryMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const query = String(params.query || '');
-  const limit = Number(params.limit) || 10;
+  const limit = Math.min(Number(params.limit) || 10, MAX_RESPONSE_ITEMS);
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
 
   if (!query.trim()) {
     return { content: [{ type: 'text', text: 'Error: query parameter is required' }], isError: true };
@@ -506,60 +657,83 @@ async function queryMemories(params: Record<string, unknown>, env: Env): Promise
     .filter((w: string) => w.length > 2 && !STOP_WORDS.has(w));
 
   if (keywords.length === 0) {
-    // Fall back to the full query
     keywords.push(query.toLowerCase().trim());
   }
 
+  const ns = nsFilter(namespace);
+  const fetchLimit = limit * 3; // fetch more for re-ranking
+
   // Build OR conditions for each keyword
   const conditions = keywords.map(() => `(content LIKE ? OR tags LIKE ?)`).join(' OR ');
-  const bindParams: string[] = [];
+  const bindParams: (string | number)[] = [];
   for (const kw of keywords) {
     bindParams.push(`%${kw}%`, `%"${kw}"%`);
   }
-  bindParams.push(userId, String(limit));
+  bindParams.push(userId);
+  if (ns.param) bindParams.push(ns.param);
+  bindParams.push(fetchLimit);
 
   const sql = `
-    SELECT id, content, type, confidence, user_id, created_at, updated_at, tags
+    SELECT id, content, type, confidence, user_id, namespace, created_at, updated_at, tags
     FROM memories 
-    WHERE (${conditions}) AND user_id = ? AND deleted_at IS NULL 
+    WHERE (${conditions}) AND user_id = ? AND deleted_at IS NULL${ns.clause}
     ORDER BY confidence DESC, created_at DESC 
     LIMIT ?
   `;
 
   const results = await env.DB.prepare(sql).bind(...bindParams).all();
 
+  // Re-rank by keyword relevance score
+  const scored = (results.results as Record<string, unknown>[]).map(m => ({
+    ...m,
+    relevance_score: Math.round(
+      (scoreRelevance(String(m.content), keywords) * 0.6 +
+       scoreRelevance(String(m.tags || ''), keywords) * 0.2 +
+       Number(m.confidence || 0) * 0.2) * 100
+    ) / 100,
+  }));
+  scored.sort((a, b) => (b.relevance_score as number) - (a.relevance_score as number));
+
+  const truncated = truncateMemoryResults(scored.slice(0, limit));
+
   return {
     content: [{
       type: 'text',
       text: JSON.stringify({
         query,
+        namespace: namespace || 'global',
         extracted_keywords: keywords,
-        total: results.results.length,
-        memories: results.results,
+        total: truncated.length,
+        memories: truncated,
       }, null, 2),
     }],
   };
 }
 
-// 6. list_memories
+// 6. list_memories (with namespace + truncation)
 async function listMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const type = params.type as string | undefined;
-  const limit = Number(params.limit) || 20;
+  const limit = Math.min(Number(params.limit) || 20, MAX_RESPONSE_ITEMS);
   const offset = Number(params.offset) || 0;
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
   const includeDeleted = params.include_deleted === true;
+  const ns = nsFilter(namespace);
 
   let sql = `
-    SELECT id, content, type, confidence, user_id, created_at, updated_at, tags, deleted_at
+    SELECT id, content, type, confidence, user_id, namespace, created_at, updated_at, tags, deleted_at
     FROM memories 
     WHERE user_id = ?
   `;
-  const bindParams: (string | number | boolean)[] = [userId];
+  const bindParams: (string | number)[] = [userId];
 
   if (!includeDeleted) {
     sql += ` AND deleted_at IS NULL`;
   }
-
+  if (ns.param) {
+    sql += ns.clause;
+    bindParams.push(ns.param);
+  }
   if (type && ['identity', 'preference', 'fact'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
@@ -572,14 +746,10 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
 
   // Get total count
   let countSql = `SELECT COUNT(*) as total FROM memories WHERE user_id = ?`;
-  const countParams: (string | boolean)[] = [userId];
-  if (!includeDeleted) {
-    countSql += ` AND deleted_at IS NULL`;
-  }
-  if (type && ['identity', 'preference', 'fact'].includes(type)) {
-    countSql += ` AND type = ?`;
-    countParams.push(type);
-  }
+  const countParams: (string | number)[] = [userId];
+  if (!includeDeleted) countSql += ` AND deleted_at IS NULL`;
+  if (ns.param) { countSql += ns.clause; countParams.push(ns.param); }
+  if (type && ['identity', 'preference', 'fact'].includes(type)) { countSql += ` AND type = ?`; countParams.push(type); }
   const countResult = await env.DB.prepare(countSql).bind(...countParams).first();
 
   return {
@@ -587,25 +757,39 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
       type: 'text',
       text: JSON.stringify({
         total: (countResult as Record<string, unknown>)?.total || 0,
+        namespace: namespace || 'global',
         offset,
         limit,
-        memories: results.results,
+        memories: truncateMemoryResults(results.results as Record<string, unknown>[]),
       }, null, 2),
     }],
   };
 }
 
-// 7. get_memory_graph
+// 7. get_memory_graph (with sub-graph filtering + namespace)
 async function getMemoryGraph(params: Record<string, unknown>, env: Env): Promise<unknown> {
-  const limit = Number(params.limit) || 50;
+  const limit = Math.min(Number(params.limit) || 50, MAX_RESPONSE_ITEMS);
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const filterKeyword = params.filter_keyword as string | undefined;
+  const ns = nsFilter(namespace);
 
-  const memories = await env.DB.prepare(
-    `SELECT id, content, type, confidence, created_at FROM memories WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?`
-  )
-    .bind(userId, limit)
-    .all();
+  let sql: string;
+  const bindParams: (string | number)[] = [];
 
+  if (filterKeyword && filterKeyword.trim()) {
+    // Sub-graph: only nodes matching keyword
+    sql = `SELECT id, content, type, confidence, namespace, created_at FROM memories WHERE user_id = ? AND deleted_at IS NULL AND content LIKE ?`;
+    bindParams.push(userId, `%${filterKeyword}%`);
+  } else {
+    sql = `SELECT id, content, type, confidence, namespace, created_at FROM memories WHERE user_id = ? AND deleted_at IS NULL`;
+    bindParams.push(userId);
+  }
+  if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
+  sql += ` ORDER BY created_at DESC LIMIT ?`;
+  bindParams.push(limit);
+
+  const memories = await env.DB.prepare(sql).bind(...bindParams).all();
   const memoryIds = memories.results.map((m: Record<string, unknown>) => m.id as string);
 
   let links: Record<string, unknown>[] = [];
@@ -622,22 +806,26 @@ async function getMemoryGraph(params: Record<string, unknown>, env: Env): Promis
 
   const nodeCount = memories.results.length;
   const edgeCount = links.length;
-  const avgConfidence = memories.results.length > 0
-    ? memories.results.reduce((sum: number, m: Record<string, unknown>) => sum + Number(m.confidence), 0) / memories.results.length
+  const avgConfidence = nodeCount > 0
+    ? memories.results.reduce((sum: number, m: Record<string, unknown>) => sum + Number(m.confidence), 0) / nodeCount
     : 0;
 
   const typeDistribution: Record<string, number> = {};
   for (const m of memories.results as Record<string, unknown>[]) {
-    const t = String(m.type);
-    typeDistribution[t] = (typeDistribution[t] || 0) + 1;
+    typeDistribution[String(m.type)] = (typeDistribution[String(m.type)] || 0) + 1;
   }
+
+  // Truncate node content for response size
+  const truncatedNodes = truncateMemoryResults(memories.results as Record<string, unknown>[], limit, true);
 
   return {
     content: [{
       type: 'text',
       text: JSON.stringify({
         stats: { node_count: nodeCount, edge_count: edgeCount, avg_confidence: Math.round(avgConfidence * 100) / 100, type_distribution: typeDistribution },
-        nodes: memories.results,
+        filter: filterKeyword || null,
+        namespace: namespace || 'global',
+        nodes: truncatedNodes,
         edges: links,
       }, null, 2),
     }],
@@ -695,12 +883,14 @@ async function linkMemories(params: Record<string, unknown>, env: Env): Promise<
   };
 }
 
-// 9. sm_time_query
+// 9. sm_time_query (with namespace + truncation)
 async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const period = String(params.period || 'last_week');
   const type = params.type as string | undefined;
-  const limit = Number(params.limit) || 50;
+  const limit = Math.min(Number(params.limit) || 50, MAX_RESPONSE_ITEMS);
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const ns = nsFilter(namespace);
 
   let fromDate: string;
   let toDate: string;
@@ -714,7 +904,6 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
   } else {
     const now = new Date();
     toDate = now.toISOString().slice(0, 19).replace('T', ' ');
-
     const periodDays: Record<string, number> = { last_day: 1, last_week: 7, last_month: 30, last_year: 365 };
     const days = periodDays[period] || 7;
     const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
@@ -722,25 +911,22 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
   }
 
   let sql = `
-    SELECT id, content, type, confidence, created_at, updated_at, tags
+    SELECT id, content, type, confidence, namespace, created_at, updated_at, tags
     FROM memories 
     WHERE user_id = ? AND deleted_at IS NULL AND created_at >= ? AND created_at <= ?
   `;
   const bindParams: (string | number)[] = [userId, fromDate, toDate];
 
-  if (type && ['identity', 'preference', 'fact'].includes(type)) {
-    sql += ` AND type = ?`;
-    bindParams.push(type);
-  }
-
+  if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
+  if (type && ['identity', 'preference', 'fact'].includes(type)) { sql += ` AND type = ?`; bindParams.push(type); }
   sql += ` ORDER BY created_at DESC LIMIT ?`;
   bindParams.push(limit);
 
   const results = await env.DB.prepare(sql).bind(...bindParams).all();
 
-  // Group by day
+  // Group by day with truncation
   const grouped: Record<string, Record<string, unknown>[]> = {};
-  for (const mem of results.results as Record<string, unknown>[]) {
+  for (const mem of truncateMemoryResults(results.results as Record<string, unknown>[]) as Record<string, unknown>[]) {
     const day = String(mem.created_at).slice(0, 10);
     if (!grouped[day]) grouped[day] = [];
     grouped[day].push(mem);
@@ -751,6 +937,7 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
       type: 'text',
       text: JSON.stringify({
         period,
+        namespace: namespace || 'global',
         from_date: fromDate,
         to_date: toDate,
         total: results.results.length,
@@ -760,74 +947,89 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
   };
 }
 
-// 10. sm_memory_summary
+// 10. sm_memory_summary (with namespace)
 async function memorySummary(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const ns = nsFilter(namespace);
 
-  // Total count
+  // Helper to build filtered queries
+  const baseWhere = `user_id = ?${ns.clause} AND deleted_at IS NULL`;
+  const baseParams = ns.param ? [userId, ns.param] : [userId];
+
   const totalResult = await env.DB.prepare(
-    `SELECT COUNT(*) as total FROM memories WHERE user_id = ? AND deleted_at IS NULL`
-  ).bind(userId).first();
+    `SELECT COUNT(*) as total FROM memories WHERE ${baseWhere}`
+  ).bind(...baseParams).first();
 
-  // Type distribution
   const typeDist = await env.DB.prepare(
-    `SELECT type, COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NULL GROUP BY type`
-  ).bind(userId).all();
+    `SELECT type, COUNT(*) as count FROM memories WHERE ${baseWhere} GROUP BY type`
+  ).bind(...baseParams).all();
 
-  // Average confidence
   const confResult = await env.DB.prepare(
-    `SELECT AVG(confidence) as avg_confidence FROM memories WHERE user_id = ? AND deleted_at IS NULL`
-  ).bind(userId).first();
+    `SELECT AVG(confidence) as avg_confidence FROM memories WHERE ${baseWhere}`
+  ).bind(...baseParams).first();
 
-  // Most active day
   const activeDayResult = await env.DB.prepare(
-    `SELECT DATE(created_at) as day, COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NULL GROUP BY DATE(created_at) ORDER BY count DESC LIMIT 1`
-  ).bind(userId).first();
+    `SELECT DATE(created_at) as day, COUNT(*) as count FROM memories WHERE ${baseWhere} GROUP BY DATE(created_at) ORDER BY count DESC LIMIT 1`
+  ).bind(...baseParams).first();
 
-  // Most active week
   const activeWeekResult = await env.DB.prepare(
-    `SELECT STRFTIME('%Y-W%W', created_at) as week, COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NULL GROUP BY week ORDER BY count DESC LIMIT 1`
-  ).bind(userId).first();
+    `SELECT STRFTIME('%Y-W%W', created_at) as week, COUNT(*) as count FROM memories WHERE ${baseWhere} GROUP BY week ORDER BY count DESC LIMIT 1`
+  ).bind(...baseParams).first();
 
-  // Top linked memories
   const topLinked = await env.DB.prepare(
     `SELECT m.id, m.content, COUNT(ml.id) as link_count 
      FROM memories m 
      LEFT JOIN memory_links ml ON (ml.source_id = m.id OR ml.target_id = m.id) 
-     WHERE m.user_id = ? AND m.deleted_at IS NULL 
+     WHERE m.user_id = ? AND m.deleted_at IS NULL${ns.clause}
      GROUP BY m.id 
      ORDER BY link_count DESC 
      LIMIT 5`
-  ).bind(userId).all();
+  ).bind(...baseParams).all();
 
-  // Confidence trend (last 10 memories)
   const confTrend = await env.DB.prepare(
-    `SELECT created_at, confidence FROM memories WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 10`
-  ).bind(userId).all();
+    `SELECT created_at, confidence FROM memories WHERE ${baseWhere} ORDER BY created_at DESC LIMIT 10`
+  ).bind(...baseParams).all();
 
-  // Deleted count
+  const deletedWhere = `user_id = ?${ns.clause} AND deleted_at IS NOT NULL`;
   const deletedResult = await env.DB.prepare(
-    `SELECT COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NOT NULL`
-  ).bind(userId).first();
+    `SELECT COUNT(*) as count FROM memories WHERE ${deletedWhere}`
+  ).bind(...baseParams).first();
+
+  // Namespace distribution (only in global mode)
+  let namespaceDist: Record<string, number> | null = null;
+  if (!namespace) {
+    const nsDist = await env.DB.prepare(
+      `SELECT namespace, COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NULL GROUP BY namespace`
+    ).bind(userId).all();
+    namespaceDist = {};
+    for (const row of nsDist.results as Record<string, unknown>[]) {
+      namespaceDist[String(row.namespace)] = Number(row.count);
+    }
+  }
 
   const typeDistribution: Record<string, number> = {};
   for (const row of typeDist.results as Record<string, unknown>[]) {
     typeDistribution[String(row.type)] = Number(row.count);
   }
 
+  const result: Record<string, unknown> = {
+    total_memories: Number((totalResult as Record<string, unknown>)?.total || 0),
+    deleted_memories: Number((deletedResult as Record<string, unknown>)?.count || 0),
+    namespace: namespace || 'global',
+    type_distribution: typeDistribution,
+    average_confidence: Math.round(Number((confResult as Record<string, unknown>)?.avg_confidence || 0) * 100) / 100,
+    most_active_day: activeDayResult ? { day: (activeDayResult as Record<string, unknown>).day, count: (activeDayResult as Record<string, unknown>).count } : null,
+    most_active_week: activeWeekResult ? { week: (activeWeekResult as Record<string, unknown>).week, count: (activeWeekResult as Record<string, unknown>).count } : null,
+    top_linked_memories: truncateMemoryResults(topLinked.results as Record<string, unknown>[], 5),
+    confidence_trend: confTrend.results,
+  };
+  if (namespaceDist) result.namespace_distribution = namespaceDist;
+
   return {
     content: [{
       type: 'text',
-      text: JSON.stringify({
-        total_memories: Number((totalResult as Record<string, unknown>)?.total || 0),
-        deleted_memories: Number((deletedResult as Record<string, unknown>)?.count || 0),
-        type_distribution: typeDistribution,
-        average_confidence: Math.round(Number((confResult as Record<string, unknown>)?.avg_confidence || 0) * 100) / 100,
-        most_active_day: activeDayResult ? { day: (activeDayResult as Record<string, unknown>).day, count: (activeDayResult as Record<string, unknown>).count } : null,
-        most_active_week: activeWeekResult ? { week: (activeWeekResult as Record<string, unknown>).week, count: (activeWeekResult as Record<string, unknown>).count } : null,
-        top_linked_memories: topLinked.results,
-        confidence_trend: confTrend.results,
-      }, null, 2),
+      text: JSON.stringify(result, null, 2),
     }],
   };
 }
@@ -968,7 +1170,7 @@ async function batchOperations(params: Record<string, unknown>, env: Env): Promi
   }
 }
 
-// 12. sm_export_memories
+// 12. sm_export_memories (with limit + namespace)
 async function exportMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const format = String(params.format || 'json');
   const type = params.type as string | undefined;
@@ -977,13 +1179,17 @@ async function exportMemories(params: Record<string, unknown>, env: Env): Promis
   const fromDate = params.from_date as string | undefined;
   const toDate = params.to_date as string | undefined;
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const exportLimit = Math.min(Number(params.limit) || 500, 500);
+  const ns = nsFilter(namespace);
 
   let sql = `SELECT * FROM memories WHERE user_id = ?`;
-  const bindParams: (string | boolean)[] = [userId];
+  const bindParams: (string | number)[] = [userId];
 
   if (!includeDeleted) {
     sql += ` AND deleted_at IS NULL`;
   }
+  if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
   if (type && ['identity', 'preference', 'fact'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
@@ -997,7 +1203,8 @@ async function exportMemories(params: Record<string, unknown>, env: Env): Promis
     bindParams.push(toDate);
   }
 
-  sql += ` ORDER BY created_at ASC`;
+  sql += ` ORDER BY created_at ASC LIMIT ?`;
+  bindParams.push(exportLimit);
   const memories = await env.DB.prepare(sql).bind(...bindParams).all();
 
   // Fetch links if requested
@@ -1060,16 +1267,23 @@ async function exportMemories(params: Record<string, unknown>, env: Env): Promis
   };
 }
 
-// 13. sm_concept_cluster
+// 13. sm_concept_cluster (with LIMIT + namespace - prevents O(n²) explosion)
 async function conceptCluster(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const minClusterSize = Number(params.min_cluster_size) || 2;
   const maxClusters = Number(params.max_clusters) || 10;
   const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const clusterLimit = Math.min(Number(params.limit) || 500, 500);
+  const ns = nsFilter(namespace);
 
-  // Fetch all non-deleted memories
-  const memories = await env.DB.prepare(
-    `SELECT id, content, type, tags FROM memories WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`
-  ).bind(userId).all();
+  // Fetch memories with hard LIMIT to prevent O(n²) explosion
+  const bindParams: (string | number)[] = [userId];
+  let sql = `SELECT id, content, type, tags FROM memories WHERE user_id = ? AND deleted_at IS NULL`;
+  if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
+  sql += ` ORDER BY created_at DESC LIMIT ?`;
+  bindParams.push(clusterLimit);
+
+  const memories = await env.DB.prepare(sql).bind(...bindParams).all();
 
   if (memories.results.length === 0) {
     return {
@@ -1151,7 +1365,7 @@ async function conceptCluster(params: Record<string, unknown>, env: Env): Promis
     const sharedKws = new Set<string>();
     if (keywordSets.length > 0) {
       for (const kw of keywordSets[0]) {
-        if (keywordSets.every(ks => ks.has(kw))) sharedKws.add(kw);
+        if (keywordSets.every(ks => ks.has(kw))) sharedKws.add(kw as string);
       }
     }
 
@@ -1194,11 +1408,12 @@ async function conceptCluster(params: Record<string, unknown>, env: Env): Promis
   };
 }
 
-// 14. sm_import_memories
+// 14. sm_import_memories (with PII scrubbing + namespace)
 async function importMemories(params: Record<string, unknown>, env: Env): Promise<unknown> {
   const dataStr = String(params.data || '');
   const duplicateHandling = String(params.duplicate_handling || 'skip');
   const userId = String(params.user_id || 'default');
+  const namespace = String(params.namespace || 'global');
 
   if (!dataStr.trim()) {
     return { content: [{ type: 'text', text: 'Error: data parameter is required' }], isError: true };
@@ -1217,11 +1432,16 @@ async function importMemories(params: Record<string, unknown>, env: Env): Promis
   let imported = 0;
   let skipped = 0;
   let updated = 0;
+  let piiRedacted = 0;
   const newIds: string[] = [];
 
   for (const item of data) {
-    const content = String(item.content || '').trim();
-    if (!content) continue;
+    const rawContent = String(item.content || '').trim();
+    if (!rawContent) continue;
+
+    // PII scrub each imported memory
+    const { cleaned: content, hadPII } = scrubPII(rawContent);
+    if (hadPII) piiRedacted++;
 
     const type = ['identity', 'preference', 'fact'].includes(String(item.type)) ? String(item.type) : 'fact';
     const confidence = Number(item.confidence) || 0.8;
@@ -1243,29 +1463,32 @@ async function importMemories(params: Record<string, unknown>, env: Env): Promis
         updated++;
         continue;
       }
-      // create_new: fall through to create
     }
 
     const id = crypto.randomUUID();
     await env.DB.prepare(
-      `INSERT INTO memories (id, content, type, confidence, user_id, tags) VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, JSON.stringify(tags)).run();
+      `INSERT INTO memories (id, content, type, confidence, user_id, namespace, tags) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, content, type, Math.min(1, Math.max(0, confidence)), userId, namespace, JSON.stringify(tags)).run();
 
     imported++;
     newIds.push(id);
   }
 
+  const result: Record<string, unknown> = {
+    success: true,
+    namespace,
+    total_items: data.length,
+    imported,
+    skipped,
+    updated,
+    new_ids: newIds,
+  };
+  if (piiRedacted > 0) result.pii_redacted_count = piiRedacted;
+
   return {
     content: [{
       type: 'text',
-      text: JSON.stringify({
-        success: true,
-        total_items: data.length,
-        imported,
-        skipped,
-        updated,
-        new_ids: newIds,
-      }, null, 2),
+      text: JSON.stringify(result, null, 2),
     }],
   };
 }
