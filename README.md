@@ -6,12 +6,12 @@
 
 Give your AI the ability to remember — across sessions, projects, and tools.
 
-[![Version](https://img.shields.io/badge/MCP_Server-v2.1-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
+[![Version](https://img.shields.io/badge/MCP_Server-v3.0_Ulu--Brain-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
 [![MCP](https://img.shields.io/badge/Protocol-MCP_2025--03--26-green?style=for-the-badge)](https://spec.modelcontextprotocol.io)
 [![Runtime](https://img.shields.io/badge/Runtime-Cloudflare_Workers-orange?style=for-the-badge)](https://workers.cloudflare.com)
 [![License](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](LICENSE)
 
-[Quick Start](#-quick-start) · [Tools](#-tools-15) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
+[Quick Start](#-quick-start) · [Tools](#-tools-19) · [🧠 Ulu-Brain](#-ulu-brain-cognitive-layer) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
 
 </div>
 
@@ -30,7 +30,7 @@ Claude Desktop ─┐
 Cursor ──────────┤
 Windsurf ────────┼──→ StackMemory MCP ──→ Cloudflare D1 + Vectorize
 VS Code ─────────┤         │
-Custom Agent ────┘    15 tools, <50ms edge latency
+Custom Agent ────┘    19 tools + cognitive layer, <50ms edge latency
 ```
 
 ---
@@ -90,7 +90,7 @@ results = memory.search("routing", namespace="my-project")
 
 ---
 
-## 🛠 Tools (15)
+## 🛠 Tools (19)
 
 ### Core
 
@@ -121,6 +121,15 @@ results = memory.search("routing", namespace="my-project")
 | `sm_concept_cluster` | Group memories by conceptual similarity |
 | `sm_import_memories` | Import with duplicate handling and PII scrubbing |
 | `sm_prefetch` | **Proactive injection** — pre-fetch relevant memories for LLM context |
+
+### 🧠 Ulu-Brain (Cognitive Layer)
+
+| Tool | What it does |
+|------|-------------|
+| `brain_think` | **Reasoning engine** — retrieves memories, analyzes graph connections, detects contradictions, returns strategic cognitive assessment |
+| `brain_adapt` | **Feedback loop** — report useful/not_useful/critical feedback, auto-adjusts H-score weights per namespace over time |
+| `brain_consolidate` | **Cognitive housekeeping** — clusters similar memories, generates `insight` summaries, links sources, reduces redundancy |
+| `brain_status` | **Brain health report** — memory distribution, adaptive weights, freshness metrics, cognitive load assessment |
 
 ---
 
@@ -177,6 +186,61 @@ Memories age naturally. Frequently accessed, high-importance memories surface fi
 
 ---
 
+## 🧠 Ulu-Brain (Cognitive Layer)
+
+v3.0 adds a cognitive layer that transforms StackMemory from a passive data store into an active reasoning system.
+
+### brain_think — Contextual Reasoning
+
+Instead of just retrieving memories, `brain_think` **reasons** about them:
+
+```json
+{ "context": "Should we switch from REST to GraphQL?", "depth": "deep" }
+```
+
+Returns:
+- **Key memories** ranked by multi-signal relevance
+- **Graph connections** between retrieved memories
+- **Contradiction detection** — finds conflicting decisions made at different times
+- **Cognitive assessment** — confidence level, knowledge freshness, strategic recommendation
+
+### brain_adapt — Behavioral Adaptation
+
+A feedback loop that makes retrieval smarter over time:
+
+```json
+{ "memory_id": "abc-123", "feedback": "useful", "namespace": "my-project" }
+```
+
+- Reports whether a memory was `useful`, `not_useful`, or `critical`
+- Auto-adjusts H-score weights **per namespace** using gradient-like updates
+- Boosts `importance_score` of useful memories, decays unhelpful ones
+- Learning rate: 0.02 per feedback event, clamped to [0.05, 0.60]
+
+### brain_consolidate — Cognitive Housekeeping
+
+Like a brain organizing memories during sleep:
+
+```json
+{ "namespace": "my-project", "min_cluster_size": 3, "dry_run": true }
+```
+
+- Clusters similar memories using Jaccard similarity
+- Generates `insight` type memories that summarize each cluster
+- Links insights to source memories via `consolidated_from` relations
+- Embeddings generated for insights (searchable via Vectorize)
+- Use `dry_run: true` to preview without committing
+
+### brain_status — Cognitive Health Report
+
+```json
+{ "namespace": "my-project" }
+```
+
+Returns: memory distribution, namespace stats, freshness metrics, adaptive weight state, recent feedback activity, and a cognitive load assessment with actionable recommendations.
+
+---
+
 ## 🏛 Architecture
 
 ```
@@ -196,7 +260,7 @@ Memories age naturally. Frequently accessed, high-importance memories surface fi
 
 | Component | Stack | Purpose |
 |-----------|-------|---------|
-| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 15 tools |
+| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 19 tools + cognitive layer |
 | **frontend** | Next.js, Supabase, Tailwind | Web dashboard and memory visualization |
 | **backend** | FastAPI, MongoDB, numpy | REST API, H(x,ψ) scoring, orchestration |
 | **bridge** | Python, FastAPI | Protocol bridge between frontend and backend |
@@ -288,7 +352,8 @@ make health     # Check service health
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v2.1** | 2026-05-06 | PII scrubbing, namespace isolation, Vectorize semantic search, memory decay, `sm_prefetch`, smart truncation |
+| **v3.0** | 2026-05-06 | 🧠 **Ulu-Brain** — `brain_think` (reasoning), `brain_adapt` (feedback loop), `brain_consolidate` (housekeeping), `brain_status` (health). `insight` memory type. Adaptive H-score weights per namespace. |
+| v2.1 | 2026-05-06 | PII scrubbing, namespace isolation, Vectorize semantic search, memory decay, `sm_prefetch`, smart truncation |
 | v2.0 | 2026-02-11 | Time queries, batch ops, export/import, concept clustering, H(x,ψ) scoring |
 | v1.0 | 2026-01-15 | Core CRUD, graph operations, MCP protocol |
 

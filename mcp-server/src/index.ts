@@ -1,6 +1,6 @@
-// StackMemory MCP Server v2.1.0 - Cloudflare Pages Worker
+// StackMemory MCP Server v3.0.0 (Ulu-Brain) - Cloudflare Pages Worker
 // MCP Protocol 2025-03-26 with Streamable HTTP Transport
-// v2.1: PII filter, namespace isolation, smart truncation, relevance scoring
+// v3.0: Cognitive layer — brain_think, brain_adapt, brain_consolidate, brain_status
 
 interface Env {
   DB: D1Database;
@@ -203,7 +203,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         content: { type: 'string', description: 'The memory content to store (PII/secrets auto-redacted)' },
-        type: { type: 'string', description: 'Memory type (default: "fact")', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
+        type: { type: 'string', description: 'Memory type (default: "fact")', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'] },
         confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0 (default: 0.8)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
         user_id: { type: 'string', description: 'User ID (default: "default")' },
@@ -220,7 +220,7 @@ const TOOLS = [
       properties: {
         id: { type: 'string', description: 'Memory ID to update' },
         content: { type: 'string', description: 'New content for the memory (PII/secrets auto-redacted)' },
-        type: { type: 'string', description: 'New memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
+        type: { type: 'string', description: 'New memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'] },
         confidence: { type: 'number', description: 'New confidence score (0.0-1.0)' },
         tags: { type: 'array', items: { type: 'string' }, description: 'New tags array (replaces existing)' },
       },
@@ -258,7 +258,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
+        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'] },
         limit: { type: 'number', description: 'Maximum results (default: 20, max: 200)' },
         offset: { type: 'number', description: 'Offset for pagination (default: 0)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
@@ -304,7 +304,7 @@ const TOOLS = [
         period: { type: 'string', description: 'Predefined period: last_day, last_week, last_month, last_year, custom', enum: ['last_day', 'last_week', 'last_month', 'last_year', 'custom'] },
         from_date: { type: 'string', description: 'Start date for custom period (ISO 8601 format, e.g., 2024-01-01)' },
         to_date: { type: 'string', description: 'End date for custom period (ISO 8601 format)' },
-        type: { type: 'string', description: 'Optional type filter', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
+        type: { type: 'string', description: 'Optional type filter', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'] },
         limit: { type: 'number', description: 'Maximum results (default: 50, max: 200)' },
         user_id: { type: 'string', description: 'User ID filter (default: "default")' },
         namespace: { type: 'string', description: 'Project namespace for isolation' },
@@ -349,7 +349,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         format: { type: 'string', description: 'Export format: json or csv', enum: ['json', 'csv'] },
-        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'] },
+        type: { type: 'string', description: 'Filter by memory type', enum: ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'] },
         include_deleted: { type: 'boolean', description: 'Include soft-deleted memories (default: false)' },
         include_links: { type: 'boolean', description: 'Include memory links in export (default: false)' },
         from_date: { type: 'string', description: 'Start date filter (ISO 8601)' },
@@ -402,6 +402,60 @@ const TOOLS = [
         min_score: { type: 'number', description: 'Minimum relevance score threshold 0.0-1.0 (default: 0.1)' },
       },
       required: ['message'],
+    },
+  },
+  // ========== Ulu-Brain: Cognitive Layer (v3.0) ==========
+  {
+    name: 'brain_think',
+    description: 'Contextual reasoning engine. Given a question or context, retrieves relevant memories, analyzes contradictions and connections via the memory graph, and returns a structured cognitive analysis with key facts, conflicts, and strategic recommendations. Use this when the agent needs to *reason* about past knowledge, not just retrieve it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        context: { type: 'string', description: 'Question, topic, or decision context to reason about' },
+        depth: { type: 'string', description: 'Analysis depth: quick (top 5), normal (top 10), deep (top 20)', enum: ['quick', 'normal', 'deep'] },
+        user_id: { type: 'string', description: 'User ID (default: "default")' },
+        namespace: { type: 'string', description: 'Project namespace for isolation' },
+      },
+      required: ['context'],
+    },
+  },
+  {
+    name: 'brain_adapt',
+    description: 'Adaptive weight feedback. Report whether a memory retrieval was useful or not. The system uses this feedback to gradually adapt H-score weights per namespace, making future retrievals more relevant over time. Call after a successful (or unsuccessful) memory usage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        memory_id: { type: 'string', description: 'ID of the memory that was used' },
+        feedback: { type: 'string', description: 'Was the memory helpful?', enum: ['useful', 'not_useful', 'critical'] },
+        context: { type: 'string', description: 'What context was the memory used in (helps learn associations)' },
+        namespace: { type: 'string', description: 'Project namespace' },
+      },
+      required: ['memory_id', 'feedback'],
+    },
+  },
+  {
+    name: 'brain_consolidate',
+    description: 'Cognitive housekeeping. Scans memories for redundancy and clusters similar ones, then creates "insight" memories that summarize each cluster. Marks source memories as consolidated. Like a brain organizing memories during sleep. Run periodically or when memory count is high.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        namespace: { type: 'string', description: 'Namespace to consolidate (default: all)' },
+        user_id: { type: 'string', description: 'User ID (default: "default")' },
+        min_cluster_size: { type: 'number', description: 'Minimum memories to form a cluster (default: 3)' },
+        max_insights: { type: 'number', description: 'Maximum insights to generate per run (default: 5)' },
+        dry_run: { type: 'boolean', description: 'Preview clusters without creating insights (default: false)' },
+      },
+    },
+  },
+  {
+    name: 'brain_status',
+    description: 'Cognitive state report. Returns the current "brain health": memory distribution by type and namespace, adaptive weight state, recent consolidation activity, memory freshness metrics, and overall cognitive load assessment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'string', description: 'User ID (default: "default")' },
+        namespace: { type: 'string', description: 'Filter to specific namespace' },
+      },
     },
   },
 ];
@@ -525,6 +579,30 @@ async function initDatabase(db: D1Database): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_memories_user_ns ON memories(user_id, namespace);
       CREATE INDEX IF NOT EXISTS idx_memory_links_source ON memory_links(source_id);
       CREATE INDEX IF NOT EXISTS idx_memory_links_target ON memory_links(target_id);
+      CREATE TABLE IF NOT EXISTS brain_config (
+        id TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL DEFAULT 'global',
+        weight_similarity REAL NOT NULL DEFAULT 0.35,
+        weight_decay REAL NOT NULL DEFAULT 0.15,
+        weight_importance REAL NOT NULL DEFAULT 0.25,
+        weight_frequency REAL NOT NULL DEFAULT 0.10,
+        weight_emotional REAL NOT NULL DEFAULT 0.15,
+        total_feedback INTEGER NOT NULL DEFAULT 0,
+        useful_feedback INTEGER NOT NULL DEFAULT 0,
+        last_adapted TEXT,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS brain_feedback (
+        id TEXT PRIMARY KEY,
+        memory_id TEXT NOT NULL,
+        namespace TEXT NOT NULL DEFAULT 'global',
+        feedback TEXT NOT NULL,
+        memory_type TEXT,
+        context TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_brain_feedback_ns ON brain_feedback(namespace);
+      CREATE INDEX IF NOT EXISTS idx_brain_feedback_created ON brain_feedback(created_at);
     `);
     // Migrations: add columns for existing tables (safe if already exists)
     const migrations = [
@@ -661,7 +739,7 @@ async function storeMemory(params: Record<string, unknown>, env: Env): Promise<u
     return { content: [{ type: 'text', text: 'Error: content parameter is required' }], isError: true };
   }
 
-  if (!['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
+  if (!['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(type)) {
     return { content: [{ type: 'text', text: 'Error: type must be identity, preference, or fact' }], isError: true };
   }
 
@@ -914,7 +992,7 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
     sql += ns.clause;
     bindParams.push(ns.param);
   }
-  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
   }
@@ -929,7 +1007,7 @@ async function listMemories(params: Record<string, unknown>, env: Env): Promise<
   const countParams: (string | number)[] = [userId];
   if (!includeDeleted) countSql += ` AND deleted_at IS NULL`;
   if (ns.param) { countSql += ns.clause; countParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) { countSql += ` AND type = ?`; countParams.push(type); }
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(type)) { countSql += ` AND type = ?`; countParams.push(type); }
   const countResult = await env.DB.prepare(countSql).bind(...countParams).first();
 
   return {
@@ -1098,7 +1176,7 @@ async function timeQuery(params: Record<string, unknown>, env: Env): Promise<unk
   const bindParams: (string | number)[] = [userId, fromDate, toDate];
 
   if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) { sql += ` AND type = ?`; bindParams.push(type); }
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(type)) { sql += ` AND type = ?`; bindParams.push(type); }
   sql += ` ORDER BY created_at DESC LIMIT ?`;
   bindParams.push(limit);
 
@@ -1370,7 +1448,7 @@ async function exportMemories(params: Record<string, unknown>, env: Env): Promis
     sql += ` AND deleted_at IS NULL`;
   }
   if (ns.param) { sql += ns.clause; bindParams.push(ns.param); }
-  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(type)) {
+  if (type && ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(type)) {
     sql += ` AND type = ?`;
     bindParams.push(type);
   }
@@ -1623,7 +1701,7 @@ async function importMemories(params: Record<string, unknown>, env: Env): Promis
     const { cleaned: content, hadPII } = scrubPII(rawContent);
     if (hadPII) piiRedacted++;
 
-    const type = ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task'].includes(String(item.type)) ? String(item.type) : 'fact';
+    const type = ['identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight'].includes(String(item.type)) ? String(item.type) : 'fact';
     const confidence = Number(item.confidence) || 0.8;
     const tags = Array.isArray(item.tags) ? item.tags : [];
 
@@ -1892,6 +1970,560 @@ async function prefetchMemories(params: Record<string, unknown>, env: Env): Prom
 }
 
 // ============================================================
+// 16. brain_think — Contextual Reasoning Engine
+// ============================================================
+async function brainThink(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const context = String(params.context || '');
+  const depth = String(params.depth || 'normal');
+  const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+
+  if (!context.trim()) {
+    return { content: [{ type: 'text', text: 'Error: context parameter is required' }], isError: true };
+  }
+
+  const topK = depth === 'quick' ? 5 : depth === 'deep' ? 20 : 10;
+  const ns = nsFilter(namespace);
+
+  // 1. Retrieve relevant memories (reuse prefetch scoring logic)
+  const keywords = context.toLowerCase()
+    .replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, ' ')
+    .split(/\s+/)
+    .filter((w: string) => w.length > 2 && !STOP_WORDS.has(w));
+
+  const queryEmbedding = await generateEmbedding(context, env);
+  const vectorFilter: Record<string, string> = { user_id: userId };
+  if (namespace && namespace !== 'global') vectorFilter.namespace = namespace;
+  const vectorHits = queryEmbedding ? await vectorQuery(queryEmbedding, topK * 2, vectorFilter, env) : [];
+
+  let keywordResults: Record<string, unknown>[] = [];
+  if (keywords.length > 0) {
+    const conditions = keywords.slice(0, 5).map(() => `content LIKE ?`).join(' OR ');
+    const bindParams: (string | number)[] = keywords.slice(0, 5).map(kw => `%${kw}%`);
+    bindParams.push(userId);
+    if (ns.param) bindParams.push(ns.param);
+    bindParams.push(topK * 2);
+
+    const r = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, updated_at, importance_score, tags
+       FROM memories WHERE (${conditions}) AND user_id = ? AND deleted_at IS NULL${ns.clause}
+       ORDER BY confidence DESC, created_at DESC LIMIT ?`
+    ).bind(...bindParams).all();
+    keywordResults = r.results as Record<string, unknown>[];
+  }
+
+  // Merge + deduplicate
+  const seen = new Set<string>();
+  const memories: Record<string, unknown>[] = [];
+  if (vectorHits.length > 0) {
+    const ids = vectorHits.map(v => v.id);
+    const ph = ids.map(() => '?').join(',');
+    const recs = await env.DB.prepare(
+      `SELECT id, content, type, confidence, namespace, created_at, updated_at, importance_score, tags
+       FROM memories WHERE id IN (${ph}) AND deleted_at IS NULL`
+    ).bind(...ids).all();
+    for (const m of recs.results as Record<string, unknown>[]) { seen.add(String(m.id)); memories.push(m); }
+  }
+  for (const m of keywordResults) {
+    if (!seen.has(String(m.id))) { seen.add(String(m.id)); memories.push(m); }
+  }
+
+  // Score and rank
+  const vecMap = new Map(vectorHits.map(v => [v.id, v.score]));
+  const scored: (Record<string, unknown> & { think_score: number })[] = memories.map(m => {
+    const vec = vecMap.get(String(m.id)) || 0;
+    const kw = keywords.length > 0 ? scoreRelevance(String(m.content), keywords) : 0;
+    const decay = calculateDecayScore(m.last_accessed as string | null, String(m.created_at));
+    const score = vec > 0 ? vec * 0.4 + kw * 0.25 + decay * 0.2 + Number(m.importance_score || 0.5) * 0.15
+                          : kw * 0.4 + decay * 0.25 + Number(m.importance_score || 0.5) * 0.35;
+    return { ...m, think_score: Math.round(score * 100) / 100 };
+  });
+  scored.sort((a, b) => b.think_score - a.think_score);
+  const topScored = scored.slice(0, topK);
+
+  // 2. Get graph connections between these memories
+  const memIds = topScored.map(m => String(m.id));
+  let connections: Record<string, unknown>[] = [];
+  if (memIds.length > 1) {
+    const ph = memIds.map(() => '?').join(',');
+    const linkResult = await env.DB.prepare(
+      `SELECT source_id, target_id, relation, weight FROM memory_links
+       WHERE source_id IN (${ph}) OR target_id IN (${ph})`
+    ).bind(...memIds, ...memIds).all();
+    connections = linkResult.results as Record<string, unknown>[];
+  }
+
+  // 3. Detect contradictions (same topic/type, different time, different content direction)
+  const contradictions: { memory_a: string; memory_b: string; reason: string }[] = [];
+  for (let i = 0; i < topScored.length; i++) {
+    for (let j = i + 1; j < topScored.length; j++) {
+      const a = topScored[i], b = topScored[j];
+      if (a.type !== b.type) continue;
+      // Check if keywords overlap significantly but content differs
+      const wordsA = new Set(String(a.content).toLowerCase().split(/\s+/).filter(w => w.length > 3));
+      const wordsB = new Set(String(b.content).toLowerCase().split(/\s+/).filter(w => w.length > 3));
+      const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
+      const overlapRatio = overlap / Math.max(Math.min(wordsA.size, wordsB.size), 1);
+
+      if (overlapRatio > 0.3 && overlapRatio < 0.8) {
+        // Significant topic overlap but not identical = potential contradiction
+        const daysDiff = Math.abs(
+          new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
+        ) / (1000 * 60 * 60 * 24);
+        if (daysDiff > 7) {
+          contradictions.push({
+            memory_a: String(a.id).slice(0, 8),
+            memory_b: String(b.id).slice(0, 8),
+            reason: `Same type (${a.type}), overlapping topic (${Math.round(overlapRatio * 100)}%), ${Math.round(daysDiff)} days apart — may reflect changed decisions`,
+          });
+        }
+      }
+    }
+  }
+
+  // 4. Build type distribution
+  const typeDistribution: Record<string, number> = {};
+  for (const m of topScored) {
+    const t = String(m.type);
+    typeDistribution[t] = (typeDistribution[t] || 0) + 1;
+  }
+
+  // 5. Generate strategic summary
+  const highConfidence = topScored.filter(m => Number(m.confidence) >= 0.8);
+  const lowConfidence = topScored.filter(m => Number(m.confidence) < 0.5);
+  const recentCount = topScored.filter(m => {
+    const days = (Date.now() - new Date(String(m.created_at)).getTime()) / (1000 * 60 * 60 * 24);
+    return days < 30;
+  }).length;
+
+  touchMemories(memIds, env.DB);
+
+  const analysis = {
+    context_preview: context.slice(0, 150),
+    depth,
+    namespace: namespace || 'global',
+    semantic_search: vectorHits.length > 0,
+
+    key_memories: truncateMemoryResults(topScored),
+    memory_count: topScored.length,
+    type_distribution: typeDistribution,
+
+    graph_connections: connections.length,
+    connections: connections.slice(0, 20),
+
+    contradictions_found: contradictions.length,
+    contradictions,
+
+    cognitive_assessment: {
+      confidence_level: highConfidence.length > topScored.length / 2 ? 'high' : lowConfidence.length > topScored.length / 3 ? 'low' : 'moderate',
+      knowledge_freshness: recentCount > topScored.length / 2 ? 'fresh' : recentCount > 0 ? 'mixed' : 'stale',
+      recommendation: contradictions.length > 0
+        ? `⚠️ ${contradictions.length} potential contradiction(s) detected. Review conflicting memories before proceeding.`
+        : highConfidence.length >= 3
+          ? '✅ Strong knowledge base on this topic. High confidence in retrieved context.'
+          : scored.length === 0
+            ? '❌ No relevant memories found. This is a new topic — consider storing key decisions.'
+            : '🔶 Limited knowledge. Consider gathering more context before making decisions.',
+    },
+  };
+
+  return { content: [{ type: 'text', text: JSON.stringify(analysis, null, 2) }] };
+}
+
+// ============================================================
+// 17. brain_adapt — Adaptive Weight Feedback Loop
+// ============================================================
+const LEARNING_RATE = 0.02; // How fast weights adapt per feedback event
+const WEIGHT_FLOOR = 0.05;  // Minimum weight to prevent any signal from going to zero
+const WEIGHT_CEIL = 0.60;   // Maximum weight for any single signal
+
+async function brainAdapt(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const memoryId = String(params.memory_id || '');
+  const feedback = String(params.feedback || '');
+  const context = String(params.context || '');
+  const namespace = String(params.namespace || 'global');
+
+  if (!memoryId || !['useful', 'not_useful', 'critical'].includes(feedback)) {
+    return { content: [{ type: 'text', text: 'Error: memory_id and valid feedback (useful/not_useful/critical) required' }], isError: true };
+  }
+
+  // 1. Look up the memory to understand which signal drove its retrieval
+  const mem = await env.DB.prepare('SELECT id, type, confidence, importance_score, access_count FROM memories WHERE id = ?').bind(memoryId).first();
+  if (!mem) {
+    return { content: [{ type: 'text', text: 'Error: memory not found' }], isError: true };
+  }
+
+  // 2. Record the feedback
+  const feedbackId = `fb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await env.DB.prepare(
+    `INSERT INTO brain_feedback (id, memory_id, namespace, feedback, memory_type, context) VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(feedbackId, memoryId, namespace, feedback, String(mem.type), context.slice(0, 500)).run();
+
+  // 3. If "useful" or "critical", boost the memory's importance; if "not_useful", decay it
+  if (feedback === 'critical') {
+    await env.DB.prepare('UPDATE memories SET importance_score = MIN(1.0, importance_score + 0.1) WHERE id = ?').bind(memoryId).run();
+  } else if (feedback === 'useful') {
+    await env.DB.prepare('UPDATE memories SET importance_score = MIN(1.0, importance_score + 0.05) WHERE id = ?').bind(memoryId).run();
+  } else {
+    await env.DB.prepare('UPDATE memories SET importance_score = MAX(0.1, importance_score - 0.05) WHERE id = ?').bind(memoryId).run();
+  }
+
+  // 4. Adapt namespace-level weights based on accumulated feedback
+  const configId = `config-${namespace}`;
+  let config = await env.DB.prepare('SELECT * FROM brain_config WHERE id = ?').bind(configId).first();
+  if (!config) {
+    await env.DB.prepare(
+      `INSERT INTO brain_config (id, namespace) VALUES (?, ?)`
+    ).bind(configId, namespace).run();
+    config = await env.DB.prepare('SELECT * FROM brain_config WHERE id = ?').bind(configId).first();
+  }
+
+  // Weight adaptation logic:
+  // "useful" from high-confidence memory → boost importance weight
+  // "useful" from recent memory → boost decay weight (recency matters)
+  // "not_useful" → slightly boost similarity weight (need better matching)
+  const w = {
+    similarity: Number(config!.weight_similarity),
+    decay: Number(config!.weight_decay),
+    importance: Number(config!.weight_importance),
+    frequency: Number(config!.weight_frequency),
+    emotional: Number(config!.weight_emotional),
+  };
+
+  const lr = feedback === 'critical' ? LEARNING_RATE * 2 : LEARNING_RATE;
+
+  if (feedback === 'useful' || feedback === 'critical') {
+    const memType = String(mem.type);
+    const isHighImportance = Number(mem.importance_score) > 0.7;
+    const isFrequentlyUsed = Number(mem.access_count) > 5;
+
+    if (isHighImportance) w.importance += lr;
+    if (isFrequentlyUsed) w.frequency += lr;
+    w.decay += lr * 0.5; // Slight recency boost for useful results
+  } else {
+    w.similarity += lr; // Need better matching
+    w.importance -= lr * 0.5;
+  }
+
+  // Clamp and normalize to sum=1.0
+  const keys = Object.keys(w) as (keyof typeof w)[];
+  for (const k of keys) w[k] = Math.max(WEIGHT_FLOOR, Math.min(WEIGHT_CEIL, w[k]));
+  const sum = keys.reduce((s, k) => s + w[k], 0);
+  for (const k of keys) w[k] = Math.round((w[k] / sum) * 1000) / 1000;
+
+  // Fix rounding to exactly 1.0
+  const diff = 1.0 - keys.reduce((s, k) => s + w[k], 0);
+  w.similarity = Math.round((w.similarity + diff) * 1000) / 1000;
+
+  const totalFeedback = Number(config!.total_feedback) + 1;
+  const usefulFeedback = Number(config!.useful_feedback) + (feedback !== 'not_useful' ? 1 : 0);
+
+  await env.DB.prepare(
+    `UPDATE brain_config SET
+      weight_similarity = ?, weight_decay = ?, weight_importance = ?,
+      weight_frequency = ?, weight_emotional = ?,
+      total_feedback = ?, useful_feedback = ?,
+      last_adapted = datetime('now'), updated_at = datetime('now')
+    WHERE id = ?`
+  ).bind(w.similarity, w.decay, w.importance, w.frequency, w.emotional, totalFeedback, usefulFeedback, configId).run();
+
+  log(LOG_LEVEL.INFO, 'brain', 'Weight adaptation applied', { namespace, feedback, weights: w });
+
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify({
+        feedback_recorded: true,
+        memory_id: memoryId,
+        feedback,
+        importance_adjusted: feedback === 'critical' ? '+0.10' : feedback === 'useful' ? '+0.05' : '-0.05',
+        namespace_weights: w,
+        total_feedback: totalFeedback,
+        useful_ratio: totalFeedback > 0 ? Math.round((usefulFeedback / totalFeedback) * 100) + '%' : 'n/a',
+      }, null, 2),
+    }],
+  };
+}
+
+// ============================================================
+// 18. brain_consolidate — Cognitive Housekeeping
+// ============================================================
+async function brainConsolidate(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const namespace = params.namespace as string | undefined;
+  const userId = String(params.user_id || 'default');
+  const minClusterSize = Math.max(2, Number(params.min_cluster_size) || 3);
+  const maxInsights = Math.min(10, Number(params.max_insights) || 5);
+  const dryRun = params.dry_run === true;
+
+  const ns = nsFilter(namespace);
+  const bindParams: (string | number)[] = [userId];
+  if (ns.param) bindParams.push(ns.param);
+  bindParams.push(500);
+
+  // 1. Fetch active memories (exclude already-consolidated insights)
+  const result = await env.DB.prepare(
+    `SELECT id, content, type, confidence, namespace, created_at, importance_score, tags
+     FROM memories WHERE user_id = ? AND deleted_at IS NULL${ns.clause}
+     AND type != 'insight'
+     ORDER BY created_at DESC LIMIT ?`
+  ).bind(...bindParams).all();
+  const memories = result.results as Record<string, unknown>[];
+
+  if (memories.length < minClusterSize) {
+    return { content: [{ type: 'text', text: JSON.stringify({ message: 'Not enough memories to consolidate', count: memories.length }) }] };
+  }
+
+  // 2. Build keyword-based clusters (same logic as sm_concept_cluster)
+  const memKeywords = memories.map(m => {
+    const content = String(m.content).toLowerCase();
+    const words = content.replace(/[^\w\sğüşıöçĞÜŞİÖÇ]/g, ' ').split(/\s+/)
+      .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+    let tags: string[] = [];
+    try {
+      const parsed = typeof m.tags === 'string' ? JSON.parse(String(m.tags)) : m.tags;
+      if (Array.isArray(parsed)) tags = parsed.map(String);
+    } catch { /* ignore */ }
+    return { id: String(m.id), words: new Set([...words, ...tags]), memory: m };
+  });
+
+  // Jaccard similarity clustering
+  const clusters: { members: typeof memKeywords; keyword_overlap: string[] }[] = [];
+  const assigned = new Set<string>();
+
+  for (let i = 0; i < memKeywords.length && clusters.length < maxInsights * 2; i++) {
+    if (assigned.has(memKeywords[i].id)) continue;
+    const cluster = [memKeywords[i]];
+    const sharedWords: Map<string, number> = new Map();
+    for (const w of memKeywords[i].words) sharedWords.set(w, 1);
+
+    for (let j = i + 1; j < memKeywords.length; j++) {
+      if (assigned.has(memKeywords[j].id)) continue;
+      const intersection = [...memKeywords[i].words].filter(w => memKeywords[j].words.has(w)).length;
+      const union = new Set([...memKeywords[i].words, ...memKeywords[j].words]).size;
+      const jaccard = union > 0 ? intersection / union : 0;
+      if (jaccard > 0.15) {
+        cluster.push(memKeywords[j]);
+        for (const w of memKeywords[j].words) sharedWords.set(w, (sharedWords.get(w) || 0) + 1);
+      }
+    }
+
+    if (cluster.length >= minClusterSize) {
+      for (const c of cluster) assigned.add(c.id);
+      const topWords = [...sharedWords.entries()]
+        .filter(([, count]) => count >= Math.ceil(cluster.length / 2))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([w]) => w);
+      clusters.push({ members: cluster, keyword_overlap: topWords });
+    }
+  }
+
+  // 3. Generate insights from top clusters
+  const insights: Record<string, unknown>[] = [];
+  const topClusters = clusters.slice(0, maxInsights);
+
+  for (const cluster of topClusters) {
+    const memberContents = cluster.members.map(m => truncateContent(String(m.memory.content), 200));
+    const types = [...new Set(cluster.members.map(m => String(m.memory.type)))];
+    const avgConfidence = cluster.members.reduce((s, m) => s + Number(m.memory.confidence), 0) / cluster.members.length;
+
+    // Create consolidated insight content
+    const insightContent = `[Consolidated Insight] Topic: ${cluster.keyword_overlap.join(', ')}. ` +
+      `Based on ${cluster.members.length} memories (types: ${types.join(', ')}). ` +
+      `Key points: ${memberContents.join(' | ')}`;
+
+    const insight = {
+      cluster_size: cluster.members.length,
+      keywords: cluster.keyword_overlap,
+      member_ids: cluster.members.map(m => m.id),
+      types,
+      avg_confidence: Math.round(avgConfidence * 100) / 100,
+      content_preview: insightContent.slice(0, 300),
+    };
+
+    if (!dryRun) {
+      // Store the insight as a new memory
+      const insightId = `insight-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const insightNs = namespace || String(cluster.members[0].memory.namespace) || 'global';
+      await env.DB.prepare(
+        `INSERT INTO memories (id, content, type, confidence, user_id, namespace, importance_score, tags)
+         VALUES (?, ?, 'insight', ?, ?, ?, 0.9, ?)`
+      ).bind(
+        insightId, insightContent.slice(0, 2000), Math.round(avgConfidence * 100) / 100,
+        userId, insightNs, JSON.stringify(cluster.keyword_overlap)
+      ).run();
+
+      // Link insight to source memories
+      for (const member of cluster.members) {
+        const linkId = `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        await env.DB.prepare(
+          `INSERT INTO memory_links (id, source_id, target_id, relation, weight) VALUES (?, ?, ?, 'consolidated_from', 0.9)`
+        ).bind(linkId, insightId, member.id).run();
+      }
+
+      // Generate embedding for the insight
+      const embedding = await generateEmbedding(insightContent, env);
+      if (embedding) await vectorUpsert(insightId, embedding, { type: 'insight', namespace: insightNs, user_id: userId }, env);
+
+      Object.assign(insight, { insight_id: insightId, stored: true });
+    }
+
+    insights.push(insight);
+  }
+
+  log(LOG_LEVEL.INFO, 'brain', 'Consolidation complete', {
+    namespace: namespace || 'all', clusters: clusters.length, insights: insights.length, dry_run: dryRun,
+  });
+
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify({
+        dry_run: dryRun,
+        memories_analyzed: memories.length,
+        clusters_found: clusters.length,
+        insights_created: insights.length,
+        insights,
+      }, null, 2),
+    }],
+  };
+}
+
+// ============================================================
+// 19. brain_status — Cognitive State Report
+// ============================================================
+async function brainStatus(params: Record<string, unknown>, env: Env): Promise<unknown> {
+  const userId = String(params.user_id || 'default');
+  const namespace = params.namespace as string | undefined;
+  const ns = nsFilter(namespace);
+
+  // 1. Memory distribution
+  const distParams: string[] = [userId];
+  if (ns.param) distParams.push(ns.param);
+  const typeDist = await env.DB.prepare(
+    `SELECT type, COUNT(*) as count, AVG(confidence) as avg_confidence,
+            AVG(importance_score) as avg_importance, AVG(access_count) as avg_access
+     FROM memories WHERE user_id = ? AND deleted_at IS NULL${ns.clause}
+     GROUP BY type ORDER BY count DESC`
+  ).bind(...distParams).all();
+
+  // 2. Namespace distribution
+  const nsDist = await env.DB.prepare(
+    `SELECT namespace, COUNT(*) as count FROM memories WHERE user_id = ? AND deleted_at IS NULL GROUP BY namespace ORDER BY count DESC`
+  ).bind(userId).all();
+
+  // 3. Freshness metrics
+  const freshParams: string[] = [userId];
+  if (ns.param) freshParams.push(ns.param);
+  const freshness = await env.DB.prepare(
+    `SELECT
+       COUNT(*) as total,
+       SUM(CASE WHEN created_at > datetime('now', '-7 days') THEN 1 ELSE 0 END) as last_7d,
+       SUM(CASE WHEN created_at > datetime('now', '-30 days') THEN 1 ELSE 0 END) as last_30d,
+       SUM(CASE WHEN last_accessed > datetime('now', '-7 days') THEN 1 ELSE 0 END) as accessed_7d,
+       SUM(CASE WHEN access_count = 0 THEN 1 ELSE 0 END) as never_accessed,
+       SUM(CASE WHEN type = 'insight' THEN 1 ELSE 0 END) as insight_count
+     FROM memories WHERE user_id = ? AND deleted_at IS NULL${ns.clause}`
+  ).bind(...freshParams).first();
+
+  // 4. Brain config (adaptive weights)
+  const configId = namespace ? `config-${namespace}` : null;
+  let weights = null;
+  if (configId) {
+    weights = await env.DB.prepare('SELECT * FROM brain_config WHERE id = ?').bind(configId).first();
+  }
+  // If no namespace-specific config, get all configs
+  let allConfigs: Record<string, unknown>[] = [];
+  if (!configId) {
+    const configs = await env.DB.prepare('SELECT * FROM brain_config ORDER BY total_feedback DESC LIMIT 10').all();
+    allConfigs = configs.results as Record<string, unknown>[];
+  }
+
+  // 5. Recent feedback activity
+  const recentFeedback = await env.DB.prepare(
+    `SELECT feedback, COUNT(*) as count FROM brain_feedback
+     WHERE created_at > datetime('now', '-30 days')
+     ${namespace ? 'AND namespace = ?' : ''}
+     GROUP BY feedback`
+  ).bind(...(namespace ? [namespace] : [])).all();
+
+  // 6. Graph density
+  const linkCount = await env.DB.prepare('SELECT COUNT(*) as count FROM memory_links').first();
+
+  // 7. Cognitive load assessment
+  const total = Number(freshness?.total || 0);
+  const neverAccessed = Number(freshness?.never_accessed || 0);
+  const insightCount = Number(freshness?.insight_count || 0);
+  const accessedRecently = Number(freshness?.accessed_7d || 0);
+
+  let cognitiveLoad = 'healthy';
+  let recommendations: string[] = [];
+
+  if (total > 500 && insightCount < 5) {
+    cognitiveLoad = 'overloaded';
+    recommendations.push('🧹 Run brain_consolidate — too many memories without consolidation');
+  }
+  if (neverAccessed > total * 0.5) {
+    cognitiveLoad = total > 200 ? 'overloaded' : 'cluttered';
+    recommendations.push(`📦 ${neverAccessed} memories never accessed — consider archiving or consolidating`);
+  }
+  if (total < 10) {
+    cognitiveLoad = 'nascent';
+    recommendations.push('🌱 Brain is new — keep storing key decisions, preferences, and project facts');
+  }
+  if (total > 50 && accessedRecently < 5) {
+    recommendations.push('💤 Low recent activity — brain knowledge may be going stale');
+  }
+  if (recommendations.length === 0) {
+    recommendations.push('✅ Brain is healthy and well-organized');
+  }
+
+  const status = {
+    user_id: userId,
+    namespace: namespace || 'all',
+    memory_distribution: typeDist.results,
+    namespace_distribution: nsDist.results,
+    freshness: {
+      total,
+      created_last_7d: Number(freshness?.last_7d || 0),
+      created_last_30d: Number(freshness?.last_30d || 0),
+      accessed_last_7d: accessedRecently,
+      never_accessed: neverAccessed,
+      insights: insightCount,
+    },
+    graph: {
+      total_links: Number(linkCount?.count || 0),
+    },
+    adaptive_weights: weights ? {
+      namespace: weights.namespace,
+      weights: {
+        similarity: weights.weight_similarity,
+        decay: weights.weight_decay,
+        importance: weights.weight_importance,
+        frequency: weights.weight_frequency,
+        emotional: weights.weight_emotional,
+      },
+      total_feedback: weights.total_feedback,
+      useful_ratio: Number(weights.total_feedback) > 0
+        ? Math.round(Number(weights.useful_feedback) / Number(weights.total_feedback) * 100) + '%'
+        : 'n/a',
+      last_adapted: weights.last_adapted,
+    } : allConfigs.length > 0 ? allConfigs.map(c => ({
+      namespace: c.namespace,
+      total_feedback: c.total_feedback,
+      weights: { s: c.weight_similarity, d: c.weight_decay, i: c.weight_importance, f: c.weight_frequency, e: c.weight_emotional },
+    })) : 'No adaptations yet — use brain_adapt to start learning',
+    recent_feedback: recentFeedback.results,
+    cognitive_assessment: {
+      load: cognitiveLoad,
+      recommendations,
+    },
+  };
+
+  return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
+}
+
+// ============================================================
 // Tool Call Router
 // ============================================================
 async function handleToolCall(name: string, args: Record<string, unknown>, env: Env): Promise<unknown> {
@@ -1911,6 +2543,11 @@ async function handleToolCall(name: string, args: Record<string, unknown>, env: 
     case 'sm_concept_cluster': return await conceptCluster(args, env);
     case 'sm_import_memories': return await importMemories(args, env);
     case 'sm_prefetch': return await prefetchMemories(args, env);
+    // Ulu-Brain: Cognitive Layer
+    case 'brain_think': return await brainThink(args, env);
+    case 'brain_adapt': return await brainAdapt(args, env);
+    case 'brain_consolidate': return await brainConsolidate(args, env);
+    case 'brain_status': return await brainStatus(args, env);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],

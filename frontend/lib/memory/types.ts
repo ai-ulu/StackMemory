@@ -7,6 +7,7 @@ export const MEMORY_TYPES = {
   RULE: 'rule',
   DECISION: 'decision',
   TASK: 'task',
+  INSIGHT: 'insight', // v3.0: brain_consolidate generated summaries
 } as const;
 
 export const MEMORY_STATUS = {

@@ -58,10 +58,11 @@ function calculateHScore(memory, similarity, emotionalContext = null) {
     : (Date.now() - new Date(memory.created_at).getTime()) / (1000 * 60 * 60 * 24);
   const decayFactor = Math.exp(-H_WEIGHTS.λ * daysSinceAccess);
 
-  // Importance based on type (v2.1 values — all 7 types)
+  // Importance based on type (v3.0 values — all 8 types)
   const importanceMap = {
     identity: 1.0, preference: 0.7, fact: 0.4,
     rule: 0.9, decision: 0.8, project: 0.6, task: 0.5,
+    insight: 0.85, // consolidated knowledge — high value
   };
   const importance = importanceMap[memory.type] || 0.4;
 

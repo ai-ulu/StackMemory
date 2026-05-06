@@ -140,8 +140,8 @@ CREATE TABLE IF NOT EXISTS memories (
   content_hash TEXT GENERATED ALWAYS AS (encode(sha256(content::bytea), 'hex')) STORED,
   
   -- Typed Memory (REQUIRED)
-  -- Extended types: project, rule, decision, task (v2.1)
-  type TEXT NOT NULL CHECK (type IN ('identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task')),
+  -- Extended types: project, rule, decision, task (v2.1), insight (v3.0 brain_consolidate)
+  type TEXT NOT NULL CHECK (type IN ('identity', 'preference', 'fact', 'project', 'rule', 'decision', 'task', 'insight')),
   confidence FLOAT NOT NULL DEFAULT 0.8 CHECK (confidence >= 0 AND confidence <= 1),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'deprecated')),
   truth_type TEXT NOT NULL DEFAULT 'user_claim' CHECK (truth_type IN ('user_claim', 'verified', 'system_inferred')),
