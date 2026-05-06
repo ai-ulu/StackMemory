@@ -1,12 +1,20 @@
-# StackMemory Universal Deployment
-# Deploy the entire ecosystem with one command: docker-compose up
+# StackMemory — Unified Deployment
+#
+# Architecture (v3.2): single source of truth = Cloudflare D1 + Vectorize via
+# the MCP server. The Next.js frontend talks to MCP through HTTP. There is no
+# separate FastAPI backend or Python bridge anymore.
+#
+# Quick start:
+#   cp .env.example .env  # fill MCP_SERVER_URL + Supabase auth keys
+#   docker compose up -d  # frontend + (optional) self-hosted mcp-server
+#
+# Bots (Slack/Discord/Telegram) and the Chrome extension are independent and
+# can be enabled via Compose profiles.
 
 services:
-  # ==========================================================================
-  # Core Services
-  # ==========================================================================
-  
-  # Main Next.js Application
+  # ---------------------------------------------------------------------------
+  # Frontend — Next.js dashboard + API routes (proxy to MCP server)
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
@@ -20,9 +28,15 @@ services:
       - DOMAIN=${DOMAIN}
       - STACKMEMORY_LOCAL_MODE=${STACKMEMORY_LOCAL_MODE}
       - NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE=${NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE}
+      # Auth / billing / teams (Supabase identity domain — NOT memories)
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # Memory / brain → MCP server (single source of truth)
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - NEXT_PUBLIC_MCP_SERVER_URL=${NEXT_PUBLIC_MCP_SERVER_URL}
+      - MCP_SERVER_TOKEN=${MCP_SERVER_TOKEN}
+      # Optional integrations
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
@@ -43,18 +57,22 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Universal Bridge (REST + WebSocket + OpenAPI)
-  bridge:
+  # ---------------------------------------------------------------------------
+  # MCP Server — Cloudflare-targeted (this image is for self-host/local only)
+  #
+  # In production the canonical endpoint is https://stackmemory-mcp.pages.dev
+  # deployed via `wrangler deploy` from ./mcp-server. This service is opt-in
+  # and useful for offline development; enable it with:
+  #     docker compose --profile selfhost up
+  # ---------------------------------------------------------------------------
+  mcp-server:
     build:
-      context: ./bridge
+      context: ./mcp-server
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8787:8787"
     environment:
-      - AI_ULU_API_URL=http://frontend:3000
-      - BRIDGE_PORT=8080
-    depends_on:
-      - frontend
+      - NODE_ENV=production
     deploy:
       resources:
         limits:
@@ -63,39 +81,13 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # MCP Server (for Claude/Cursor)
-  mcp-server:
-    build:
-      context: ./mcp-server
-      dockerfile: Dockerfile
-    environment:
-      - AI_ULU_API_URL=http://frontend:3000
-    depends_on:
-      - frontend
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
-        reservations:
-          cpus: '0.05'
-          memory: 64M
     profiles:
-      - mcp
+      - selfhost
     restart: unless-stopped
 
-  # ==========================================================================
-  # Bots (Optional - Enable as needed)
-  # ==========================================================================
-  
-  # Slack Bot
+  # ---------------------------------------------------------------------------
+  # Bots (optional)
+  # ---------------------------------------------------------------------------
   slack-bot:
     build:
       context: ./bots/slack
@@ -103,120 +95,32 @@ services:
     environment:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - AI_ULU_BRIDGE_URL=http://bridge:8080
-    depends_on:
-      - bridge
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - MCP_SERVER_TOKEN=${MCP_SERVER_TOKEN}
     profiles:
       - bots
     restart: unless-stopped
 
-  # Discord Bot
   discord-bot:
     build:
       context: ./bots/discord
       dockerfile: Dockerfile
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - AI_ULU_BRIDGE_URL=http://bridge:8080
-    depends_on:
-      - bridge
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - MCP_SERVER_TOKEN=${MCP_SERVER_TOKEN}
     profiles:
       - bots
     restart: unless-stopped
 
-  # Telegram Bot
   telegram-bot:
     build:
       context: ./bots/telegram
       dockerfile: Dockerfile
     environment:
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - AI_ULU_BRIDGE_URL=http://bridge:8080
-    depends_on:
-      - bridge
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - MCP_SERVER_TOKEN=${MCP_SERVER_TOKEN}
     profiles:
       - bots
     restart: unless-stopped
-
-  # ==========================================================================
-  # Infrastructure (Optional)
-  # ==========================================================================
-  
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-    profiles:
-      - cache
-    restart: unless-stopped
-
-  # Monitoring (Prometheus + Grafana)
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 512M
-    profiles:
-      - monitoring
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
-    profiles:
-      - monitoring
-    restart: unless-stopped
-
-volumes:
-  redis_data:
-  prometheus_data:
-  grafana_data:
-
-networks:
-  default:
-    name: stackmemory-network
