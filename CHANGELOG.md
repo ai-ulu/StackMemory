@@ -2,6 +2,41 @@
 
 All notable changes to StackMemory will be documented in this file.
 
+## [3.2.0] - 2026-05-06 - Architecture Unification 🧹
+
+### Changed — Single source of truth
+- **Memories now live exclusively in the MCP server** (Cloudflare D1 + Vectorize).
+  The Next.js frontend `/api/memories/*` and `/api/brain/*` routes were rewritten
+  as thin proxies that call MCP via JSON-RPC.
+- **Supabase is now identity-only** — auth, billing, teams, conversations,
+  marketplace. The `memories` table is no longer written to from the dashboard.
+- New `frontend/lib/mcp/client.ts` — typed JSON-RPC client (21 tools).
+- New `frontend/lib/mcp/auth.ts` — single helper that maps the authenticated
+  user to a `user:<id>` MCP namespace. Clients can never set namespaces directly.
+
+### Removed
+- `backend/` (FastAPI + MongoDB) — duplicated MCP CRUD with no production users.
+- `bridge/` (Python REST proxy) — frontend now talks to MCP directly.
+- `frontend/lib/brain/helpers.ts` — replaced by `mcp.callTool('brain_*')`.
+- Frontend Supabase writes inside memory/brain routes.
+
+### Added
+- `ARCHITECTURE.md` — definitive component + data-flow reference.
+- `MCP_SERVER_URL`, `NEXT_PUBLIC_MCP_SERVER_URL`, `MCP_SERVER_TOKEN`
+  environment variables (see `.env.example`).
+- `docker compose --profile selfhost` for local MCP development.
+- `make mcp-deploy` for one-command Cloudflare deploys.
+
+### Migration notes
+- `MCP_SERVER_URL` defaults to `https://stackmemory-mcp.pages.dev/mcp` — no
+  config change required for hosted deployments.
+- Self-hosters should run `wrangler deploy` from `mcp-server/` and point the
+  frontend at their worker URL.
+- Existing Supabase `memories` rows are not migrated (clean-start release);
+  archive via `pg_dump` if needed.
+
+
+
 ## [5.1.0] - 2026-05-06 - Ulu-Brain v2: Simulation & Imagination 🔮
 
 ### Added — brain_simulate: Decision Simulation Engine

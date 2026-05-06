@@ -1,252 +1,62 @@
+/**
+ * /api/memories/[id]
+ * GET    → fetch single memory (uses list + filter, MCP has no get-by-id)
+ * PATCH  → mcp.update
+ * DELETE → mcp.delete (soft-delete + Vectorize cleanup, server-side)
+ */
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
-import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
-import { getMemoryById, updateMemoryById } from '@/lib/dev/local-data';
-import { getAppApiUrl } from '@/lib/app-url';
+import { mcp, McpError } from '@/lib/mcp/client';
+import { getAuth } from '@/lib/mcp/auth';
 
-// GET - Get single memory with full details
 export async function GET(request, { params }) {
   try {
+    const auth = await getAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { id } = await params;
-
-    if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser(request);
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const memory = await getMemoryById(user.id, id);
-      if (!memory) {
-        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
-      }
-
-      const tracked = await updateMemoryById(user.id, id, {
-        access_count: (memory.access_count || 0) + 1,
-        last_accessed_at: new Date().toISOString(),
-      });
-      return NextResponse.json(tracked || memory);
-    }
-
-    const supabase = await createClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data, error } = await supabase
-      .from('memories')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (error || !data) {
-      return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
-    }
-
-    // Track access
-    await supabase.rpc('track_memory_access', { memory_uuid: id });
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Get memory error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const list = await mcp.list({ namespace: auth.namespace, limit: 500 });
+    const memories = list?.memories ?? list ?? [];
+    const found = Array.isArray(memories) ? memories.find((m) => m.id === id) : null;
+    if (!found) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(found);
+  } catch (err) {
+    const status = err instanceof McpError ? 502 : 500;
+    return NextResponse.json({ error: err.message }, { status });
   }
 }
 
-// PUT - Update memory (triggers versioning)
-export async function PUT(request, { params }) {
+export async function PATCH(request, { params }) {
   try {
+    const auth = await getAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { id } = await params;
-
-    if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser(request);
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const body = await request.json();
-      const updates = {};
-
-      if (body.confidence !== undefined) {
-        updates.confidence = Math.max(0, Math.min(1, body.confidence));
-      }
-      if (body.status && ['active', 'pending', 'deprecated'].includes(body.status)) {
-        updates.status = body.status;
-      }
-      if (body.content) {
-        updates.content = body.content;
-      }
-      if (body.scope && ['private', 'team', 'org'].includes(body.scope)) {
-        updates.scope = body.scope;
-      }
-
-      if (Object.keys(updates).length === 0) {
-        return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
-      }
-
-      const memory = await updateMemoryById(user.id, id, updates);
-      if (!memory) {
-        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
-      }
-
-      return NextResponse.json(memory);
-    }
-
-    const supabase = await createClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check write permission
-    const { data: canWrite } = await supabase.rpc('can_write_memory', { user_uuid: user.id });
-    if (!canWrite) {
-      return NextResponse.json({ 
-        error: 'Write disabled. Check Safe Mode or Privacy Mode settings.' 
-      }, { status: 403 });
-    }
-
     const body = await request.json();
-    const { confidence, status, content, scope } = body;
-
-    const updates = {};
-    if (confidence !== undefined) {
-      updates.confidence = Math.max(0, Math.min(1, confidence));
-    }
-    if (status && ['active', 'pending', 'deprecated'].includes(status)) {
-      updates.status = status;
-    }
-    if (content) {
-      updates.content = content;
-      // Regenerate embedding for new content
-      try {
-        const embedResponse = await fetch(getAppApiUrl(request, '/api/embed'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: content }),
-        });
-        if (embedResponse.ok) {
-          const embedData = await embedResponse.json();
-          updates.embedding = embedData.embedding;
-        }
-      } catch (e) {
-        console.error('Embedding regeneration failed:', e);
-      }
-    }
-    if (scope && ['private', 'team', 'org'].includes(scope)) {
-      updates.scope = scope;
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
-    }
-
-    // Update triggers versioning automatically via trigger
-    const { data, error } = await supabase
-      .from('memories')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Update memory error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    // Log
-    await supabase.from('access_logs').insert({
-      user_id: user.id,
-      resource_type: 'memory',
-      resource_id: id,
-      action: 'update',
-      metadata: { updates: Object.keys(updates) },
+    const result = await mcp.update({
+      id,
+      namespace: auth.namespace,
+      content: body.content,
+      type: body.type,
+      confidence: body.confidence,
+      tags: body.tags,
     });
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Update memory error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(result);
+  } catch (err) {
+    const status = err instanceof McpError ? 502 : 500;
+    return NextResponse.json({ error: err.message }, { status });
   }
 }
 
-// DELETE - Shadow delete (never hard delete)
 export async function DELETE(request, { params }) {
   try {
+    const auth = await getAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { id } = await params;
-
-    if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser(request);
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const { searchParams } = new URL(request.url);
-      const reason = searchParams.get('reason') || 'User requested deletion';
-      const memory = await updateMemoryById(user.id, id, {
-        is_shadow: true,
-        status: 'deprecated',
-        shadow_reason: reason,
-        shadowed_at: new Date().toISOString(),
-      });
-
-      if (!memory) {
-        return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Memory moved to shadow (retained but hidden)',
-      });
-    }
-
-    const supabase = await createClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const reason = searchParams.get('reason') || 'User requested deletion';
-
-    // Shadow delete - mark as shadow, never actually delete
-    const { error } = await supabase
-      .from('memories')
-      .update({ 
-        is_shadow: true,
-        status: 'deprecated',
-        shadow_reason: reason,
-        shadowed_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Delete memory error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    // Log
-    await supabase.from('access_logs').insert({
-      user_id: user.id,
-      resource_type: 'memory',
-      resource_id: id,
-      action: 'delete',
-      metadata: { shadow_reason: reason },
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Memory moved to shadow (retained but hidden)' 
-    });
-  } catch (error) {
-    console.error('Delete memory error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const result = await mcp.delete({ id, namespace: auth.namespace });
+    return NextResponse.json(result);
+  } catch (err) {
+    const status = err instanceof McpError ? 502 : 500;
+    return NextResponse.json({ error: err.message }, { status });
   }
 }

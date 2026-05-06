@@ -6,7 +6,7 @@
 
 Give your AI the ability to remember — across sessions, projects, and tools.
 
-[![Version](https://img.shields.io/badge/MCP_Server-v3.1_Ulu--Brain-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
+[![Version](https://img.shields.io/badge/Platform-v3.2_Unified-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
 [![MCP](https://img.shields.io/badge/Protocol-MCP_2025--03--26-green?style=for-the-badge)](https://spec.modelcontextprotocol.io)
 [![Runtime](https://img.shields.io/badge/Runtime-Cloudflare_Workers-orange?style=for-the-badge)](https://workers.cloudflare.com)
 [![License](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](LICENSE)
@@ -281,32 +281,39 @@ Example output:
 
 ---
 
-## 🏛 Architecture
+## 🏛 Architecture (v3.2 — Unified)
+
+> One source of truth: the **MCP server** (Cloudflare D1 + Vectorize) owns
+> every memory and every cognitive operation. The Next.js frontend is a thin
+> proxy + dashboard. Supabase only handles identity, billing and teams.
+> See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full reference.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    StackMemory Platform                   │
-├──────────────┬──────────────┬────────────┬──────────────┤
-│  MCP Server  │   Frontend   │  Backend   │    Bridge    │
-│  (Cloudflare │  (Next.js)   │  (FastAPI) │  (Python)    │
-│   Workers)   │              │            │              │
-├──────────────┼──────────────┼────────────┼──────────────┤
-│ D1 + Vector  │   Supabase   │  MongoDB   │  REST proxy  │
-│   ize        │   pgvector   │  numpy     │              │
-└──────────────┴──────────────┴────────────┴──────────────┘
-        ↑               ↑            ↑
-   MCP clients     Web dashboard   API consumers
+                ┌──────────────────────────┐
+   MCP clients ─►│   StackMemory MCP server │◄─ Web dashboard (Next.js)
+   (Claude,      │   Cloudflare Workers     │   /api/memories/*  → MCP
+    Cursor,      │   D1 + Vectorize         │   /api/brain/*     → MCP
+    Windsurf)    │   21 tools + Ulu-Brain   │
+                └──────────────────────────┘
+                            ▲
+                            │
+        Bots / SDK / Chrome ext  (all → MCP)
+
+   Supabase: auth, billing, teams, conversations  (NEVER memories)
 ```
 
 | Component | Stack | Purpose |
 |-----------|-------|---------|
-| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 21 tools + cognitive layer |
-| **frontend** | Next.js, Supabase, Tailwind | Web dashboard and memory visualization |
-| **backend** | FastAPI, MongoDB, numpy | REST API, H(x,ψ) scoring, orchestration |
-| **bridge** | Python, FastAPI | Protocol bridge between frontend and backend |
-| **sdk** | Python | `pip install ai-ulu` — client library |
-| **bots** | Slack, Discord, Telegram | Chat integrations |
-| **chrome-extension** | Manifest V3 | Browser-based memory capture |
+| **mcp-server** | Cloudflare Workers, D1, Vectorize | All memory CRUD + cognitive layer (21 tools) |
+| **frontend** | Next.js 15, Tailwind, shadcn | Dashboard UI + MCP proxy routes + Supabase auth |
+| **frontend/lib/mcp** | TypeScript | JSON-RPC client + namespace bridge |
+| **sdk/python** | Python | `pip install ai-ulu` — client library |
+| **bots** | Slack, Discord, Telegram | Chat integrations (call MCP via SDK) |
+| **chrome-extension** | Manifest V3 | Browser memory capture (calls MCP) |
+
+> **Removed in v3.2:** legacy FastAPI `backend/` and Python `bridge/` services.
+> See [CHANGELOG.md](./CHANGELOG.md#320---2026-05-06---architecture-unification-).
+
 
 ---
 
@@ -371,9 +378,8 @@ docker compose up -d
 ```
 
 Services:
-- **Frontend**: `http://localhost:3000`
-- **Backend**: `http://localhost:8000`
-- **Bridge**: `http://localhost:8001`
+- **Dashboard**: `http://localhost:3000`
+- **MCP server** (only with `--profile selfhost`): `http://localhost:8787/mcp`
 
 ### Makefile Commands
 
@@ -392,7 +398,8 @@ make health     # Check service health
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v3.1** | 2026-05-06 | 🧠 **Ulu-Brain v2** — `brain_simulate` (decision simulation + risk scoring), `brain_dream` (cross-namespace ideation + pattern transfer). 21 total tools. |
+| **v3.2** | 2026-05-06 | 🧹 **Architecture Unification** — single source of truth (MCP server). Removed FastAPI backend + Python bridge. Frontend now proxies all memory/brain calls to MCP. |
+| v3.1 | 2026-05-06 | 🧠 **Ulu-Brain v2** — `brain_simulate` (decision simulation + risk scoring), `brain_dream` (cross-namespace ideation + pattern transfer). 21 total tools. |
 | v3.0 | 2026-05-06 | 🧠 **Ulu-Brain v1** — `brain_think` (reasoning), `brain_adapt` (feedback loop), `brain_consolidate` (housekeeping), `brain_status` (health). `insight` memory type. |
 | v2.1 | 2026-05-06 | PII scrubbing, namespace isolation, Vectorize semantic search, memory decay, `sm_prefetch`, smart truncation |
 | v2.0 | 2026-02-11 | Time queries, batch ops, export/import, concept clustering, H(x,ψ) scoring |
