@@ -6,3 +6,12 @@ pages_build_output_dir = "./dist"
 binding = "DB"
 database_name = "stackmemory-mcp-db"
 database_id = "d2c0a1f2-7556-4ec0-8bf2-5dbbbb6a8e8b"
+
+# Workers AI — embedding generation (text-embedding model)
+[ai]
+binding = "AI"
+
+# Vectorize — semantic vector search index
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "stackmemory-embeddings"

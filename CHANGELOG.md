@@ -2,6 +2,54 @@
 
 All notable changes to StackMemory will be documented in this file.
 
+## [4.0.0] - 2026-05-06 - MCP Server v2.1 Production Hardening 🛡️🧠
+
+### Added — Security
+- 🔐 **PII / Secret Auto-Scrubbing** on `store_memory`, `update_memory`, `sm_import_memories`
+  - 15 regex patterns: email, credit card, phone, SSN, API keys (GitHub/GitLab/Slack/Supabase/AWS/Google), JWT, passwords
+  - Sensitive data redacted before storage, original never persisted
+
+### Added — Namespace Isolation
+- 🏗️ **`namespace` parameter** on all 15 MCP tools for project-level isolation
+  - DB schema: `namespace` column + composite index `(user_id, namespace)`
+  - Auto-migration for existing tables, backward compatible (default: `'global'`)
+  - `sm_memory_summary` shows namespace distribution in global mode
+
+### Added — Semantic Search
+- 🧠 **Cloudflare Vectorize + Workers AI** integration
+  - `@cf/baai/bge-base-en-v1.5` (768-dim) embeddings on store
+  - Hybrid search: vector similarity + keyword relevance + confidence + recency
+  - Graceful fallback to keyword-only if bindings unavailable
+
+### Added — Memory Decay
+- 📉 **Automatic memory aging** with exponential decay (30-day half-life)
+  - `last_accessed`, `access_count`, `importance_score` columns
+  - `touchMemories()` auto-updates on every retrieval
+  - Decay score integrated into all search/query ranking
+
+### Added — Proactive Memory Injection
+- 🚦 **`sm_prefetch` tool** — router-level pre-fetch for LLM context injection
+  - Pass a raw user message → get top-K relevant memories ranked by vector + keyword + decay + importance
+  - 5-signal scoring: semantic (35%) + keyword (20%) + confidence (15%) + recency (15%) + importance (15%)
+
+### Added — Smart Truncation
+- 📏 Content capped at 500 chars per memory in search/list/graph responses
+- Hard cap: 200 items per response, 500 records per export/cluster
+
+### Added — Search Improvements
+- 🎯 **Keyword relevance scoring** with density, position, and occurrence bonuses
+- **Multi-signal ranking** in `query_memories`: content + tags + confidence + decay
+- `get_memory_graph`: `filter_keyword` parameter for sub-graph extraction
+
+### Changed — Frontend Compatibility
+- `Memory` interface in `types.ts` now includes `namespace`, `importance_score`, `last_accessed`, `access_count`
+- `MEMORY_NAMESPACE` constant added for future adoption
+
+### Infrastructure
+- `wrangler.toml`: Workers AI + Vectorize bindings added
+- MCP Server build: 75.1KB (was 65.2KB)
+- 0 TypeScript errors, esbuild clean
+
 ## [3.5.0] - 2026-02-11 - H(x,ψ) Scoring System 🎯
 
 ### Added

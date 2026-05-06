@@ -27,6 +27,11 @@ export const MEMORY_SCOPE = {
   TEMP: 'temp',
 } as const;
 
+// Namespace for project isolation (aligned with MCP server v2.1)
+export const MEMORY_NAMESPACE = {
+  GLOBAL: 'global',
+} as const;
+
 export const CLASSIFICATION = {
   MEMORY_CANDIDATE: 'memory_candidate',
   NORMAL: 'normal',
@@ -43,6 +48,10 @@ export interface Memory {
   status: typeof MEMORY_STATUS[keyof typeof MEMORY_STATUS];
   truth_type: typeof TRUTH_TYPES[keyof typeof TRUTH_TYPES];
   scope: typeof MEMORY_SCOPE[keyof typeof MEMORY_SCOPE];
+  namespace?: string;          // Project isolation (MCP v2.1)
+  importance_score?: number;   // 0.0-1.0, memory decay weight (MCP v2.1)
+  last_accessed?: string;      // ISO timestamp of last retrieval (MCP v2.1)
+  access_count?: number;       // How many times retrieved (MCP v2.1)
   embedding?: number[];
   created_at: string;
   updated_at: string;
