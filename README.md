@@ -6,12 +6,12 @@
 
 Give your AI the ability to remember — across sessions, projects, and tools.
 
-[![Version](https://img.shields.io/badge/MCP_Server-v3.0_Ulu--Brain-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
+[![Version](https://img.shields.io/badge/MCP_Server-v3.1_Ulu--Brain-blue?style=for-the-badge)](https://github.com/ai-ulu/StackMemory)
 [![MCP](https://img.shields.io/badge/Protocol-MCP_2025--03--26-green?style=for-the-badge)](https://spec.modelcontextprotocol.io)
 [![Runtime](https://img.shields.io/badge/Runtime-Cloudflare_Workers-orange?style=for-the-badge)](https://workers.cloudflare.com)
 [![License](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](LICENSE)
 
-[Quick Start](#-quick-start) · [Tools](#-tools-19) · [🧠 Ulu-Brain](#-ulu-brain-cognitive-layer) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
+[Quick Start](#-quick-start) · [Tools](#-tools-21) · [🧠 Ulu-Brain](#-ulu-brain-cognitive-layer) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
 
 </div>
 
@@ -30,7 +30,7 @@ Claude Desktop ─┐
 Cursor ──────────┤
 Windsurf ────────┼──→ StackMemory MCP ──→ Cloudflare D1 + Vectorize
 VS Code ─────────┤         │
-Custom Agent ────┘    19 tools + cognitive layer, <50ms edge latency
+Custom Agent ────┘    21 tools + cognitive layer, <50ms edge latency
 ```
 
 ---
@@ -90,7 +90,7 @@ results = memory.search("routing", namespace="my-project")
 
 ---
 
-## 🛠 Tools (19)
+## 🛠 Tools (21)
 
 ### Core
 
@@ -130,6 +130,8 @@ results = memory.search("routing", namespace="my-project")
 | `brain_adapt` | **Feedback loop** — report useful/not_useful/critical feedback, auto-adjusts H-score weights per namespace over time |
 | `brain_consolidate` | **Cognitive housekeeping** — clusters similar memories, generates `insight` summaries, links sources, reduces redundancy |
 | `brain_status` | **Brain health report** — memory distribution, adaptive weights, freshness metrics, cognitive load assessment |
+| `brain_simulate` | **Decision simulation** — analyzes past decisions/rules, detects risks and contradictions, maps affected namespaces, returns risk-scored verdict |
+| `brain_dream` | **Cross-namespace ideation** — discovers unexpected connections between projects, identifies transferable patterns, suggests creative "blue ocean" ideas |
 
 ---
 
@@ -239,6 +241,44 @@ Like a brain organizing memories during sleep:
 
 Returns: memory distribution, namespace stats, freshness metrics, adaptive weight state, recent feedback activity, and a cognitive load assessment with actionable recommendations.
 
+### brain_simulate — Decision Simulation (v3.1)
+
+Test a decision against your entire knowledge base before committing:
+
+```json
+{ "decision": "Switch from REST to GraphQL", "namespace": "my-api", "include_cross_namespace": true }
+```
+
+Returns:
+- **Historical context** — past decisions, rules, and insights related to the topic
+- **Risk assessment** — risk score (0-1), supporting evidence, warning signals
+- **Decision conflicts** — existing decisions this would override
+- **Affected namespaces** — which projects would be impacted
+- **Verdict**: 🔴 HIGH RISK / 🟡 MODERATE / 🟠 CAUTION / 🟢 LOW RISK / ⚪ UNCHARTED
+
+Pattern detection uses bilingual keywords (EN/TR) for negative/positive signal analysis.
+
+### brain_dream — Cross-Namespace Ideation (v3.1)
+
+Like a brain dreaming — discovers unexpected connections between isolated projects:
+
+```json
+{ "focus": "performance optimization", "max_ideas": 5 }
+```
+
+Returns:
+- **Dream connections** — keyword bridges between namespace pairs with strength scores
+- **Unique patterns** — expertise isolated in one namespace that could transfer elsewhere
+- **Dream summary** — top bridge with actionable insight
+
+Example output:
+```
+💡 "e-commerce" and "game-engine" share concepts: [cache, latency, queue].
+   Knowledge from one may transfer to the other.
+🔮 "ml-pipeline" has unique expertise in [embedding, tokenizer, batch].
+   Consider applying these patterns to other projects.
+```
+
 ---
 
 ## 🏛 Architecture
@@ -260,7 +300,7 @@ Returns: memory distribution, namespace stats, freshness metrics, adaptive weigh
 
 | Component | Stack | Purpose |
 |-----------|-------|---------|
-| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 19 tools + cognitive layer |
+| **mcp-server** | Cloudflare Workers, D1, Vectorize | MCP protocol endpoint — 21 tools + cognitive layer |
 | **frontend** | Next.js, Supabase, Tailwind | Web dashboard and memory visualization |
 | **backend** | FastAPI, MongoDB, numpy | REST API, H(x,ψ) scoring, orchestration |
 | **bridge** | Python, FastAPI | Protocol bridge between frontend and backend |
@@ -352,7 +392,8 @@ make health     # Check service health
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v3.0** | 2026-05-06 | 🧠 **Ulu-Brain** — `brain_think` (reasoning), `brain_adapt` (feedback loop), `brain_consolidate` (housekeeping), `brain_status` (health). `insight` memory type. Adaptive H-score weights per namespace. |
+| **v3.1** | 2026-05-06 | 🧠 **Ulu-Brain v2** — `brain_simulate` (decision simulation + risk scoring), `brain_dream` (cross-namespace ideation + pattern transfer). 21 total tools. |
+| v3.0 | 2026-05-06 | 🧠 **Ulu-Brain v1** — `brain_think` (reasoning), `brain_adapt` (feedback loop), `brain_consolidate` (housekeeping), `brain_status` (health). `insight` memory type. |
 | v2.1 | 2026-05-06 | PII scrubbing, namespace isolation, Vectorize semantic search, memory decay, `sm_prefetch`, smart truncation |
 | v2.0 | 2026-02-11 | Time queries, batch ops, export/import, concept clustering, H(x,ψ) scoring |
 | v1.0 | 2026-01-15 | Core CRUD, graph operations, MCP protocol |
