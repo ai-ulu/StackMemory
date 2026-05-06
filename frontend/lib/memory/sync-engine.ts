@@ -434,7 +434,7 @@ export function detectDeviceInfo(): DeviceInfo {
 
   // Add browser name
   const browserMatch = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/);
-  if (browserMatch) device_name += ;
+  if (browserMatch) device_name += ` ${browserMatch[1]}`;
 
   return { device_id, device_name, device_type, platform };
 }
