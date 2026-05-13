@@ -47,8 +47,13 @@ jobs:
       - name: Lint
         run: npm run lint --if-present
 
-      - name: Test
-        run: npm run test --if-present
+      - name: Test when test files exist
+        run: |
+          if find . -type f \( -name "*.test.*" -o -name "*.spec.*" \) | grep -q .; then
+            npm run test
+          else
+            echo "No test files found; skipping vitest."
+          fi
 
       - name: Build
         run: npm run build
