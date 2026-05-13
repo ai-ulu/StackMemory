@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { validatePassword } from '@/lib/auth/password';
+import { getWorkflowLabel } from '@/content/workflows';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,16 +27,7 @@ function SignupContent() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const workflow = searchParams.get('workflow') || 'claude_code';
-  const workflowLabel = useMemo(() => {
-    const labels = {
-      claude_code: 'Claude Code',
-      cursor: 'Cursor',
-      codex: 'Codex',
-      replit: 'Replit',
-      custom_app: 'Custom App / n8n',
-    };
-    return labels[workflow] || 'AI workflow';
-  }, [workflow]);
+  const workflowLabel = getWorkflowLabel(workflow);
 
   const handleSignup = async (e) => {
     e.preventDefault();
