@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
 import { MetricCard } from '@/components/app/MetricCard';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const metrics = [
@@ -9,11 +11,17 @@ const metrics = [
   ['Token Saved', '41k', 'Estimated repeated context avoided'],
 ];
 
+const actions = [
+  ['Create or inspect memories', '/memories', 'Add project rules, decisions and active work.'],
+  ['Preview agent context', '/brain', 'See what the next agent run will remember.'],
+  ['Review usage and cost', '/usage', 'Track token pressure before billing work starts.'],
+];
+
 const recent = [
-  'Prefer small pull requests and visible diffs',
-  'Claude Code is primary coding workflow',
-  'StackMemory should become shared agent memory',
-  'MCP, billing and OAuth are later-phase work',
+  ['Prefer small pull requests and visible diffs', '/memories/prefer-small-prs'],
+  ['Claude Code is primary coding workflow', '/memories/claude-code-primary'],
+  ['StackMemory should become shared agent memory', '/memories/shared-agent-memory'],
+  ['MCP, billing and OAuth are later-phase work', '/memories/later-phase-work'],
 ];
 
 export default function DashboardPage() {
@@ -32,21 +40,27 @@ export default function DashboardPage() {
               <CardTitle>Next best actions</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm text-muted-foreground">
-              <div className="rounded-2xl border border-border/60 p-4">Create the memories list and filters.</div>
-              <div className="rounded-2xl border border-border/60 p-4">Add context compiler preview for agent runs.</div>
-              <div className="rounded-2xl border border-border/60 p-4">Wire real memory data after skeleton is complete.</div>
+              {actions.map(([title, href, body]) => (
+                <Link key={href} href={href} className="rounded-2xl border border-border/60 p-4 transition-colors hover:bg-muted/50">
+                  <div className="font-medium text-foreground">{title}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">{body}</div>
+                </Link>
+              ))}
             </CardContent>
           </Card>
 
           <Card className="border-border/60 bg-card/60">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Recent memory signals</CardTitle>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/memories">View all</Link>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              {recent.map((item) => (
-                <div key={item} className="rounded-2xl border border-border/60 bg-background/60 p-4">
+              {recent.map(([item, href]) => (
+                <Link key={href} href={href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
                   {item}
-                </div>
+                </Link>
               ))}
             </CardContent>
           </Card>
