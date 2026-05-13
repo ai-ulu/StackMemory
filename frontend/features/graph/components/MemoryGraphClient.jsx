@@ -13,7 +13,7 @@ async function parseResponse(response) {
 }
 
 export function MemoryGraphClient() {
-  const [graph, setGraph] = useState({ nodes: [], edges: [] });
+  const [graph, setGraph] = useState({ nodes: [], edges: [], source: 'inferred' });
   const [selectedNode, setSelectedNode] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,7 +23,7 @@ export function MemoryGraphClient() {
     setError('');
     try {
       const body = await parseResponse(await fetch('/api/graph'));
-      setGraph(body.graph || { nodes: [], edges: [] });
+      setGraph(body.graph || { nodes: [], edges: [], source: 'inferred' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load graph');
     } finally {
@@ -51,8 +51,10 @@ export function MemoryGraphClient() {
           <CardContent className="text-3xl font-bold">{graph.edges.length}</CardContent>
         </Card>
         <Card className="border-border/60 bg-card/60">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Mode</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-bold">MVP</CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Source</CardTitle></CardHeader>
+          <CardContent className="flex items-center gap-2 text-3xl font-bold capitalize">
+            {graph.source || 'inferred'}
+          </CardContent>
         </Card>
       </div>
 
@@ -71,8 +73,15 @@ export function MemoryGraphClient() {
                   <GitBranch className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle>Memory graph</CardTitle>
-                  <CardDescription>Node/edge MVP generated from memory type and shared tags.</CardDescription>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>Memory graph</CardTitle>
+                    <Badge variant={graph.source === 'persisted' ? 'default' : 'secondary'}>
+                      {graph.source === 'persisted' ? 'memory_links' : 'inferred fallback'}
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    Uses persisted memory_links when available, otherwise infers edges from type/shared tags.
+                  </CardDescription>
                 </div>
               </div>
               <Button variant="outline" onClick={loadGraph}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button>
@@ -111,7 +120,7 @@ export function MemoryGraphClient() {
         <Card className="border-border/60 bg-card/60">
           <CardHeader>
             <CardTitle>Node details</CardTitle>
-            <CardDescription>Select a node to inspect its MVP relationships.</CardDescription>
+            <CardDescription>Select a node to inspect relationships.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedNode ? (
