@@ -4,12 +4,13 @@ import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { validatePassword } from '@/lib/auth/password';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Brain, Loader2, Mail, Lock, User, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Brain, Loader2, Mail, Lock, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const dynamic = 'force-dynamic';
@@ -36,20 +37,11 @@ function SignupContent() {
     return labels[workflow] || 'AI workflow';
   }, [workflow]);
 
-  const validatePassword = (pass) => {
-    if (pass.length < 8) return 'Şifre en az 8 karakter olmalı';
-    if (!/[A-Z]/.test(pass)) return 'Şifre en az bir büyük harf içermeli';
-    if (!/[a-z]/.test(pass)) return 'Şifre en az bir küçük harf içermeli';
-    if (!/[0-9]/.test(pass)) return 'Şifre en az bir rakam içermeli';
-    return null;
-  };
-
   const handleSignup = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Validation
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
@@ -81,7 +73,6 @@ function SignupContent() {
         return;
       }
 
-      // Check if email confirmation is required
       if (data?.user?.identities?.length === 0) {
         setError('Bu email adresi zaten kayıtlı.');
         return;
@@ -144,7 +135,6 @@ function SignupContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
       <nav className="border-b">
         <div className="container flex h-16 items-center">
           <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -154,10 +144,8 @@ function SignupContent() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          {/* Logo */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
@@ -177,8 +165,7 @@ function SignupContent() {
                 Selected workflow: {workflowLabel}
               </div>
               <div className="mb-5 rounded-2xl border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
-                İlk gün için ideal kullanım:
-                {' '}proje kurallarını kaydet, tercih ettiğin stack'i belirt, aktif işleri not et ve bunu Claude Code, Cursor, Codex-style ajanlar veya kendi uygulaman için tekrar kullan.
+                İlk gün için ideal kullanım: proje kurallarını kaydet, tercih ettiğin stack'i belirt, aktif işleri not et ve bunu Claude Code, Cursor, Codex-style ajanlar veya kendi uygulaman için tekrar kullan.
               </div>
               <form onSubmit={handleSignup} className="space-y-4">
                 {error && (
@@ -192,15 +179,7 @@ function SignupContent() {
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="ornek@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="email" type="email" placeholder="ornek@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
                   </div>
                 </div>
 
@@ -208,42 +187,20 @@ function SignupContent() {
                   <Label htmlFor="password">Şifre</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="En az 8 karakter"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="password" type="password" placeholder="En az 8 karakter" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10" required />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Büyük harf, küçük harf ve rakam içermeli
-                  </p>
+                  <p className="text-xs text-muted-foreground">Büyük harf, küçük harf ve rakam içermeli</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Şifre Tekrar</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Şifrenizi tekrar girin"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="confirmPassword" type="password" placeholder="Şifrenizi tekrar girin" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10" required />
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-to-r from-primary to-violet-600 hover:opacity-90"
-                  disabled={loading}
-                >
+                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-violet-600 hover:opacity-90" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -257,17 +214,10 @@ function SignupContent() {
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <p className="text-xs text-center text-muted-foreground">
-                Hesap oluşturarak{' '}
-                <Link href="#" className="text-primary hover:underline">Kullanım Koşullarını</Link>
-                {' '}ve{' '}
-                <Link href="#" className="text-primary hover:underline">Gizlilik Politikasını</Link>
-                {' '}kabul etmiş olursunuz.
+                Hesap oluşturarak <Link href="#" className="text-primary hover:underline">Kullanım Koşullarını</Link> ve <Link href="#" className="text-primary hover:underline">Gizlilik Politikasını</Link> kabul etmiş olursunuz.
               </p>
               <div className="text-center text-sm text-muted-foreground">
-                Zaten hesabınız var mı?{' '}
-                <Link href={`/login?workflow=${workflow}`} className="text-primary hover:underline font-medium">
-                  Giriş Yap
-                </Link>
+                Zaten hesabınız var mı? <Link href={`/login?workflow=${workflow}`} className="text-primary hover:underline font-medium">Giriş Yap</Link>
               </div>
             </CardFooter>
           </Card>
