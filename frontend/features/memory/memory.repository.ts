@@ -9,6 +9,10 @@ export interface MemoryRepository {
   remove(id: string): Promise<{ id: string }>;
 }
 
+function normalizeTagFilter(tag?: string): string {
+  return tag?.trim().replace(/^#/, '').toLowerCase() ?? '';
+}
+
 function matchesFilter(memory: Memory, filters?: MemoryListFilters): boolean {
   if (!filters) return true;
 
@@ -17,6 +21,9 @@ function matchesFilter(memory: Memory, filters?: MemoryListFilters): boolean {
     const haystack = `${memory.content} ${memory.type} ${memory.tags.join(' ')}`.toLowerCase();
     if (!haystack.includes(query)) return false;
   }
+
+  const tag = normalizeTagFilter(filters.tag);
+  if (tag && !memory.tags.map((item) => item.toLowerCase()).includes(tag)) return false;
 
   if (filters.type && filters.type !== 'all' && memory.type !== filters.type) return false;
   if (filters.status && filters.status !== 'all' && memory.status !== filters.status) return false;
