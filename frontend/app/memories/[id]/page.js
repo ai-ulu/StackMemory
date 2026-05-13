@@ -1,15 +1,20 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function MemoryDetailPage({ params }) {
   return (
     <AppShell title="Memory Detail" description="Inspect one memory, its metadata and future retrieval signals.">
       <div className="space-y-6">
-        <Link href="/memories">
-          <Button variant="outline">Back to memories</Button>
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button asChild variant="outline">
+            <Link href="/memories">Back to memories</Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/brain?memory=${params.id}`}>Preview in Brain</Link>
+          </Button>
+        </div>
 
         <Card className="border-border/60 bg-card/60">
           <CardHeader>
