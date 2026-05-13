@@ -1,14 +1,8 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { mockMemories } from '@/content/mockMemories';
 import { Button } from '@/components/ui/button';
-
-const memories = [
-  ['later-phase-work', 'rule', 'Keep MCP, billing and OAuth for later phases.'],
-  ['skeleton-before-polish', 'preference', 'Prefer product skeleton first, polish later.'],
-  ['shared-agent-memory', 'decision', 'Use StackMemory as a shared memory layer for LLM agents.'],
-  ['build-product-screens', 'task', 'Build dashboard, memories, brain, agents and workflows screens.'],
-];
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function MemoriesPage() {
   return (
@@ -23,13 +17,20 @@ export default function MemoriesPage() {
         </div>
 
         <div className="grid gap-4">
-          {memories.map(([id, type, content]) => (
-            <Link key={id} href={`/memories/${id}`}>
+          {mockMemories.map((memory) => (
+            <Link key={memory.id} href={`/memories/${memory.id}`}>
               <Card className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">{type}</CardTitle>
+                  <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">{memory.type}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm">{content}</CardContent>
+                <CardContent className="space-y-3 text-sm">
+                  <p>{memory.content}</p>
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>confidence {Math.round(memory.confidence * 100)}%</span>
+                    <span>importance {Math.round(memory.importance * 100)}%</span>
+                    <span>decay {Math.round(memory.decay * 100)}%</span>
+                  </div>
+                </CardContent>
               </Card>
             </Link>
           ))}
