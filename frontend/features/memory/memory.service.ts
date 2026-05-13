@@ -19,6 +19,10 @@ export class MemoryService {
     return this.repository.list(filters);
   }
 
+  async getMemory(id: string) {
+    return this.repository.get(id);
+  }
+
   async createMemory(input: CreateMemoryInput) {
     if (!input.content.trim()) {
       throw new Error('Memory content is required.');

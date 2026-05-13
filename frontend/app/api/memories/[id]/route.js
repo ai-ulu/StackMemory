@@ -1,62 +1,62 @@
 /**
  * /api/memories/[id]
- * GET    → fetch single memory (uses list + filter, MCP has no get-by-id)
- * PATCH  → mcp.update
- * DELETE → mcp.delete (soft-delete + Vectorize cleanup, server-side)
+ * App-first route: uses the memory service layer backed by Supabase.
  */
 import { NextResponse } from 'next/server';
-import { mcp, McpError } from '@/lib/mcp/client';
-import { getAuth } from '@/lib/mcp/auth';
+import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
 
-export async function GET(request, { params }) {
+function errorResponse(error) {
+  const message = error instanceof Error ? error.message : 'Unexpected error';
+  const status = message === 'Unauthorized' ? 401 : 500;
+  return NextResponse.json({ error: message }, { status });
+}
+
+export async function GET(_request, { params }) {
   try {
-    const auth = await getAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const service = await createAuthenticatedMemoryService();
     const { id } = await params;
-    const list = await mcp.list({ namespace: auth.namespace, limit: 500 });
-    const memories = list?.memories ?? list ?? [];
-    const found = Array.isArray(memories) ? memories.find((m) => m.id === id) : null;
-    if (!found) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json(found);
-  } catch (err) {
-    const status = err instanceof McpError ? 502 : 500;
-    return NextResponse.json({ error: err.message }, { status });
+    const memory = await service.getMemory(id);
+
+    if (!memory) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ memory });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
 export async function PATCH(request, { params }) {
   try {
-    const auth = await getAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const service = await createAuthenticatedMemoryService();
     const { id } = await params;
     const body = await request.json();
-    const result = await mcp.update({
+
+    const memory = await service.updateMemory({
       id,
-      namespace: auth.namespace,
       content: body.content,
       type: body.type,
       confidence: body.confidence,
+      scope: body.scope,
+      status: body.status,
       tags: body.tags,
     });
-    return NextResponse.json(result);
-  } catch (err) {
-    const status = err instanceof McpError ? 502 : 500;
-    return NextResponse.json({ error: err.message }, { status });
+
+    return NextResponse.json({ memory });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(_request, { params }) {
   try {
-    const auth = await getAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const service = await createAuthenticatedMemoryService();
     const { id } = await params;
-    const result = await mcp.delete({ id, namespace: auth.namespace });
+    const result = await service.deprecateMemory(id);
+
     return NextResponse.json(result);
-  } catch (err) {
-    const status = err instanceof McpError ? 502 : 500;
-    return NextResponse.json({ error: err.message }, { status });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
