@@ -3,34 +3,29 @@
  * App-first route: uses the memory service layer backed by Supabase.
  */
 import { NextResponse } from 'next/server';
+import { apiError } from '@/lib/api/responses';
 import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
-
-function errorResponse(error) {
-  const message = error instanceof Error ? error.message : 'Unexpected error';
-  const status = message === 'Unauthorized' ? 401 : 500;
-  return NextResponse.json({ error: message }, { status });
-}
 
 export async function GET(_request, { params }) {
   try {
     const service = await createAuthenticatedMemoryService();
-    const { id } = await params;
+    const { id } = params;
     const memory = await service.getMemory(id);
 
     if (!memory) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      throw new Error('Not found');
     }
 
     return NextResponse.json({ memory });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
 
 export async function PATCH(request, { params }) {
   try {
     const service = await createAuthenticatedMemoryService();
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
 
     const memory = await service.updateMemory({
@@ -45,18 +40,18 @@ export async function PATCH(request, { params }) {
 
     return NextResponse.json({ memory });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
 
 export async function DELETE(_request, { params }) {
   try {
     const service = await createAuthenticatedMemoryService();
-    const { id } = await params;
+    const { id } = params;
     const result = await service.deprecateMemory(id);
 
     return NextResponse.json(result);
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
