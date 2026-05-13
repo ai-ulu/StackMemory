@@ -21,6 +21,7 @@ export async function GET(request) {
       type: searchParams.get('type') || 'all',
       status: searchParams.get('status') || 'all',
       scope: searchParams.get('scope') || 'all',
+      tag: searchParams.get('tag') || undefined,
       limit: Number(searchParams.get('limit')) || 100,
     });
 
