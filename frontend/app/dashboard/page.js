@@ -3,7 +3,29 @@ import { Brain, Database, GitBranch, ShieldCheck, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { memoryService } from '@/features/memory/memory.service';
+import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
+
+const emptySummary = {
+  total: 0,
+  active: 0,
+  deprecated: 0,
+  avgConfidence: 0,
+  byType: {},
+};
+
+async function getOverviewData() {
+  try {
+    const service = await createAuthenticatedMemoryService();
+    const [summary, memories] = await Promise.all([
+      service.getSummary(),
+      service.listMemories({ limit: 4 }),
+    ]);
+
+    return { summary, memories };
+  } catch {
+    return { summary: emptySummary, memories: [] };
+  }
+}
 
 function StatCard({ title, value, description, icon: Icon }) {
   return (
@@ -21,8 +43,7 @@ function StatCard({ title, value, description, icon: Icon }) {
 }
 
 export default async function DashboardPage() {
-  const summary = await memoryService.getSummary();
-  const memories = await memoryService.listMemories({ limit: 4 });
+  const { summary, memories } = await getOverviewData();
 
   return (
     <>
@@ -48,7 +69,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Memories" value={summary.total} description="Overview uses mock service until dashboard auth binding lands" icon={Database} />
+        <StatCard title="Total Memories" value={summary.total} description="Real workspace memory count from Supabase" icon={Database} />
         <StatCard title="Active" value={summary.active} description="Usable memories in the current workspace" icon={ShieldCheck} />
         <StatCard title="Avg Confidence" value={`${Math.round(summary.avgConfidence * 100)}%`} description="Service-level summary calculation" icon={Sparkles} />
         <StatCard title="Brain + Graph" value="MVP" description="Available through the product shell navigation" icon={Brain} />
@@ -66,7 +87,7 @@ export default async function DashboardPage() {
               'Supabase memory adapter eklendi: API route akışı MCP yerine app service üzerinden ilerliyor.',
               'Memory CRUD UI eklendi: listele, oluştur, düzenle ve deprecate et.',
               'Brain + Graph MVP eklendi: memory service üstünden analiz ve ilişki görselleştirme başladı.',
-              'Product shell eklendi: sidebar, topbar ve ortak dashboard navigasyonu.',
+              'MCP legacy dosyası pasifleştirildi; aktif MCP app-adapter üzerinden app API’ye bağlanıyor.',
             ].map((item, index) => (
               <div key={item} className="flex gap-3 rounded-2xl border border-border/60 bg-background/60 p-4">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -81,10 +102,10 @@ export default async function DashboardPage() {
         <Card className="border-border/60 bg-card/60">
           <CardHeader>
             <CardTitle>Recent memory signals</CardTitle>
-            <CardDescription>Dashboard overview için ilk ürün sinyalleri.</CardDescription>
+            <CardDescription>Supabase üzerinden gelen son workspace hafızaları.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {memories.map((memory) => (
+            {memories.length ? memories.map((memory) => (
               <div key={memory.id} className="rounded-2xl border border-border/60 bg-background/60 p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <Badge variant="secondary">{memory.type}</Badge>
@@ -92,7 +113,11 @@ export default async function DashboardPage() {
                 </div>
                 <p className="line-clamp-2 text-sm text-muted-foreground">{memory.content}</p>
               </div>
-            ))}
+            )) : (
+              <div className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-8 text-center text-sm text-muted-foreground">
+                Henüz memory yok. İlk kayıtları Memory Explorer ekranından oluşturabilirsin.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -104,8 +129,8 @@ export default async function DashboardPage() {
               <GitBranch className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Next PR</CardTitle>
-              <CardDescription>Settings + Billing: memory preferences, usage cards and plan surface.</CardDescription>
+              <CardTitle>Next pass</CardTitle>
+              <CardDescription>Build/deploy config, schema docs and environment checklist.</CardDescription>
             </div>
           </div>
         </CardHeader>
