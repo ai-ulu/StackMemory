@@ -1,31 +1,21 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { requireUser } from '@/features/auth/require-user';
 import { PRICING_PLANS } from '@/lib/billing';
+import { apiError } from '@/lib/api/responses';
 
 function getPlanId() {
   const value = process.env.NEXT_PUBLIC_DEFAULT_PLAN || 'free';
   return PRICING_PLANS[value] ? value : 'free';
 }
 
-function errorResponse(error) {
-  const message = error instanceof Error ? error.message : 'Unexpected error';
-  const status = message === 'Unauthorized' ? 401 : 500;
-  return NextResponse.json({ error: message }, { status });
-}
-
 export async function GET() {
   try {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error || !data.user) {
-      throw new Error('Unauthorized');
-    }
+    const { supabase, user } = await requireUser();
 
     const { count: memoryCount, error: memoryError } = await supabase
       .from('memories')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', data.user.id)
+      .eq('user_id', user.id)
       .eq('status', 'active');
 
     if (memoryError) {
@@ -50,6 +40,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }

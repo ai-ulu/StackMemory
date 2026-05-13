@@ -1,22 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { requireUser } from '@/features/auth/require-user';
 import { makeMemorySettingsLogic } from '@/features/settings/settings.logic';
+import { apiError } from '@/lib/api/responses';
 
 async function getLogic() {
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error || !data.user) {
-    throw new Error('Unauthorized');
-  }
-
-  return makeMemorySettingsLogic(supabase, data.user.id);
-}
-
-function errorResponse(error) {
-  const message = error instanceof Error ? error.message : 'Unexpected error';
-  const status = message === 'Unauthorized' ? 401 : 500;
-  return NextResponse.json({ error: message }, { status });
+  const { supabase, user } = await requireUser();
+  return makeMemorySettingsLogic(supabase, user.id);
 }
 
 export async function GET() {
@@ -25,7 +14,7 @@ export async function GET() {
     const settings = await logic.getSettings();
     return NextResponse.json({ settings });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
 
@@ -48,6 +37,6 @@ export async function PUT(request) {
 
     return NextResponse.json({ settings });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }

@@ -1,0 +1,8 @@
+name = "stackmemory-mcp-app-adapter"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "./dist"
+
+# App-first MCP adapter settings.
+# Set these in Cloudflare Pages project environment variables/secrets.
+# STACKMEMORY_APP_URL = "https://your-stackmemory-app.example.com"
+# STACKMEMORY_APP_TOKEN = "optional-service-token-or-forwarded-bearer-token"
