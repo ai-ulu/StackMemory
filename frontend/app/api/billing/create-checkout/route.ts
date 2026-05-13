@@ -9,9 +9,7 @@ function getStripeClient() {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
 
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-12-15.clover'
-  })
+  return new Stripe(process.env.STRIPE_SECRET_KEY)
 }
 
 export async function POST(req: NextRequest) {
@@ -34,7 +32,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
 
-    // Get price ID from environment
     const priceId = plan_id === 'pro'
       ? process.env.STRIPE_PRO_PRICE_ID
       : process.env.STRIPE_TEAM_PRICE_ID
@@ -45,7 +42,6 @@ export async function POST(req: NextRequest) {
 
     const appBaseUrl = getAppBaseUrl(req)
 
-    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
       line_items: [
@@ -55,8 +51,8 @@ export async function POST(req: NextRequest) {
         }
       ],
       mode: 'subscription',
-      success_url: `${appBaseUrl}/settings/billing?success=true`,
-      cancel_url: `${appBaseUrl}/pricing`,
+      success_url: `${appBaseUrl}/dashboard/billing?success=true`,
+      cancel_url: `${appBaseUrl}/dashboard/billing?canceled=true`,
       metadata: {
         user_id: user.id,
         plan_id
