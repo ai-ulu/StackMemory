@@ -1,73 +1,64 @@
 /**
  * /api/memories
- * GET  → mcp.list   (list memories in current user's namespace)
- * POST → mcp.store  (create memory; PII scrubbing handled server-side)
- *
- * Refactored: previously wrote to Supabase `memories` table. Now delegates
- * to the MCP server (Cloudflare D1 + Vectorize) — single source of truth.
+ * App-first route: uses the memory service layer backed by Supabase.
+ * MCP is parked and will return later as an adapter over this service boundary.
  */
 import { NextResponse } from 'next/server';
-import { mcp, McpError } from '@/lib/mcp/client';
-import { getAuth } from '@/lib/mcp/auth';
+import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
 
 const ALLOWED_TYPES = [
   'identity', 'preference', 'fact', 'project',
   'rule', 'decision', 'task', 'insight',
 ];
 
+function errorResponse(error) {
+  const message = error instanceof Error ? error.message : 'Unexpected error';
+  const status = message === 'Unauthorized' ? 401 : 500;
+  return NextResponse.json({ error: message }, { status });
+}
+
 export async function GET(request) {
   try {
-    const auth = await getAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const service = await createAuthenticatedMemoryService();
     const { searchParams } = new URL(request.url);
-    const result = await mcp.list({
-      namespace: auth.namespace,
-      type: searchParams.get('type') || undefined,
+    const memories = await service.listMemories({
+      query: searchParams.get('q') || undefined,
+      type: searchParams.get('type') || 'all',
+      status: searchParams.get('status') || 'all',
+      scope: searchParams.get('scope') || 'all',
       limit: Number(searchParams.get('limit')) || 100,
-      offset: Number(searchParams.get('offset')) || 0,
     });
 
-    return NextResponse.json(result?.memories ?? result ?? []);
-  } catch (err) {
-    const status = err instanceof McpError ? 502 : 500;
-    return NextResponse.json({ error: err.message }, { status });
+    return NextResponse.json({ memories });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
 export async function POST(request) {
   try {
-    const auth = await getAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const service = await createAuthenticatedMemoryService();
     const body = await request.json();
-    const {
-      content,
-      type = 'fact',
-      confidence = 0.8,
-      tags,
-      importance_score,
-    } = body;
+    const type = body.type || 'fact';
 
-    if (!content) {
+    if (!body.content) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
+
     if (!ALLOWED_TYPES.includes(type)) {
       return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
     }
 
-    const result = await mcp.store({
-      content,
+    const memory = await service.createMemory({
+      content: body.content,
       type,
-      confidence: Math.max(0, Math.min(1, confidence)),
-      namespace: auth.namespace,
-      tags,
-      importance_score,
+      confidence: body.confidence,
+      scope: body.scope,
+      tags: body.tags,
     });
 
-    return NextResponse.json(result);
-  } catch (err) {
-    const status = err instanceof McpError ? 502 : 500;
-    return NextResponse.json({ error: err.message }, { status });
+    return NextResponse.json({ memory }, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
