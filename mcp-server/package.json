@@ -1,14 +1,12 @@
 {
   "name": "@stackmemory/mcp-server-cloudflare",
   "version": "2.0.0",
-  "description": "StackMemory MCP Server v2.0.0 - AI Memory Management with Time Query, Clustering, Batch Ops",
+  "description": "StackMemory app-first MCP adapter for forwarding MCP calls to the main application API.",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev ./dist --d1=DB",
-    "build": "esbuild src/index.ts --bundle --outdir=dist --format=esm --target=esnext --sourcemap",
-    "build:app-adapter": "esbuild src/app-adapter.ts --bundle --outdir=dist --format=esm --target=esnext --sourcemap",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name=stackmemory-mcp",
-    "deploy:app-adapter": "npm run build:app-adapter && wrangler pages deploy dist --project-name=stackmemory-mcp-app-adapter"
+    "dev": "npm run build && wrangler pages dev ./dist",
+    "build": "esbuild src/app-adapter.ts --bundle --outdir=dist --format=esm --target=esnext --sourcemap",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=stackmemory-mcp-app-adapter"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20241205.0"
