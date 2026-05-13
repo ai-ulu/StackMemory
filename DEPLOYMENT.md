@@ -73,6 +73,8 @@ Optional:
 OPENAI_API_KEY=
 OPENAI_BASE_URL=https://api.openai.com/v1
 STRIPE_SECRET_KEY=
+STRIPE_PRO_PRICE_ID=
+STRIPE_TEAM_PRICE_ID=
 NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
 NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID=
 STRIPE_WEBHOOK_SECRET=
@@ -88,16 +90,18 @@ Run the main schema in Supabase SQL Editor:
 frontend/supabase/schema.sql
 ```
 
-Then run migrations:
+Then run migrations in order:
 
 ```txt
 frontend/supabase/migrations/20260513_memory_links.sql
+frontend/supabase/migrations/20260513_memory_tags.sql
 ```
 
-Core tables used by the current app shell:
+Core tables/columns used by the current app shell:
 
 ```txt
 memories
+memories.tags
 memory_settings
 memory_versions
 brain_config
@@ -206,7 +210,7 @@ get_memory_graph
 After app startup and Supabase login:
 
 1. Open `/dashboard`.
-2. Create a memory in `/dashboard/memories`.
+2. Create a memory in `/dashboard/memories` with tags.
 3. Confirm the memory appears in `/dashboard` recent signals.
 4. Open `/dashboard/brain` and check status/simulation.
 5. Open `/dashboard/graph` and confirm graph data renders.
@@ -218,9 +222,9 @@ After app startup and Supabase login:
 ## 7. Known next steps
 
 ```txt
-1. Add CI workflow for frontend build/test.
-2. Add CI workflow for MCP adapter build.
-3. Add subscription table + Stripe webhook persistence.
-4. Connect memory_links to graph write/read flows.
+1. Read GitHub Actions logs and fix any build failures.
+2. Add subscription table + Stripe webhook persistence.
+3. Connect memory_links to graph write/read flows.
+4. Add tag filtering to Memory Explorer.
 5. Replace fallback mock repository only after tests cover Supabase paths.
 ```
