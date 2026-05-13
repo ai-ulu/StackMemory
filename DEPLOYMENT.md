@@ -165,7 +165,7 @@ STACKMEMORY_APP_TOKEN=
 App API:
 
 ```txt
-GET    /api/memories
+GET    /api/memories?q=&type=&status=&scope=&tag=&limit=
 POST   /api/memories
 GET    /api/memories/:id
 PATCH  /api/memories/:id
@@ -177,6 +177,17 @@ GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+```
+
+Memory list filters:
+
+```txt
+q       content search
+type    identity | preference | fact | project | rule | decision | task | insight
+status  active | pending | deprecated
+scope   private | team | org
+tag     exact normalized tag match without #
+limit   max rows, default 100 in API UI calls
 ```
 
 Dashboard UI:
@@ -211,11 +222,12 @@ After app startup and Supabase login:
 
 1. Open `/dashboard`.
 2. Create a memory in `/dashboard/memories` with tags.
-3. Confirm the memory appears in `/dashboard` recent signals.
-4. Open `/dashboard/brain` and check status/simulation.
-5. Open `/dashboard/graph` and confirm graph data renders.
-6. Open `/dashboard/settings`, change one setting, save, refresh.
-7. Open `/dashboard/billing`, confirm memory usage count updates.
+3. Click one tag pill and confirm the list filters by that tag.
+4. Confirm the memory appears in `/dashboard` recent signals.
+5. Open `/dashboard/brain` and check status/simulation.
+6. Open `/dashboard/graph` and confirm graph data renders.
+7. Open `/dashboard/settings`, change one setting, save, refresh.
+8. Open `/dashboard/billing`, confirm memory usage count updates.
 
 ---
 
@@ -225,6 +237,6 @@ After app startup and Supabase login:
 1. Read GitHub Actions logs and fix any build failures.
 2. Add subscription table + Stripe webhook persistence.
 3. Connect memory_links to graph write/read flows.
-4. Add tag filtering to Memory Explorer.
+4. Add richer tag suggestions/autocomplete to Memory Explorer.
 5. Replace fallback mock repository only after tests cover Supabase paths.
 ```
