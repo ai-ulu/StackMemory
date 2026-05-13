@@ -31,6 +31,7 @@ export type MemoryListFilters = {
   type?: MemoryType | 'all';
   status?: MemoryStatus | 'all';
   scope?: MemoryScope | 'all';
+  tag?: string;
   limit?: number;
 };
 
