@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
 import { MetricCard } from '@/components/app/MetricCard';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const metrics = [
@@ -24,6 +26,21 @@ export default function UsagePage() {
           {metrics.map(([label, value, hint]) => (
             <MetricCard key={label} label={label} value={value} hint={hint} />
           ))}
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-3xl border border-border/60 bg-card/60 p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="font-medium">Optimize next agent run</div>
+            <p className="mt-1 text-sm text-muted-foreground">Preview memory selection before increasing token volume or changing retention policy.</p>
+          </div>
+          <div className="flex gap-3">
+            <Button asChild variant="outline">
+              <Link href="/brain">Open Brain</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/settings">Memory policy</Link>
+            </Button>
+          </div>
         </div>
 
         <Card className="border-border/60 bg-card/60">
