@@ -3,13 +3,7 @@ import { AppShell } from '@/components/app/AppShell';
 import { MetricCard } from '@/components/app/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const metrics = [
-  ['Memories', '1,248', 'Stored project facts and rules'],
-  ['Agents', '6', 'Connected workflow targets'],
-  ['Context Health', '82%', 'Ready for compiler preview'],
-  ['Token Saved', '41k', 'Estimated repeated context avoided'],
-];
+import { mockMemories } from '@/content/mockMemories';
 
 const actions = [
   ['Create or inspect memories', '/memories', 'Add project rules, decisions and active work.'],
@@ -17,14 +11,14 @@ const actions = [
   ['Review usage and cost', '/usage', 'Track token pressure before billing work starts.'],
 ];
 
-const recent = [
-  ['Prefer small pull requests and visible diffs', '/memories/prefer-small-prs'],
-  ['Claude Code is primary coding workflow', '/memories/claude-code-primary'],
-  ['StackMemory should become shared agent memory', '/memories/shared-agent-memory'],
-  ['MCP, billing and OAuth are later-phase work', '/memories/later-phase-work'],
-];
-
 export default function DashboardPage() {
+  const metrics = [
+    ['Memories', String(mockMemories.length), 'Stored project facts and rules'],
+    ['Agents', '6', 'Connected workflow targets'],
+    ['Context Health', '82%', 'Ready for compiler preview'],
+    ['Token Saved', '41k', 'Estimated repeated context avoided'],
+  ];
+
   return (
     <AppShell title="Dashboard" description="High-level product command center for your shared memory layer.">
       <div className="space-y-8">
@@ -57,9 +51,9 @@ export default function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              {recent.map(([item, href]) => (
-                <Link key={href} href={href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
-                  {item}
+              {mockMemories.map((memory) => (
+                <Link key={memory.id} href={`/memories/${memory.id}`} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
+                  {memory.content}
                 </Link>
               ))}
             </CardContent>
