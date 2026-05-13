@@ -172,7 +172,9 @@ PATCH  /api/memories/:id
 DELETE /api/memories/:id
 GET    /api/brain/status
 POST   /api/brain/simulate
-GET    /api/graph
+GET    /api/graph?type=&status=&scope=&tag=&limit=
+POST   /api/graph
+DELETE /api/graph?id=
 GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
@@ -188,6 +190,18 @@ status  active | pending | deprecated
 scope   private | team | org
 tag     exact normalized tag match without #
 limit   max rows, default 100 in API UI calls
+```
+
+Graph link POST body:
+
+```json
+{
+  "sourceMemoryId": "memory-a-id",
+  "targetMemoryId": "memory-b-id",
+  "relationshipType": "supports",
+  "weight": 0.8,
+  "reason": "Same project context"
+}
 ```
 
 Dashboard UI:
@@ -221,13 +235,16 @@ get_memory_graph
 After app startup and Supabase login:
 
 1. Open `/dashboard`.
-2. Create a memory in `/dashboard/memories` with tags.
+2. Create at least two memories in `/dashboard/memories` with tags.
 3. Click one tag pill and confirm the list filters by that tag.
 4. Confirm the memory appears in `/dashboard` recent signals.
 5. Open `/dashboard/brain` and check status/simulation.
 6. Open `/dashboard/graph` and confirm graph data renders.
-7. Open `/dashboard/settings`, change one setting, save, refresh.
-8. Open `/dashboard/billing`, confirm memory usage count updates.
+7. Use Create memory link to connect two memories.
+8. Confirm graph source changes to `persisted` / `memory_links`.
+9. Select one linked node and delete the persisted edge.
+10. Open `/dashboard/settings`, change one setting, save, refresh.
+11. Open `/dashboard/billing`, confirm memory usage count updates.
 
 ---
 
@@ -236,7 +253,7 @@ After app startup and Supabase login:
 ```txt
 1. Read GitHub Actions logs and fix any build failures.
 2. Add subscription table + Stripe webhook persistence.
-3. Connect memory_links to graph write/read flows.
+3. Add graph search/filter controls to Graph UI.
 4. Add richer tag suggestions/autocomplete to Memory Explorer.
 5. Replace fallback mock repository only after tests cover Supabase paths.
 ```
