@@ -21,9 +21,13 @@ type MemoryRow = {
 
 function normalizeTags(tags?: string[]): string[] {
   return Array.from(new Set((tags ?? [])
-    .map((tag) => tag.trim())
+    .map((tag) => tag.trim().replace(/^#/, ''))
     .filter(Boolean)
     .map((tag) => tag.toLowerCase())));
+}
+
+function normalizeTagFilter(tag?: string): string {
+  return tag?.trim().replace(/^#/, '').toLowerCase() ?? '';
 }
 
 function mapMemoryRow(row: MemoryRow): Memory {
@@ -59,6 +63,11 @@ export class SupabaseMemoryRepository implements MemoryRepository {
 
     if (filters?.query?.trim()) {
       query = query.ilike('content', `%${filters.query.trim()}%`);
+    }
+
+    const tag = normalizeTagFilter(filters?.tag);
+    if (tag) {
+      query = query.contains('tags', [tag]);
     }
 
     if (filters?.type && filters.type !== 'all') {
