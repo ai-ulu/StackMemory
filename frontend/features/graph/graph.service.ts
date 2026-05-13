@@ -19,6 +19,7 @@ export type MemoryGraphEdge = {
 export type MemoryGraph = {
   nodes: MemoryGraphNode[];
   edges: MemoryGraphEdge[];
+  source: 'persisted' | 'inferred';
 };
 
 function getSharedTags(a: Memory, b: Memory): string[] {
@@ -26,15 +27,17 @@ function getSharedTags(a: Memory, b: Memory): string[] {
   return (b.tags || []).filter((tag) => aTags.has(tag));
 }
 
-export function buildMemoryGraph(memories: Memory[]): MemoryGraph {
-  const nodes = memories.map((memory) => ({
+export function buildMemoryNodes(memories: Memory[]): MemoryGraphNode[] {
+  return memories.map((memory) => ({
     id: memory.id,
     label: memory.content.length > 80 ? `${memory.content.slice(0, 80)}...` : memory.content,
     type: memory.type,
     confidence: memory.confidence,
     status: memory.status,
   }));
+}
 
+export function inferMemoryEdges(memories: Memory[]): MemoryGraphEdge[] {
   const edges: MemoryGraphEdge[] = [];
 
   for (let i = 0; i < memories.length; i += 1) {
@@ -57,5 +60,15 @@ export function buildMemoryGraph(memories: Memory[]): MemoryGraph {
     }
   }
 
-  return { nodes, edges: edges.slice(0, 80) };
+  return edges.slice(0, 80);
+}
+
+export function buildMemoryGraph(memories: Memory[], persistedEdges: MemoryGraphEdge[] = []): MemoryGraph {
+  const nodes = buildMemoryNodes(memories);
+
+  if (persistedEdges.length) {
+    return { nodes, edges: persistedEdges.slice(0, 200), source: 'persisted' };
+  }
+
+  return { nodes, edges: inferMemoryEdges(memories), source: 'inferred' };
 }
