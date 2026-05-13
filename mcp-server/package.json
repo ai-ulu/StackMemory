@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler pages dev ./dist --d1=DB",
     "build": "esbuild src/index.ts --bundle --outdir=dist --format=esm --target=esnext --sourcemap",
+    "typecheck": "tsc --noEmit",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=stackmemory-mcp"
   },
   "dependencies": {
