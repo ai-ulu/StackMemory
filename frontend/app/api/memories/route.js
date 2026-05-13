@@ -4,18 +4,13 @@
  * MCP is parked and will return later as an adapter over this service boundary.
  */
 import { NextResponse } from 'next/server';
+import { apiBadRequest, apiError } from '@/lib/api/responses';
 import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
 
 const ALLOWED_TYPES = [
   'identity', 'preference', 'fact', 'project',
   'rule', 'decision', 'task', 'insight',
 ];
-
-function errorResponse(error) {
-  const message = error instanceof Error ? error.message : 'Unexpected error';
-  const status = message === 'Unauthorized' ? 401 : 500;
-  return NextResponse.json({ error: message }, { status });
-}
 
 export async function GET(request) {
   try {
@@ -31,7 +26,7 @@ export async function GET(request) {
 
     return NextResponse.json({ memories });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
 
@@ -42,11 +37,11 @@ export async function POST(request) {
     const type = body.type || 'fact';
 
     if (!body.content) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+      return apiBadRequest('Content is required');
     }
 
     if (!ALLOWED_TYPES.includes(type)) {
-      return NextResponse.json({ error: 'Invalid memory type' }, { status: 400 });
+      return apiBadRequest('Invalid memory type');
     }
 
     const memory = await service.createMemory({
@@ -59,6 +54,6 @@ export async function POST(request) {
 
     return NextResponse.json({ memory }, { status: 201 });
   } catch (error) {
-    return errorResponse(error);
+    return apiError(error);
   }
 }
