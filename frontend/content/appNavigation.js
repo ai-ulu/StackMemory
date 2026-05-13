@@ -5,5 +5,7 @@ export const appNavigation = [
   { href: '/agents', label: 'Agents', description: 'Tool connections' },
   { href: '/workflows', label: 'Workflows', description: 'Reusable flows' },
   { href: '/integrations', label: 'Integrations', description: 'API and builder docs' },
+  { href: '/usage', label: 'Usage', description: 'Tokens and cost signals' },
+  { href: '/docs', label: 'Docs', description: 'Quick start guides' },
   { href: '/settings', label: 'Settings', description: 'Workspace controls' },
 ];
