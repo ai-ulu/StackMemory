@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CreateMemoryInput, Memory, MemoryListFilters, UpdateMemoryInput } from './memory.types';
 import type { MemoryRepository } from './memory.repository';
 
-const MEMORY_COLUMNS = 'id, content, type, confidence, status, scope, access_count, decay_factor, created_at, updated_at, last_accessed_at';
+const MEMORY_COLUMNS = 'id, content, type, confidence, status, scope, tags, access_count, decay_factor, created_at, updated_at, last_accessed_at';
 
 type MemoryRow = {
   id: string;
@@ -11,12 +11,20 @@ type MemoryRow = {
   confidence: number | null;
   status: Memory['status'] | null;
   scope: Memory['scope'] | null;
+  tags: string[] | null;
   access_count: number | null;
   decay_factor: number | null;
   created_at: string;
   updated_at: string;
   last_accessed_at: string | null;
 };
+
+function normalizeTags(tags?: string[]): string[] {
+  return Array.from(new Set((tags ?? [])
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => tag.toLowerCase())));
+}
 
 function mapMemoryRow(row: MemoryRow): Memory {
   return {
@@ -26,7 +34,7 @@ function mapMemoryRow(row: MemoryRow): Memory {
     confidence: row.confidence ?? 0.8,
     status: row.status ?? 'active',
     scope: row.scope ?? 'private',
-    tags: [],
+    tags: row.tags ?? [],
     accessCount: row.access_count ?? 0,
     decayFactor: row.decay_factor ?? 1,
     createdAt: row.created_at,
@@ -99,6 +107,7 @@ export class SupabaseMemoryRepository implements MemoryRepository {
         confidence: input.confidence ?? 0.8,
         status: 'active',
         scope: input.scope ?? 'private',
+        tags: normalizeTags(input.tags),
         access_count: 0,
         decay_factor: 1,
       })
@@ -120,6 +129,7 @@ export class SupabaseMemoryRepository implements MemoryRepository {
     if (input.confidence !== undefined) patch.confidence = input.confidence;
     if (input.scope !== undefined) patch.scope = input.scope;
     if (input.status !== undefined) patch.status = input.status;
+    if (input.tags !== undefined) patch.tags = normalizeTags(input.tags);
     patch.updated_at = new Date().toISOString();
 
     const { data, error } = await this.supabase
