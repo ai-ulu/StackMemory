@@ -1,0 +1,80 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      STACKMEMORY_LOCAL_MODE: "false"
+      NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE: "false"
+      NEXT_PUBLIC_DEFAULT_PLAN: free
+      OPENAI_API_KEY: test-openai-key
+      OPENAI_BASE_URL: https://api.openai.com/v1
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_pro_placeholder
+      NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID: price_team_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm run test --if-present
+
+      - name: Build
+        run: npm run build
+
+  mcp:
+    name: MCP adapter build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp-server
+    env:
+      STACKMEMORY_APP_URL: http://localhost:3000
+      STACKMEMORY_APP_TOKEN: test-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build adapter
+        run: npm run build
