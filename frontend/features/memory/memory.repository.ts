@@ -3,6 +3,7 @@ import type { CreateMemoryInput, Memory, MemoryListFilters, UpdateMemoryInput } 
 
 export interface MemoryRepository {
   list(filters?: MemoryListFilters): Promise<Memory[]>;
+  get(id: string): Promise<Memory | null>;
   create(input: CreateMemoryInput): Promise<Memory>;
   update(input: UpdateMemoryInput): Promise<Memory>;
   remove(id: string): Promise<{ id: string }>;
@@ -33,6 +34,10 @@ export class MockMemoryRepository implements MemoryRepository {
     return this.memories
       .filter((memory) => matchesFilter(memory, filters))
       .slice(0, limit);
+  }
+
+  async get(id: string): Promise<Memory | null> {
+    return this.memories.find((memory) => memory.id === id) ?? null;
   }
 
   async create(input: CreateMemoryInput): Promise<Memory> {
