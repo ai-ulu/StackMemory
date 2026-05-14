@@ -11,7 +11,7 @@ Give your AI the ability to remember — across sessions, projects, and tools.
 [![Runtime](https://img.shields.io/badge/Runtime-Cloudflare_Workers-orange?style=for-the-badge)](https://workers.cloudflare.com)
 [![License](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](LICENSE)
 
-[Quick Start](#-quick-start) · [Tools](#-tools-21) · [🧠 Ulu-Brain](#-ulu-brain-cognitive-layer) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
+[Quick Start](#-quick-start) · [Product Dashboard](#-product-dashboard-mvp) · [Tools](#-tools-21) · [🧠 Ulu-Brain](#-ulu-brain-cognitive-layer) · [Python SDK](#-python-sdk) · [Architecture](#-architecture) · [Self-Host](#-self-hosting)
 
 </div>
 
@@ -32,6 +32,44 @@ Windsurf ────────┼──→ StackMemory MCP ──→ Cloudfla
 VS Code ─────────┤         │
 Custom Agent ────┘    21 tools + cognitive layer, <50ms edge latency
 ```
+
+---
+
+## 🧭 Product Dashboard MVP
+
+The Next.js frontend now includes a productized, navigable dashboard skeleton for turning StackMemory into a shared memory operating layer for LLM agents, coding tools, automation systems and custom AI apps.
+
+### Core app routes
+
+| Route | Purpose |
+|------|---------|
+| `/dashboard` | Product command center with metrics, memory signals and demo shortcuts |
+| `/memories` | Memory explorer for reusable context records |
+| `/memories/new` | Create-memory skeleton form |
+| `/memories/[id]` | Memory detail with confidence, importance, decay and source metadata |
+| `/brain` | Context compiler preview with selected memory/workflow/agent target support |
+| `/agents` | Agent target catalog |
+| `/agents/[id]` | Agent detail, recommended memory shape and workflow links |
+| `/workflows` | Reusable memory workflow templates |
+| `/workflows/[id]` | Workflow detail and Brain preview handoff |
+| `/integrations` | Integration catalog for MCP, REST API, n8n and SDK |
+| `/integrations/[id]` | Integration detail, setup steps and docs handoff |
+| `/docs?section=mcp/api/n8n/sdk` | Query-aware setup docs |
+| `/usage` | Token, retrieval and cost planning signals |
+| `/settings` | Workspace and policy controls |
+
+### MVP demo flow
+
+```txt
+Landing → Signup/Login → Dashboard
+Dashboard → Memories → Memory Detail → Brain
+Dashboard → Agents → Agent Detail → Integrations → Integration Detail → Docs
+Dashboard → Workflows → Workflow Detail → Brain
+Dashboard → Usage → Brain / Settings
+Memories → Create Memory → Mock detail preview
+```
+
+> The current dashboard is a navigable MVP/demo layer backed by shared mock models. Real activation starts with memory CRUD, real search and the context compiler wired to the MCP server.
 
 ---
 
