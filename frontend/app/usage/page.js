@@ -3,13 +3,7 @@ import { AppShell } from '@/components/app/AppShell';
 import { MetricCard } from '@/components/app/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const metrics = [
-  ['Context compiled', '312', 'Agent runs with memory context'],
-  ['Estimated tokens', '184k', 'Monthly memory context volume'],
-  ['Token savings', '41k', 'Repeated prompt context avoided'],
-  ['Projected cost', '$3.84', 'Placeholder estimate for planning'],
-];
+import { listMemories } from '@/lib/memories/service';
 
 const notes = [
   'Track memory retrieval cost before adding billing.',
@@ -18,7 +12,25 @@ const notes = [
   'Later connect real provider pricing and usage logs.',
 ];
 
-export default function UsagePage() {
+function estimateTokens(memories) {
+  return memories.reduce((sum, memory) => sum + Math.ceil(memory.content.length / 4), 0);
+}
+
+function estimateCost(tokens) {
+  return `$${((tokens / 1000) * 0.002).toFixed(4)}`;
+}
+
+export default async function UsagePage() {
+  const memories = await listMemories({ limit: 100 });
+  const tokens = estimateTokens(memories);
+  const savings = tokens * 3;
+  const metrics = [
+    ['Memories indexed', String(memories.length), 'Records available for context selection'],
+    ['Estimated tokens', tokens.toLocaleString(), 'Memory context volume from current records'],
+    ['Token savings', savings.toLocaleString(), 'Repeated prompt context avoided'],
+    ['Projected cost', estimateCost(tokens), 'Placeholder estimate for planning'],
+  ];
+
   return (
     <AppShell title="Usage" description="Token, retrieval and cost planning signals for memory-powered agent runs.">
       <div className="space-y-8">
