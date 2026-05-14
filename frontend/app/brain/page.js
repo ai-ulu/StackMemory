@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { getContextPreviewMemories } from '@/content/mockMemories';
+import { SelectedTargetCard } from '@/components/app/SelectedTargetCard';
+import { getAgentById } from '@/content/mockAgents';
+import { getContextPreviewMemories, getMemoryById } from '@/content/mockMemories';
+import { getWorkflowById } from '@/content/mockWorkflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -11,12 +14,60 @@ const sections = [
   ['Memory selection', 'Score by relevance, importance, decay and workflow fit'],
 ];
 
-export default function BrainPage() {
+function getSelectedTarget(searchParams) {
+  const memoryId = searchParams?.memory;
+  const workflowId = searchParams?.workflow;
+  const agentId = searchParams?.agent;
+
+  if (memoryId) {
+    const memory = getMemoryById(memoryId);
+    return {
+      label: 'Selected memory',
+      title: memory?.content || memoryId,
+      description: memory ? `Type: ${memory.type} · Source: ${memory.source}` : 'Memory route is ready for API-backed records.',
+      href: `/memories/${memoryId}`,
+    };
+  }
+
+  if (workflowId) {
+    const workflow = getWorkflowById(workflowId);
+    return {
+      label: 'Selected workflow',
+      title: workflow?.name || workflowId,
+      description: workflow?.description || 'Workflow route is ready for API-backed records.',
+      href: `/workflows/${workflowId}`,
+    };
+  }
+
+  if (agentId) {
+    const agent = getAgentById(agentId);
+    return {
+      label: 'Selected agent',
+      title: agent?.name || agentId,
+      description: agent?.description || 'Agent route is ready for API-backed records.',
+      href: `/agents/${agentId}`,
+    };
+  }
+
+  return null;
+}
+
+export default function BrainPage({ searchParams }) {
   const preview = getContextPreviewMemories(3);
+  const selectedTarget = getSelectedTarget(searchParams);
 
   return (
     <AppShell title="Brain" description="Preview the context compiler and future quantum-inspired memory selector.">
       <div className="space-y-6">
+        {selectedTarget && (
+          <SelectedTargetCard
+            label={selectedTarget.label}
+            title={selectedTarget.title}
+            description={selectedTarget.description}
+            href={selectedTarget.href}
+          />
+        )}
+
         <div className="grid gap-6 lg:grid-cols-2">
           {sections.map(([title, body]) => (
             <Card key={title} className="border-border/60 bg-card/60">
