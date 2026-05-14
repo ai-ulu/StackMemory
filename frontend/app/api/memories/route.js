@@ -4,8 +4,10 @@
  * MCP is parked and will return later as an adapter over this service boundary.
  */
 import { NextResponse } from 'next/server';
-import { apiBadRequest, apiError } from '@/lib/api/responses';
+import { apiBadRequest, apiError, apiPaymentRequired } from '@/lib/api/responses';
 import { createAuthenticatedMemoryService } from '@/features/memory/memory.api';
+import { requireUser } from '@/features/auth/require-user';
+import { getMemoryEntitlement } from '@/features/billing/billing.entitlements';
 
 const ALLOWED_TYPES = [
   'identity', 'preference', 'fact', 'project',
@@ -33,6 +35,16 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const { supabase, user } = await requireUser();
+    const entitlement = await getMemoryEntitlement(supabase, user.id);
+
+    if (!entitlement.canCreateMemory) {
+      return apiPaymentRequired('Memory limit reached for current plan', {
+        code: 'memory_limit_reached',
+        entitlement,
+      });
+    }
+
     const service = await createAuthenticatedMemoryService();
     const body = await request.json();
     const type = body.type || 'fact';
