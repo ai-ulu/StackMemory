@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { mockMemories } from '@/content/mockMemories';
+import { listMemories } from '@/lib/memories/service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function MemoriesPage() {
+export default async function MemoriesPage() {
+  const memories = await listMemories({ limit: 50 });
+
   return (
     <AppShell title="Memories" description="Search, inspect and organize reusable agent context.">
       <div className="space-y-6">
@@ -19,7 +21,7 @@ export default function MemoriesPage() {
         </div>
 
         <div className="grid gap-4">
-          {mockMemories.map((memory) => (
+          {memories.map((memory) => (
             <Link key={memory.id} href={`/memories/${memory.id}`}>
               <Card className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
                 <CardHeader className="pb-2">
