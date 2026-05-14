@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
+import { getContextPreviewMemories } from '@/content/mockMemories';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -10,13 +11,9 @@ const sections = [
   ['Memory selection', 'Score by relevance, importance, decay and workflow fit'],
 ];
 
-const preview = [
-  'Prefer product skeleton first, polish later.',
-  'Keep MCP, billing and OAuth for later phases.',
-  'Use StackMemory as a shared memory layer for LLM agents.',
-];
-
 export default function BrainPage() {
+  const preview = getContextPreviewMemories(3);
+
   return (
     <AppShell title="Brain" description="Preview the context compiler and future quantum-inspired memory selector.">
       <div className="space-y-6">
@@ -39,10 +36,14 @@ export default function BrainPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            {preview.map((item) => (
-              <div key={item} className="rounded-2xl border border-border/60 bg-background/60 p-4">
-                {item}
-              </div>
+            {preview.map((memory) => (
+              <Link key={memory.id} href={`/memories/${memory.id}`} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
+                <div className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{memory.type}</div>
+                <div className="text-foreground">{memory.content}</div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  score {Math.round((memory.importance + memory.confidence - memory.decay) * 50)} / 100
+                </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
