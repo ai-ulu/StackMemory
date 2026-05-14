@@ -77,6 +77,7 @@ GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+POST   /api/webhooks/stripe
 ```
 
 ## Token optimization MVP
@@ -183,6 +184,26 @@ agent savings breakdown
 recent context builds
 ```
 
+## Billing persistence
+
+Billing now has a Supabase-backed subscription persistence layer:
+
+```txt
+frontend/supabase/migrations/20260513_billing_subscriptions.sql
+frontend/features/billing/billing.repository.ts
+frontend/lib/supabase/admin.ts
+frontend/app/api/webhooks/stripe/route.ts
+frontend/app/api/billing/summary/route.js
+```
+
+Stripe checkout writes `user_id` and `plan_id` into checkout and subscription metadata. Stripe webhook events upsert subscription state into:
+
+```txt
+billing_subscriptions
+```
+
+The billing summary endpoint reads the active subscription first and falls back to `NEXT_PUBLIC_DEFAULT_PLAN` only when no active subscription exists.
+
 ## Setup
 
 Read the deployment checklist first:
@@ -217,6 +238,7 @@ frontend/supabase/schema.sql
 frontend/supabase/migrations/20260513_memory_links.sql
 frontend/supabase/migrations/20260513_memory_tags.sql
 frontend/supabase/migrations/20260513_token_optimization.sql
+frontend/supabase/migrations/20260513_billing_subscriptions.sql
 ```
 
 Core tables used by the current dashboard and APIs:
@@ -232,6 +254,7 @@ memory_links
 ai_usage_events
 context_builds
 memory_retrieval_events
+billing_subscriptions
 ```
 
 ## Environment
@@ -251,6 +274,17 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Stripe billing values:
+
+```env
+STRIPE_SECRET_KEY=
+STRIPE_PRO_PRICE_ID=
+STRIPE_TEAM_PRICE_ID=
+NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
+NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID=
+STRIPE_WEBHOOK_SECRET=
 ```
 
 MCP adapter values:
@@ -274,6 +308,8 @@ Memory graph with persisted memory_links
 Manual graph link creation/deletion
 Settings UI
 Billing summary UI
+Billing subscriptions table
+Stripe webhook subscription persistence
 Dashboard auth gate
 Context estimate API
 Context compile API
@@ -289,7 +325,6 @@ Next:
 
 ```txt
 CI build log fixes
-Stripe webhook persistence
 Usage/savings charts
 Graph search/filter controls
 Production deployment hardening
