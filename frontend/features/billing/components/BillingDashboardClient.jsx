@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, CreditCard, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { Check, CreditCard, Loader2, RefreshCw, Settings, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,7 @@ export function BillingDashboardClient() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState('');
+  const [openingPortal, setOpeningPortal] = useState(false);
   const [error, setError] = useState('');
 
   async function loadSummary() {
@@ -66,6 +67,24 @@ export function BillingDashboardClient() {
     }
   }
 
+  async function openCustomerPortal() {
+    setOpeningPortal(true);
+    setError('');
+    try {
+      const body = await parseResponse(await fetch('/api/billing/customer-portal', {
+        method: 'POST',
+      }));
+
+      if (body.url) {
+        window.location.href = body.url;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open customer portal');
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
+
   useEffect(() => {
     loadSummary();
   }, []);
@@ -95,7 +114,15 @@ export function BillingDashboardClient() {
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Current plan</CardTitle></CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{summary.planName}</div>
-                <p className="mt-1 text-xs text-muted-foreground">Plan source is environment-backed until subscription table lands.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {summary.subscription ? `Stripe status: ${summary.subscription.status}` : 'No active subscription row; fallback plan is active.'}
+                </p>
+                {summary.subscription && (
+                  <Button className="mt-4" variant="outline" onClick={openCustomerPortal} disabled={openingPortal}>
+                    {openingPortal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
+                    Manage subscription
+                  </Button>
+                )}
               </CardContent>
             </Card>
             <Card className="border-border/60 bg-card/60">
@@ -123,7 +150,7 @@ export function BillingDashboardClient() {
                   </div>
                   <div>
                     <CardTitle>Usage</CardTitle>
-                    <CardDescription>Counts active memories from Supabase.</CardDescription>
+                    <CardDescription>Counts active memories from Supabase and enforces create limits.</CardDescription>
                   </div>
                 </div>
                 <Button variant="outline" onClick={loadSummary}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button>
@@ -158,9 +185,9 @@ export function BillingDashboardClient() {
                   </div>
                   <div className="mt-auto">
                     {['pro', 'team'].includes(plan.id) ? (
-                      <Button className="w-full" onClick={() => startCheckout(plan.id)} disabled={checkoutPlan === plan.id}>
+                      <Button className="w-full" onClick={() => startCheckout(plan.id)} disabled={checkoutPlan === plan.id || plan.id === summary.planId}>
                         {checkoutPlan === plan.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                        Upgrade
+                        {plan.id === summary.planId ? 'Current plan' : 'Upgrade'}
                       </Button>
                     ) : (
                       <Button className="w-full" variant="outline" disabled>{plan.id === 'free' ? 'Included' : 'Contact sales'}</Button>
