@@ -77,6 +77,7 @@ GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+POST   /api/billing/customer-portal
 POST   /api/webhooks/stripe
 ```
 
@@ -184,14 +185,16 @@ agent savings breakdown
 recent context builds
 ```
 
-## Billing persistence
+## Billing persistence and entitlements
 
-Billing now has a Supabase-backed subscription persistence layer:
+Billing has a Supabase-backed subscription persistence layer:
 
 ```txt
 frontend/supabase/migrations/20260513_billing_subscriptions.sql
 frontend/features/billing/billing.repository.ts
+frontend/features/billing/billing.entitlements.ts
 frontend/lib/supabase/admin.ts
+frontend/app/api/billing/customer-portal/route.ts
 frontend/app/api/webhooks/stripe/route.ts
 frontend/app/api/billing/summary/route.js
 ```
@@ -203,6 +206,26 @@ billing_subscriptions
 ```
 
 The billing summary endpoint reads the active subscription first and falls back to `NEXT_PUBLIC_DEFAULT_PLAN` only when no active subscription exists.
+
+Memory creation is now entitlement-aware:
+
+```txt
+Free plan: 100 active memories
+Pro/Team: unlimited active memories
+```
+
+When a user exceeds the plan memory limit, `POST /api/memories` returns:
+
+```txt
+402 Payment Required
+code: memory_limit_reached
+```
+
+Users with an active Stripe customer can manage subscription changes through:
+
+```http
+POST /api/billing/customer-portal
+```
 
 ## Setup
 
@@ -310,6 +333,8 @@ Settings UI
 Billing summary UI
 Billing subscriptions table
 Stripe webhook subscription persistence
+Stripe customer portal route
+Memory plan entitlement enforcement
 Dashboard auth gate
 Context estimate API
 Context compile API
