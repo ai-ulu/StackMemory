@@ -67,17 +67,22 @@ NEXT_PUBLIC_STACKMEMORY_LOCAL_MODE=false
 NEXT_PUBLIC_DEFAULT_PLAN=free
 ```
 
-Optional:
+Stripe billing:
 
 ```env
-OPENAI_API_KEY=
-OPENAI_BASE_URL=https://api.openai.com/v1
 STRIPE_SECRET_KEY=
 STRIPE_PRO_PRICE_ID=
 STRIPE_TEAM_PRICE_ID=
 NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
 NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID=
 STRIPE_WEBHOOK_SECRET=
+```
+
+Optional AI provider config:
+
+```env
+OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
 ---
@@ -96,6 +101,7 @@ Then run migrations in order:
 frontend/supabase/migrations/20260513_memory_links.sql
 frontend/supabase/migrations/20260513_memory_tags.sql
 frontend/supabase/migrations/20260513_token_optimization.sql
+frontend/supabase/migrations/20260513_billing_subscriptions.sql
 ```
 
 Core tables/columns used by the current app shell:
@@ -111,6 +117,7 @@ memory_links
 ai_usage_events
 context_builds
 memory_retrieval_events
+billing_subscriptions
 ```
 
 Required Supabase extension:
@@ -186,6 +193,7 @@ GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+POST   /api/webhooks/stripe
 ```
 
 Memory list filters:
@@ -225,6 +233,23 @@ Context compile POST body:
     "status": "active"
   }
 }
+```
+
+Stripe webhook URL:
+
+```txt
+https://your-app.example.com/api/webhooks/stripe
+```
+
+Recommended Stripe events:
+
+```txt
+checkout.session.completed
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+invoice.payment_failed
+invoice.payment_succeeded
 ```
 
 Dashboard UI:
@@ -272,6 +297,9 @@ After app startup and Supabase login:
 12. Select one linked node and delete the persisted edge.
 13. Open `/dashboard/settings`, change one setting, save, refresh.
 14. Open `/dashboard/billing`, confirm memory usage count updates.
+15. Trigger a Stripe test checkout for Pro/Team.
+16. Send a Stripe test webhook and confirm `billing_subscriptions` is updated.
+17. Refresh `/dashboard/billing` and confirm the active plan comes from the subscription row.
 
 ---
 
@@ -279,9 +307,9 @@ After app startup and Supabase login:
 
 ```txt
 1. Read GitHub Actions logs and fix any build failures.
-2. Add subscription table + Stripe webhook persistence.
-3. Add usage/savings charts to Context dashboard.
-4. Add graph search/filter controls to Graph UI.
-5. Add richer tag suggestions/autocomplete to Memory Explorer.
-6. Replace fallback mock repository only after tests cover Supabase paths.
+2. Add usage/savings charts to Context dashboard.
+3. Add graph search/filter controls to Graph UI.
+4. Add richer tag suggestions/autocomplete to Memory Explorer.
+5. Replace fallback mock repository only after tests cover Supabase paths.
+6. Add subscription cancellation/customer portal route.
 ```
