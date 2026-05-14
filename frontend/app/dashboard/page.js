@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Brain, Database, GitBranch, ShieldCheck, Sparkles } from 'lucide-react';
+import { BarChart3, Brain, Database, GitBranch, ShieldCheck, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,18 +49,18 @@ export default async function DashboardPage() {
     <>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <Badge variant="outline" className="mb-3">Product shell</Badge>
+          <Badge variant="outline" className="mb-3">Context control plane</Badge>
           <h1 className="text-3xl font-bold tracking-tight">StackMemory Dashboard</h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Uygulama artık ortak dashboard shell içinde ilerliyor: Memory, Brain, Graph, Settings ve Billing aynı ürün yüzeyinde toplanıyor.
+            Memory, Graph, Brain ve Context Optimizer aynı app-first ürün yüzeyinde birleşiyor.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/dashboard/memories">Memory Explorer</Link>
+            <Link href="/dashboard/context">Context Optimizer</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/dashboard/brain">Brain</Link>
+            <Link href="/dashboard/memories">Memory Explorer</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/dashboard/graph">Graph</Link>
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
         <StatCard title="Total Memories" value={summary.total} description="Real workspace memory count from Supabase" icon={Database} />
         <StatCard title="Active" value={summary.active} description="Usable memories in the current workspace" icon={ShieldCheck} />
         <StatCard title="Avg Confidence" value={`${Math.round(summary.avgConfidence * 100)}%`} description="Service-level summary calculation" icon={Sparkles} />
-        <StatCard title="Brain + Graph" value="MVP" description="Available through the product shell navigation" icon={Brain} />
+        <StatCard title="Context Optimizer" value="MVP" description="Estimate and compile token-budgeted context" icon={BarChart3} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -86,7 +86,8 @@ export default async function DashboardPage() {
               'App-first foundation kuruldu: ekranlar artık feature/service/repository sınırına sahip.',
               'Supabase memory adapter eklendi: API route akışı MCP yerine app service üzerinden ilerliyor.',
               'Memory CRUD UI eklendi: listele, oluştur, düzenle ve deprecate et.',
-              'Brain + Graph MVP eklendi: memory service üstünden analiz ve ilişki görselleştirme başladı.',
+              'Graph memory_links tablosuna bağlandı: ilişkiler artık DB’ye yazılıyor ve okunuyor.',
+              'Context Optimizer eklendi: memory seçimi token bütçesine göre yapılıyor ve tasarruf metriği üretiyor.',
               'MCP legacy dosyası pasifleştirildi; aktif MCP app-adapter üzerinden app API’ye bağlanıyor.',
             ].map((item, index) => (
               <div key={item} className="flex gap-3 rounded-2xl border border-border/60 bg-background/60 p-4">
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
             </div>
             <div>
               <CardTitle>Next pass</CardTitle>
-              <CardDescription>Build/deploy config, schema docs and environment checklist.</CardDescription>
+              <CardDescription>Build/deploy config, usage charts, Stripe persistence and production hardening.</CardDescription>
             </div>
           </div>
         </CardHeader>
