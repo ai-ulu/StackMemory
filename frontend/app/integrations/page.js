@@ -11,13 +11,13 @@ export default function IntegrationsPage() {
         <div className="rounded-3xl border border-border/60 bg-card/60 p-5">
           <div className="font-medium">Setup path</div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pick an integration surface, then open the quick start docs for the exact workflow.
+            Pick an integration surface, inspect its setup path, then open the quick start docs for the exact workflow.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           {mockIntegrations.map((integration) => (
-            <Card key={integration.id} className="border-border/60 bg-card/60">
+            <Card key={integration.id} className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
               <CardHeader>
                 <CardTitle>{integration.name}</CardTitle>
               </CardHeader>
@@ -26,9 +26,14 @@ export default function IntegrationsPage() {
                   {integration.status}
                 </div>
                 <p>{integration.description}</p>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={integration.docsHref}>View setup</Link>
-                </Button>
+                <div className="grid gap-2">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/integrations/${integration.id}`}>Open integration</Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="w-full">
+                    <Link href={integration.docsHref}>View setup</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
