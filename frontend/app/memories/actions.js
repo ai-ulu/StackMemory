@@ -1,11 +1,20 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createMemory, deleteMemory, updateMemory } from '@/lib/memories/service';
 
 function formValue(formData, key, fallback = '') {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function revalidateMemoryViews(id) {
+  revalidatePath('/dashboard');
+  revalidatePath('/memories');
+  revalidatePath('/brain');
+  revalidatePath('/usage');
+  if (id) revalidatePath(`/memories/${id}`);
 }
 
 export async function createMemoryAction(formData) {
@@ -28,6 +37,7 @@ export async function createMemoryAction(formData) {
       confidence,
     });
 
+    revalidateMemoryViews(memory.id);
     redirect(`/memories/${encodeURIComponent(memory.id)}`);
   } catch (error) {
     console.error('createMemoryAction failed:', error);
@@ -48,6 +58,7 @@ export async function updateMemoryAction(formData) {
 
   try {
     await updateMemory(id, { content, type, source, confidence });
+    revalidateMemoryViews(id);
     redirect(`/memories/${encodeURIComponent(id)}?status=updated`);
   } catch (error) {
     console.error('updateMemoryAction failed:', error);
@@ -64,6 +75,7 @@ export async function deleteMemoryAction(formData) {
 
   try {
     await deleteMemory(id);
+    revalidateMemoryViews(id);
     redirect('/memories?status=deleted');
   } catch (error) {
     console.error('deleteMemoryAction failed:', error);
