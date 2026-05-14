@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createMemoryAction } from '@/app/memories/actions';
 import { AppShell } from '@/components/app/AppShell';
+import { withNamespaceHref } from '@/lib/memories/config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ function errorMessage(error) {
 }
 
 export default function NewMemoryPage({ searchParams }) {
+  const namespace = String(searchParams?.namespace || '').trim();
   const error = errorMessage(searchParams?.error);
 
   return (
@@ -27,9 +29,11 @@ export default function NewMemoryPage({ searchParams }) {
             <CardDescription>
               Submit writes to the MCP-backed memory service. If the MCP endpoint is unavailable, the form will return an error.
             </CardDescription>
+            {namespace && <div className="font-mono text-xs text-muted-foreground">namespace: {namespace}</div>}
           </CardHeader>
           <form action={createMemoryAction}>
             <CardContent className="space-y-5">
+              {namespace && <input type="hidden" name="namespace" value={namespace} />}
               {error && (
                 <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                   {error}
@@ -71,7 +75,7 @@ export default function NewMemoryPage({ searchParams }) {
                 Save memory
               </Button>
               <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link href="/memories">Cancel</Link>
+                <Link href={withNamespaceHref('/memories', namespace)}>Cancel</Link>
               </Button>
             </CardFooter>
           </form>
