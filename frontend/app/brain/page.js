@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
 import { SelectedTargetCard } from '@/components/app/SelectedTargetCard';
 import { getAgentById } from '@/content/mockAgents';
-import { getContextPreviewMemories, getMemory } from '@/lib/memories/service';
+import { getContextPreviewMemories, getMemory, searchMemories } from '@/lib/memories/service';
 import { getWorkflowById } from '@/content/mockWorkflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ async function getSelectedTarget(searchParams) {
       title: memory?.content || memoryId,
       description: memory ? `Type: ${memory.type} · Source: ${memory.source}` : 'Memory route is ready for API-backed records.',
       href: `/memories/${memoryId}`,
+      query: memory?.content || memoryId,
     };
   }
 
@@ -36,6 +37,7 @@ async function getSelectedTarget(searchParams) {
       title: workflow?.name || workflowId,
       description: workflow?.description || 'Workflow route is ready for API-backed records.',
       href: `/workflows/${workflowId}`,
+      query: workflow ? `${workflow.name} ${workflow.description} ${workflow.steps.join(' ')}` : workflowId,
     };
   }
 
@@ -46,15 +48,22 @@ async function getSelectedTarget(searchParams) {
       title: agent?.name || agentId,
       description: agent?.description || 'Agent route is ready for API-backed records.',
       href: `/agents/${agentId}`,
+      query: agent ? `${agent.name} ${agent.category} ${agent.description}` : agentId,
     };
   }
 
   return null;
 }
 
+async function getPreviewForTarget(selectedTarget) {
+  if (!selectedTarget?.query) return getContextPreviewMemories(3);
+  const matches = await searchMemories({ query: selectedTarget.query, limit: 3 });
+  return matches.length ? matches : getContextPreviewMemories(3);
+}
+
 export default async function BrainPage({ searchParams }) {
-  const preview = await getContextPreviewMemories(3);
   const selectedTarget = await getSelectedTarget(searchParams);
+  const preview = await getPreviewForTarget(selectedTarget);
 
   return (
     <AppShell title="Brain" description="Preview the context compiler and future quantum-inspired memory selector.">
@@ -81,7 +90,7 @@ export default async function BrainPage({ searchParams }) {
 
         <Card className="border-border/60 bg-card/60">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle>Context preview</CardTitle>
+            <CardTitle>{selectedTarget ? 'Targeted context preview' : 'Context preview'}</CardTitle>
             <Button asChild>
               <Link href="/agents">Choose agent</Link>
             </Button>
