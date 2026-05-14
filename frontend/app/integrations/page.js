@@ -1,14 +1,8 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { mockIntegrations } from '@/content/mockIntegrations';
 import { Button } from '@/components/ui/button';
-
-const integrations = [
-  ['MCP', 'Connect compatible agent clients to shared memory.', '/docs?section=mcp'],
-  ['REST API', 'Write, search and query memories from custom apps.', '/docs?section=api'],
-  ['n8n', 'Use StackMemory inside automation workflows.', '/docs?section=n8n'],
-  ['SDK', 'Embed durable memory into developer tools and internal copilots.', '/docs?section=sdk'],
-];
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function IntegrationsPage() {
   return (
@@ -22,15 +16,18 @@ export default function IntegrationsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {integrations.map(([title, body, href]) => (
-            <Card key={title} className="border-border/60 bg-card/60">
+          {mockIntegrations.map((integration) => (
+            <Card key={integration.id} className="border-border/60 bg-card/60">
               <CardHeader>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle>{integration.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-muted-foreground">
-                <p>{body}</p>
+                <div className="inline-flex rounded-full border border-border/60 px-3 py-1 text-xs uppercase tracking-wide">
+                  {integration.status}
+                </div>
+                <p>{integration.description}</p>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={href}>View setup</Link>
+                  <Link href={integration.docsHref}>View setup</Link>
                 </Button>
               </CardContent>
             </Card>
