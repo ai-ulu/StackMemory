@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
+import { withNamespaceHref } from '@/lib/memories/config';
 import { listMemories, searchMemories } from '@/lib/memories/service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,12 +21,13 @@ function errorMessage(error) {
 export default async function MemoriesPage({ searchParams }) {
   const query = String(searchParams?.q || '').trim();
   const type = String(searchParams?.type || 'all');
+  const namespace = String(searchParams?.namespace || '').trim();
   const status = statusMessage(searchParams?.status);
   const error = errorMessage(searchParams?.error);
   const selectedType = type === 'all' ? undefined : type;
   const memories = query
-    ? await searchMemories({ query, type: selectedType, limit: 50 })
-    : await listMemories({ limit: 50, type: selectedType });
+    ? await searchMemories({ query, type: selectedType, namespace, limit: 50 })
+    : await listMemories({ limit: 50, type: selectedType, namespace });
 
   return (
     <AppShell title="Memories" description="Search, inspect and organize reusable agent context.">
@@ -34,9 +36,10 @@ export default async function MemoriesPage({ searchParams }) {
           <div>
             <div className="font-medium">Memory explorer</div>
             <div className="text-sm text-muted-foreground">Open a memory to inspect metadata, retrieval signals and future graph edges.</div>
+            {namespace && <div className="mt-2 font-mono text-xs text-muted-foreground">namespace: {namespace}</div>}
           </div>
           <Button asChild>
-            <Link href="/memories/new">Create memory</Link>
+            <Link href={withNamespaceHref('/memories/new', namespace)}>Create memory</Link>
           </Button>
         </div>
 
@@ -52,6 +55,7 @@ export default async function MemoriesPage({ searchParams }) {
         )}
 
         <form className="grid gap-3 rounded-3xl border border-border/60 bg-card/60 p-5 md:grid-cols-[1fr_180px_auto]" action="/memories">
+          {namespace && <input type="hidden" name="namespace" value={namespace} />}
           <Input name="q" placeholder="Search memories..." defaultValue={query} />
           <select name="type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" defaultValue={type}>
             {memoryTypes.map((item) => (
@@ -61,14 +65,14 @@ export default async function MemoriesPage({ searchParams }) {
           <div className="flex gap-2">
             <Button type="submit">Search</Button>
             <Button asChild variant="outline">
-              <Link href="/memories">Reset</Link>
+              <Link href={withNamespaceHref('/memories', namespace)}>Reset</Link>
             </Button>
           </div>
         </form>
 
         <div className="grid gap-4">
           {memories.map((memory) => (
-            <Link key={memory.id} href={`/memories/${memory.id}`}>
+            <Link key={memory.id} href={withNamespaceHref(`/memories/${memory.id}`, namespace)}>
               <Card className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">{memory.type}</CardTitle>
