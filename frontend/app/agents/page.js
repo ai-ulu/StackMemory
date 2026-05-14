@@ -9,7 +9,7 @@ export default function AgentsPage() {
     <AppShell title="Agents" description="Define where StackMemory should provide reusable context.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {mockAgents.map((agent) => (
-          <Card key={agent.id} className="border-border/60 bg-card/60">
+          <Card key={agent.id} className="border-border/60 bg-card/60 transition-colors hover:border-primary/40 hover:bg-card/80">
             <CardHeader>
               <CardTitle>{agent.name}</CardTitle>
             </CardHeader>
@@ -18,9 +18,14 @@ export default function AgentsPage() {
                 {agent.category}
               </div>
               <p>{agent.description}</p>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={agent.setupHref}>Configure</Link>
-              </Button>
+              <div className="grid gap-2">
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/agents/${agent.id}`}>Open agent</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full">
+                  <Link href={agent.setupHref}>Configure</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
