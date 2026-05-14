@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
-import { getMemoryById } from '@/content/mockMemories';
+import { getMemory } from '@/lib/memories/service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function MemoryDetailPage({ params }) {
-  const memory = getMemoryById(params.id);
+export default async function MemoryDetailPage({ params }) {
+  const memory = await getMemory(params.id);
 
   return (
     <AppShell title="Memory Detail" description="Inspect one memory, its metadata and future retrieval signals.">
@@ -35,7 +35,7 @@ export default function MemoryDetailPage({ params }) {
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Confidence: {Math.round(memory.confidence * 100)}%</div>
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Importance: {Math.round(memory.importance * 100)}%</div>
                   <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Decay: {Math.round(memory.decay * 100)}%</div>
-                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Retrieval: preview-ready</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Retrieval: MCP-backed preview</div>
                 </div>
               </>
             ) : (
