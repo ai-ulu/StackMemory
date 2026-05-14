@@ -50,6 +50,7 @@ mcp-server/src/app-adapter.ts
 ```txt
 /dashboard
 /dashboard/memories
+/dashboard/context
 /dashboard/brain
 /dashboard/graph
 /dashboard/settings
@@ -71,6 +72,7 @@ POST   /api/graph
 DELETE /api/graph?id=
 POST   /api/context/estimate
 POST   /api/context/compile
+GET    /api/usage/summary
 GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
@@ -84,9 +86,31 @@ StackMemory includes a first-pass context optimization layer:
 ```txt
 frontend/features/context/context.optimizer.ts
 frontend/features/context/context.telemetry.ts
+frontend/features/context/components/ContextOptimizerClient.jsx
+frontend/features/usage/usage.repository.ts
+frontend/app/dashboard/context/page.js
 frontend/app/api/context/estimate/route.ts
 frontend/app/api/context/compile/route.ts
+frontend/app/api/usage/summary/route.ts
 frontend/supabase/migrations/20260513_token_optimization.sql
+```
+
+### Context dashboard
+
+```txt
+/dashboard/context
+```
+
+The dashboard can:
+
+```txt
+run estimate without writing telemetry
+compile optimized context and record telemetry
+preview the compiled context block
+show estimated saved tokens
+show estimated savings percentage
+show agent savings leaderboard
+show recent context builds
 ```
 
 ### Estimate context savings
@@ -139,6 +163,24 @@ Supported strategies:
 aggressive  smaller memory budget, stronger cost reduction
 balanced    default memory budget
 quality     larger memory budget, safer answer quality
+```
+
+### Usage summary
+
+```http
+GET /api/usage/summary
+```
+
+Returns aggregate context optimization metrics:
+
+```txt
+context builds
+final context tokens
+estimated saved tokens
+estimated savings percent
+selected / omitted memory counts
+agent savings breakdown
+recent context builds
 ```
 
 ## Setup
@@ -235,6 +277,8 @@ Billing summary UI
 Dashboard auth gate
 Context estimate API
 Context compile API
+Usage summary API
+Context optimizer dashboard
 Context telemetry tables
 MCP app adapter
 Legacy MCP entrypoint tombstone
@@ -246,7 +290,7 @@ Next:
 ```txt
 CI build log fixes
 Stripe webhook persistence
-Usage/savings dashboard cards
+Usage/savings charts
 Graph search/filter controls
 Production deployment hardening
 ```
