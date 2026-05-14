@@ -95,6 +95,7 @@ Then run migrations in order:
 ```txt
 frontend/supabase/migrations/20260513_memory_links.sql
 frontend/supabase/migrations/20260513_memory_tags.sql
+frontend/supabase/migrations/20260513_token_optimization.sql
 ```
 
 Core tables/columns used by the current app shell:
@@ -107,6 +108,9 @@ memory_versions
 brain_config
 brain_feedback
 memory_links
+ai_usage_events
+context_builds
+memory_retrieval_events
 ```
 
 Required Supabase extension:
@@ -175,6 +179,9 @@ POST   /api/brain/simulate
 GET    /api/graph?type=&status=&scope=&tag=&limit=
 POST   /api/graph
 DELETE /api/graph?id=
+POST   /api/context/estimate
+POST   /api/context/compile
+GET    /api/usage/summary
 GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
@@ -204,11 +211,28 @@ Graph link POST body:
 }
 ```
 
+Context compile POST body:
+
+```json
+{
+  "agentId": "coding-agent",
+  "workspaceId": "stackmemory",
+  "userRequest": "Continue refactoring billing without touching MCP.",
+  "maxContextTokens": 6000,
+  "strategy": "balanced",
+  "filters": {
+    "tag": "billing",
+    "status": "active"
+  }
+}
+```
+
 Dashboard UI:
 
 ```txt
 /dashboard
 /dashboard/memories
+/dashboard/context
 /dashboard/brain
 /dashboard/graph
 /dashboard/settings
@@ -238,13 +262,16 @@ After app startup and Supabase login:
 2. Create at least two memories in `/dashboard/memories` with tags.
 3. Click one tag pill and confirm the list filters by that tag.
 4. Confirm the memory appears in `/dashboard` recent signals.
-5. Open `/dashboard/brain` and check status/simulation.
-6. Open `/dashboard/graph` and confirm graph data renders.
-7. Use Create memory link to connect two memories.
-8. Confirm graph source changes to `persisted` / `memory_links`.
-9. Select one linked node and delete the persisted edge.
-10. Open `/dashboard/settings`, change one setting, save, refresh.
-11. Open `/dashboard/billing`, confirm memory usage count updates.
+5. Open `/dashboard/context`.
+6. Run Estimate and confirm selected/omitted memory metrics render.
+7. Run Compile + record and confirm usage summary cards update.
+8. Open `/dashboard/brain` and check status/simulation.
+9. Open `/dashboard/graph` and confirm graph data renders.
+10. Use Create memory link to connect two memories.
+11. Confirm graph source changes to `persisted` / `memory_links`.
+12. Select one linked node and delete the persisted edge.
+13. Open `/dashboard/settings`, change one setting, save, refresh.
+14. Open `/dashboard/billing`, confirm memory usage count updates.
 
 ---
 
@@ -253,7 +280,8 @@ After app startup and Supabase login:
 ```txt
 1. Read GitHub Actions logs and fix any build failures.
 2. Add subscription table + Stripe webhook persistence.
-3. Add graph search/filter controls to Graph UI.
-4. Add richer tag suggestions/autocomplete to Memory Explorer.
-5. Replace fallback mock repository only after tests cover Supabase paths.
+3. Add usage/savings charts to Context dashboard.
+4. Add graph search/filter controls to Graph UI.
+5. Add richer tag suggestions/autocomplete to Memory Explorer.
+6. Replace fallback mock repository only after tests cover Supabase paths.
 ```
