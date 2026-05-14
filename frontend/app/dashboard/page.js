@@ -3,7 +3,7 @@ import { AppShell } from '@/components/app/AppShell';
 import { MetricCard } from '@/components/app/MetricCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockMemories } from '@/content/mockMemories';
+import { listMemories } from '@/lib/memories/service';
 
 const actions = [
   ['Create or inspect memories', '/memories', 'Add project rules, decisions and active work.'],
@@ -18,12 +18,18 @@ const demoShortcuts = [
   ['Docs', '/docs', 'Open quick start guides'],
 ];
 
-export default function DashboardPage() {
+function estimateTokens(memories) {
+  return memories.reduce((sum, memory) => sum + Math.ceil(memory.content.length / 4), 0);
+}
+
+export default async function DashboardPage() {
+  const memories = await listMemories({ limit: 50 });
+  const tokenEstimate = estimateTokens(memories);
   const metrics = [
-    ['Memories', String(mockMemories.length), 'Stored project facts and rules'],
+    ['Memories', String(memories.length), 'Stored project facts and rules'],
     ['Agents', '6', 'Connected workflow targets'],
-    ['Context Health', '82%', 'Ready for compiler preview'],
-    ['Token Saved', '41k', 'Estimated repeated context avoided'],
+    ['Context Health', memories.length ? '82%' : '0%', 'Ready for compiler preview'],
+    ['Token Saved', `${Math.max(tokenEstimate * 3, 0).toLocaleString()}`, 'Estimated repeated context avoided'],
   ];
 
   return (
@@ -58,7 +64,7 @@ export default function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              {mockMemories.map((memory) => (
+              {memories.slice(0, 5).map((memory) => (
                 <Link key={memory.id} href={`/memories/${memory.id}`} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
                   {memory.content}
                 </Link>
