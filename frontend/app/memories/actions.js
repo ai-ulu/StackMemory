@@ -9,11 +9,19 @@ function formValue(formData, key, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function appendParams(path, params = {}) {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '');
+  if (!entries.length) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}${entries.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')}`;
+}
+
 function revalidateMemoryViews(id) {
   revalidatePath('/dashboard');
   revalidatePath('/memories');
   revalidatePath('/brain');
   revalidatePath('/usage');
+  revalidatePath('/runtime');
   if (id) revalidatePath(`/memories/${id}`);
 }
 
@@ -23,9 +31,10 @@ export async function createMemoryAction(formData) {
   const source = formValue(formData, 'source', 'Dashboard');
   const importance = formValue(formData, 'importance', '75');
   const confidence = formValue(formData, 'confidence', '85');
+  const namespace = formValue(formData, 'namespace');
 
   if (!content) {
-    redirect('/memories/new?error=missing-content');
+    redirect(appendParams('/memories/new', { namespace, error: 'missing-content' }));
   }
 
   try {
@@ -35,13 +44,14 @@ export async function createMemoryAction(formData) {
       source,
       importance,
       confidence,
+      namespace,
     });
 
     revalidateMemoryViews(memory.id);
-    redirect(`/memories/${encodeURIComponent(memory.id)}`);
+    redirect(appendParams(`/memories/${encodeURIComponent(memory.id)}`, { namespace }));
   } catch (error) {
     console.error('createMemoryAction failed:', error);
-    redirect('/memories/new?error=create-failed');
+    redirect(appendParams('/memories/new', { namespace, error: 'create-failed' }));
   }
 }
 
@@ -51,34 +61,39 @@ export async function updateMemoryAction(formData) {
   const type = formValue(formData, 'type', 'note');
   const source = formValue(formData, 'source', 'Dashboard');
   const confidence = formValue(formData, 'confidence', '85');
+  const namespace = formValue(formData, 'namespace');
 
   if (!id || !content) {
-    redirect(id ? `/memories/${encodeURIComponent(id)}?error=missing-content` : '/memories?error=missing-id');
+    redirect(id
+      ? appendParams(`/memories/${encodeURIComponent(id)}`, { namespace, error: 'missing-content' })
+      : appendParams('/memories', { namespace, error: 'missing-id' })
+    );
   }
 
   try {
-    await updateMemory(id, { content, type, source, confidence });
+    await updateMemory(id, { content, type, source, confidence, namespace });
     revalidateMemoryViews(id);
-    redirect(`/memories/${encodeURIComponent(id)}?status=updated`);
+    redirect(appendParams(`/memories/${encodeURIComponent(id)}`, { namespace, status: 'updated' }));
   } catch (error) {
     console.error('updateMemoryAction failed:', error);
-    redirect(`/memories/${encodeURIComponent(id)}?error=update-failed`);
+    redirect(appendParams(`/memories/${encodeURIComponent(id)}`, { namespace, error: 'update-failed' }));
   }
 }
 
 export async function deleteMemoryAction(formData) {
   const id = formValue(formData, 'id');
+  const namespace = formValue(formData, 'namespace');
 
   if (!id) {
-    redirect('/memories?error=missing-id');
+    redirect(appendParams('/memories', { namespace, error: 'missing-id' }));
   }
 
   try {
-    await deleteMemory(id);
+    await deleteMemory(id, { namespace });
     revalidateMemoryViews(id);
-    redirect('/memories?status=deleted');
+    redirect(appendParams('/memories', { namespace, status: 'deleted' }));
   } catch (error) {
     console.error('deleteMemoryAction failed:', error);
-    redirect(`/memories/${encodeURIComponent(id)}?error=delete-failed`);
+    redirect(appendParams(`/memories/${encodeURIComponent(id)}`, { namespace, error: 'delete-failed' }));
   }
 }
