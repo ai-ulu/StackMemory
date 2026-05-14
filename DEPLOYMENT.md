@@ -193,6 +193,7 @@ GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+POST   /api/billing/customer-portal
 POST   /api/webhooks/stripe
 ```
 
@@ -205,6 +206,14 @@ status  active | pending | deprecated
 scope   private | team | org
 tag     exact normalized tag match without #
 limit   max rows, default 100 in API UI calls
+```
+
+Memory create entitlement:
+
+```txt
+Free plan: 100 active memories
+Pro/Team: unlimited active memories
+Over limit response: HTTP 402 with code memory_limit_reached
 ```
 
 Graph link POST body:
@@ -239,6 +248,12 @@ Stripe webhook URL:
 
 ```txt
 https://your-app.example.com/api/webhooks/stripe
+```
+
+Stripe customer portal route:
+
+```txt
+POST /api/billing/customer-portal
 ```
 
 Recommended Stripe events:
@@ -300,6 +315,8 @@ After app startup and Supabase login:
 15. Trigger a Stripe test checkout for Pro/Team.
 16. Send a Stripe test webhook and confirm `billing_subscriptions` is updated.
 17. Refresh `/dashboard/billing` and confirm the active plan comes from the subscription row.
+18. Click Manage subscription and confirm Stripe customer portal opens.
+19. Test free-plan memory limit by setting 100 active memories and confirming `POST /api/memories` returns HTTP 402.
 
 ---
 
@@ -311,5 +328,5 @@ After app startup and Supabase login:
 3. Add graph search/filter controls to Graph UI.
 4. Add richer tag suggestions/autocomplete to Memory Explorer.
 5. Replace fallback mock repository only after tests cover Supabase paths.
-6. Add subscription cancellation/customer portal route.
+6. Add subscription plan downgrade edge-case handling.
 ```
