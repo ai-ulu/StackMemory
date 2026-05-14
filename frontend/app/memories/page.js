@@ -13,7 +13,9 @@ export default function MemoriesPage() {
             <div className="font-medium">Memory explorer</div>
             <div className="text-sm text-muted-foreground">Open a memory to inspect metadata, retrieval signals and future graph edges.</div>
           </div>
-          <Button>Create memory</Button>
+          <Button asChild>
+            <Link href="/memories/new">Create memory</Link>
+          </Button>
         </div>
 
         <div className="grid gap-4">
