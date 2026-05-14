@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
 import { SelectedTargetCard } from '@/components/app/SelectedTargetCard';
 import { getAgentById } from '@/content/mockAgents';
-import { getContextPreviewMemories, getMemoryById } from '@/content/mockMemories';
+import { getContextPreviewMemories, getMemory } from '@/lib/memories/service';
 import { getWorkflowById } from '@/content/mockWorkflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,13 +14,13 @@ const sections = [
   ['Memory selection', 'Score by relevance, importance, decay and workflow fit'],
 ];
 
-function getSelectedTarget(searchParams) {
+async function getSelectedTarget(searchParams) {
   const memoryId = searchParams?.memory;
   const workflowId = searchParams?.workflow;
   const agentId = searchParams?.agent;
 
   if (memoryId) {
-    const memory = getMemoryById(memoryId);
+    const memory = await getMemory(memoryId);
     return {
       label: 'Selected memory',
       title: memory?.content || memoryId,
@@ -52,9 +52,9 @@ function getSelectedTarget(searchParams) {
   return null;
 }
 
-export default function BrainPage({ searchParams }) {
-  const preview = getContextPreviewMemories(3);
-  const selectedTarget = getSelectedTarget(searchParams);
+export default async function BrainPage({ searchParams }) {
+  const preview = await getContextPreviewMemories(3);
+  const selectedTarget = await getSelectedTarget(searchParams);
 
   return (
     <AppShell title="Brain" description="Preview the context compiler and future quantum-inspired memory selector.">
