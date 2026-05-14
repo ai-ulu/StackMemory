@@ -14,3 +14,7 @@ export function apiUnauthorized() {
 export function apiBadRequest(message) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
+
+export function apiPaymentRequired(message, details = {}) {
+  return NextResponse.json({ error: message, ...details }, { status: 402 });
+}
