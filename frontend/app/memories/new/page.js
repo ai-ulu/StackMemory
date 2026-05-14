@@ -52,7 +52,7 @@ export default function NewMemoryPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3 sm:flex-row">
             <Button asChild className="w-full sm:w-auto">
-              <Link href="/memories/draft-memory">Save draft preview</Link>
+              <Link href="/memories/skeleton-before-polish">Save draft preview</Link>
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/memories">Cancel</Link>
