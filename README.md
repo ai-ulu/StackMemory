@@ -1,6 +1,17 @@
 # StackMemory
 
-Persistent memory infrastructure for AI agents and app-first AI products.
+**Context control plane for AI agents.**
+
+StackMemory is persistent memory infrastructure for AI agents and app-first AI products. It stores long-lived memory, links related memories, and compiles only the relevant context needed for a request so teams can reduce repeated prompt tokens without losing useful context.
+
+## Core promise
+
+```txt
+Remember what matters.
+Retrieve only what is relevant.
+Control context size.
+Measure estimated token savings.
+```
 
 ## Current architecture
 
@@ -48,18 +59,86 @@ mcp-server/src/app-adapter.ts
 ## App API
 
 ```txt
-GET    /api/memories
+GET    /api/memories?q=&type=&status=&scope=&tag=&limit=
 POST   /api/memories
 GET    /api/memories/:id
 PATCH  /api/memories/:id
 DELETE /api/memories/:id
 GET    /api/brain/status
 POST   /api/brain/simulate
-GET    /api/graph
+GET    /api/graph?type=&status=&scope=&tag=&limit=
+POST   /api/graph
+DELETE /api/graph?id=
+POST   /api/context/estimate
+POST   /api/context/compile
 GET    /api/settings/memory
 PUT    /api/settings/memory
 GET    /api/billing/summary
 POST   /api/billing/create-checkout
+```
+
+## Token optimization MVP
+
+StackMemory includes a first-pass context optimization layer:
+
+```txt
+frontend/features/context/context.optimizer.ts
+frontend/features/context/context.telemetry.ts
+frontend/app/api/context/estimate/route.ts
+frontend/app/api/context/compile/route.ts
+frontend/supabase/migrations/20260513_token_optimization.sql
+```
+
+### Estimate context savings
+
+```http
+POST /api/context/estimate
+```
+
+```json
+{
+  "agentId": "coding-agent",
+  "workspaceId": "stackmemory",
+  "userRequest": "Continue refactoring billing without touching MCP.",
+  "maxContextTokens": 6000,
+  "strategy": "balanced",
+  "filters": {
+    "tag": "billing",
+    "status": "active"
+  }
+}
+```
+
+Returns:
+
+```txt
+selected memory ids
+omitted memory ids
+estimated baseline tokens
+final context tokens
+estimated savings tokens
+estimated savings percent
+```
+
+### Compile optimized context
+
+```http
+POST /api/context/compile
+```
+
+Returns a compiled context block plus metrics. It also records telemetry into:
+
+```txt
+context_builds
+memory_retrieval_events
+```
+
+Supported strategies:
+
+```txt
+aggressive  smaller memory budget, stronger cost reduction
+balanced    default memory budget
+quality     larger memory budget, safer answer quality
 ```
 
 ## Setup
@@ -94,17 +173,23 @@ Run the schema and migrations in this order:
 ```txt
 frontend/supabase/schema.sql
 frontend/supabase/migrations/20260513_memory_links.sql
+frontend/supabase/migrations/20260513_memory_tags.sql
+frontend/supabase/migrations/20260513_token_optimization.sql
 ```
 
-Core tables used by the current dashboard:
+Core tables used by the current dashboard and APIs:
 
 ```txt
 memories
+memories.tags
 memory_settings
 memory_versions
 brain_config
 brain_feedback
 memory_links
+ai_usage_events
+context_builds
+memory_retrieval_events
 ```
 
 ## Environment
@@ -141,21 +226,28 @@ Implemented:
 App-first dashboard shell
 Supabase memory repository
 Memory CRUD UI
+Memory tags persistence and filtering
 Brain dashboard MVP
-Memory graph MVP
+Memory graph with persisted memory_links
+Manual graph link creation/deletion
 Settings UI
 Billing summary UI
 Dashboard auth gate
+Context estimate API
+Context compile API
+Context telemetry tables
 MCP app adapter
 Legacy MCP entrypoint tombstone
+GitHub Actions build workflow
 ```
 
 Next:
 
 ```txt
-CI build workflow
+CI build log fixes
 Stripe webhook persistence
-Graph persistence through memory_links
+Usage/savings dashboard cards
+Graph search/filter controls
 Production deployment hardening
 ```
 
