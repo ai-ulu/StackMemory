@@ -62,20 +62,64 @@ export function mockMemoryFallback() {
   }));
 }
 
-export async function listMemories({ limit = 50, offset = 0, type } = {}) {
+export async function listMemories({ limit = 50, offset = 0, type, fallback = true } = {}) {
   try {
     const payload = await mcp.list({ namespace: DEFAULT_NAMESPACE, limit, offset, type });
     const memories = normalizeMemoryList(payload);
-    return memories.length ? memories : mockMemoryFallback();
+    return memories.length || !fallback ? memories : mockMemoryFallback();
   } catch (error) {
     console.warn('listMemories fallback:', error?.message || error);
-    return mockMemoryFallback();
+    return fallback ? mockMemoryFallback() : [];
+  }
+}
+
+export async function searchMemories({ query, limit = 10, type, fallback = true } = {}) {
+  const cleanQuery = String(query || '').trim();
+  if (!cleanQuery) return fallback ? mockMemoryFallback().slice(0, limit) : [];
+
+  try {
+    const payload = await mcp.search({
+      query: cleanQuery,
+      namespace: DEFAULT_NAMESPACE,
+      limit,
+      type,
+    });
+    const memories = normalizeMemoryList(payload);
+    return memories.length || !fallback ? memories : mockMemoryFallback().filter((memory) =>
+      memory.content.toLowerCase().includes(cleanQuery.toLowerCase()) || memory.id === cleanQuery
+    );
+  } catch (error) {
+    console.warn('searchMemories fallback:', error?.message || error);
+    return fallback
+      ? mockMemoryFallback().filter((memory) =>
+          memory.content.toLowerCase().includes(cleanQuery.toLowerCase()) || memory.id === cleanQuery
+        )
+      : [];
   }
 }
 
 export async function getMemory(id) {
-  const memories = await listMemories({ limit: 100 });
-  return memories.find((memory) => memory.id === id) || null;
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+
+  try {
+    const directPayload = await mcp.get({ id: cleanId, namespace: DEFAULT_NAMESPACE });
+    const directMatches = normalizeMemoryList(directPayload);
+    const directMatch = directMatches.find((memory) => memory.id === cleanId) || directMatches[0];
+    if (directMatch) return directMatch;
+  } catch (error) {
+    console.warn('getMemory direct lookup fallback:', error?.message || error);
+  }
+
+  const liveList = await listMemories({ limit: 100, fallback: false });
+  const liveMatch = liveList.find((memory) => memory.id === cleanId);
+  if (liveMatch) return liveMatch;
+
+  const searchMatches = await searchMemories({ query: cleanId, limit: 10, fallback: false });
+  const searchMatch = searchMatches.find((memory) => memory.id === cleanId) || searchMatches[0];
+  if (searchMatch) return searchMatch;
+
+  return mockMemoryFallback().find((memory) => memory.id === cleanId) || null;
 }
 
 export async function createMemory(input) {
@@ -107,6 +151,29 @@ export async function createMemory(input) {
     source,
     raw: payload,
   };
+}
+
+export async function updateMemory(id, input) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) throw new Error('Memory id is required');
+
+  const payload = await mcp.update({
+    id: cleanId,
+    namespace: DEFAULT_NAMESPACE,
+    content: input?.content ? String(input.content).trim() : undefined,
+    type: input?.type || undefined,
+    confidence: input?.confidence ? normalizeScore(input.confidence, 0.85) : undefined,
+    tags: input?.source ? [`source:${String(input.source).trim()}`] : undefined,
+  });
+
+  return normalizeMemory(payload, 0) || getMemory(cleanId);
+}
+
+export async function deleteMemory(id) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) throw new Error('Memory id is required');
+
+  return mcp.delete({ id: cleanId, namespace: DEFAULT_NAMESPACE });
 }
 
 export async function getContextPreviewMemories(limit = 3) {
