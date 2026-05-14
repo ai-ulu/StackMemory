@@ -11,6 +11,13 @@ const actions = [
   ['Review usage and cost', '/usage', 'Track token pressure before billing work starts.'],
 ];
 
+const demoShortcuts = [
+  ['Agents', '/agents', 'Connect a target tool'],
+  ['Workflows', '/workflows', 'Run a reusable flow'],
+  ['Integrations', '/integrations', 'Choose MCP, API, n8n or SDK'],
+  ['Docs', '/docs', 'Open quick start guides'],
+];
+
 export default function DashboardPage() {
   const metrics = [
     ['Memories', String(mockMemories.length), 'Stored project facts and rules'],
@@ -59,6 +66,20 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-border/60 bg-card/60">
+          <CardHeader>
+            <CardTitle>Demo shortcuts</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {demoShortcuts.map(([title, href, body]) => (
+              <Link key={href} href={href} className="rounded-2xl border border-border/60 bg-background/60 p-4 transition-colors hover:bg-muted/50">
+                <div className="font-medium">{title}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{body}</div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );
