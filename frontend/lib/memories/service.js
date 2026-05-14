@@ -1,10 +1,6 @@
 import { mcp } from '@/lib/mcp/client';
+import { getMemoryNamespace } from '@/lib/memories/config';
 import { mockMemories } from '@/content/mockMemories';
-
-const DEFAULT_NAMESPACE =
-  process.env.STACKMEMORY_NAMESPACE ||
-  process.env.NEXT_PUBLIC_STACKMEMORY_NAMESPACE ||
-  'demo:stackmemory';
 
 function toNumber(value, fallback = 0) {
   const parsed = Number(value);
@@ -62,9 +58,9 @@ export function mockMemoryFallback() {
   }));
 }
 
-export async function listMemories({ limit = 50, offset = 0, type, fallback = true } = {}) {
+export async function listMemories({ limit = 50, offset = 0, type, namespace, fallback = true } = {}) {
   try {
-    const payload = await mcp.list({ namespace: DEFAULT_NAMESPACE, limit, offset, type });
+    const payload = await mcp.list({ namespace: getMemoryNamespace(namespace), limit, offset, type });
     const memories = normalizeMemoryList(payload);
     return memories.length || !fallback ? memories : mockMemoryFallback();
   } catch (error) {
@@ -73,14 +69,14 @@ export async function listMemories({ limit = 50, offset = 0, type, fallback = tr
   }
 }
 
-export async function searchMemories({ query, limit = 10, type, fallback = true } = {}) {
+export async function searchMemories({ query, limit = 10, type, namespace, fallback = true } = {}) {
   const cleanQuery = String(query || '').trim();
   if (!cleanQuery) return fallback ? mockMemoryFallback().slice(0, limit) : [];
 
   try {
     const payload = await mcp.search({
       query: cleanQuery,
-      namespace: DEFAULT_NAMESPACE,
+      namespace: getMemoryNamespace(namespace),
       limit,
       type,
     });
@@ -98,12 +94,13 @@ export async function searchMemories({ query, limit = 10, type, fallback = true 
   }
 }
 
-export async function getMemory(id) {
+export async function getMemory(id, { namespace } = {}) {
   const cleanId = String(id || '').trim();
   if (!cleanId) return null;
+  const resolvedNamespace = getMemoryNamespace(namespace);
 
   try {
-    const directPayload = await mcp.get({ id: cleanId, namespace: DEFAULT_NAMESPACE });
+    const directPayload = await mcp.get({ id: cleanId, namespace: resolvedNamespace });
     const directMatches = normalizeMemoryList(directPayload);
     const directMatch = directMatches.find((memory) => memory.id === cleanId) || directMatches[0];
     if (directMatch) return directMatch;
@@ -111,11 +108,11 @@ export async function getMemory(id) {
     console.warn('getMemory direct lookup fallback:', error?.message || error);
   }
 
-  const liveList = await listMemories({ limit: 100, fallback: false });
+  const liveList = await listMemories({ limit: 100, namespace: resolvedNamespace, fallback: false });
   const liveMatch = liveList.find((memory) => memory.id === cleanId);
   if (liveMatch) return liveMatch;
 
-  const searchMatches = await searchMemories({ query: cleanId, limit: 10, fallback: false });
+  const searchMatches = await searchMemories({ query: cleanId, limit: 10, namespace: resolvedNamespace, fallback: false });
   const searchMatch = searchMatches.find((memory) => memory.id === cleanId) || searchMatches[0];
   if (searchMatch) return searchMatch;
 
@@ -130,13 +127,14 @@ export async function createMemory(input) {
   const source = String(input?.source || 'Dashboard').trim();
   const confidence = normalizeScore(input?.confidence, 0.85);
   const importance_score = normalizeScore(input?.importance ?? input?.importance_score, 0.75);
+  const namespace = getMemoryNamespace(input?.namespace);
 
   const payload = await mcp.store({
     content,
     type,
     confidence,
     importance_score,
-    namespace: DEFAULT_NAMESPACE,
+    namespace,
     tags: source ? [`source:${source}`] : [],
   });
 
@@ -156,28 +154,29 @@ export async function createMemory(input) {
 export async function updateMemory(id, input) {
   const cleanId = String(id || '').trim();
   if (!cleanId) throw new Error('Memory id is required');
+  const namespace = getMemoryNamespace(input?.namespace);
 
   const payload = await mcp.update({
     id: cleanId,
-    namespace: DEFAULT_NAMESPACE,
+    namespace,
     content: input?.content ? String(input.content).trim() : undefined,
     type: input?.type || undefined,
     confidence: input?.confidence ? normalizeScore(input.confidence, 0.85) : undefined,
     tags: input?.source ? [`source:${String(input.source).trim()}`] : undefined,
   });
 
-  return normalizeMemory(payload, 0) || getMemory(cleanId);
+  return normalizeMemory(payload, 0) || getMemory(cleanId, { namespace });
 }
 
-export async function deleteMemory(id) {
+export async function deleteMemory(id, { namespace } = {}) {
   const cleanId = String(id || '').trim();
   if (!cleanId) throw new Error('Memory id is required');
 
-  return mcp.delete({ id: cleanId, namespace: DEFAULT_NAMESPACE });
+  return mcp.delete({ id: cleanId, namespace: getMemoryNamespace(namespace) });
 }
 
-export async function getContextPreviewMemories(limit = 3) {
-  const memories = await listMemories({ limit: Math.max(limit, 10) });
+export async function getContextPreviewMemories(limit = 3, { namespace } = {}) {
+  const memories = await listMemories({ limit: Math.max(limit, 10), namespace });
   return [...memories]
     .sort((a, b) => {
       const scoreA = a.importance + a.confidence - a.decay;
@@ -185,8 +184,4 @@ export async function getContextPreviewMemories(limit = 3) {
       return scoreB - scoreA;
     })
     .slice(0, limit);
-}
-
-export function getMemoryNamespace() {
-  return DEFAULT_NAMESPACE;
 }
