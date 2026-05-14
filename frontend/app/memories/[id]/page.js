@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/app/AppShell';
+import { getMemoryById } from '@/content/mockMemories';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function MemoryDetailPage({ params }) {
+  const memory = getMemoryById(params.id);
+
   return (
     <AppShell title="Memory Detail" description="Inspect one memory, its metadata and future retrieval signals.">
       <div className="space-y-6">
@@ -21,9 +24,26 @@ export default function MemoryDetailPage({ params }) {
             <CardTitle>Memory ID: {params.id}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-              Memory content, type, confidence, importance, decay and access history will appear here.
-            </div>
+            {memory ? (
+              <>
+                <div className="rounded-2xl border border-border/60 bg-background/60 p-4 text-foreground">
+                  {memory.content}
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Type: {memory.type}</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Source: {memory.source}</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Confidence: {Math.round(memory.confidence * 100)}%</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Importance: {Math.round(memory.importance * 100)}%</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Decay: {Math.round(memory.decay * 100)}%</div>
+                  <div className="rounded-2xl border border-border/60 bg-background/60 p-4">Retrieval: preview-ready</div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                Memory not found. This route is ready for real API-backed records.
+              </div>
+            )}
+
             <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
               Future view: related memories, graph edges and context compiler impact.
             </div>
