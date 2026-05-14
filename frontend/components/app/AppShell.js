@@ -42,6 +42,17 @@ export function AppShell({ title, description, children }) {
                 Home
               </Link>
             </div>
+            <nav className="flex gap-2 overflow-x-auto border-t border-border/60 px-4 py-3 lg:hidden">
+              {appNavigation.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="shrink-0 rounded-xl border border-border/60 px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </header>
 
           <div className="p-4 lg:p-8">
