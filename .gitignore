@@ -72,3 +72,4 @@ backend/lib/data/test_ab/
 # Supabase internal docs (not public)
 SUPABASE_AUTH_ANALYSIS.md
 SUPABASE_KEYS_GUIDE.md
+.aider*

@@ -1,61 +1,50 @@
-# StackMemory — Architecture (v3.2, post-unification)
+# StackMemory — Architecture (v3.5, Supabase-First)
 
-> **TL;DR** — One source of truth. The MCP server (Cloudflare D1 + Vectorize)
-> owns every memory and every cognitive operation. The Next.js frontend is a
-> thin proxy + dashboard. Supabase only handles identity, billing and teams.
+> **TL;DR** — Supabase is the **Source of Truth**. The Next.js App handles cognitive logic, persistence (Postgres + pgvector), and identity. The MCP server is a high-performance **Bridge** that allows external AI agents to interact with this unified memory.
 
 ---
 
-## Why we refactored
+## The Unified Architecture
 
-Before v3.2 the platform stored memories in **three** places:
+StackMemory uses a "Service-Repository" pattern to ensure that the same memory is accessible from both the web dashboard and external AI agents.
 
-| Layer | Store | Used by |
+```
+                 ┌──────────────────────────┐
+                 │     Next.js Frontend      │
+                 │   (UI + Cognitive logic) │
+                 └──────────┬────────────────┘
+                            │
+                            │ (Service Layer)
+                            ▼
+                 ┌──────────────────────────┐
+                 │    Memory Service Layer  │
+                 │   (Consolidate / Dream)  │
+                 └──────────┬────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+    ┌───────────────────┐       ┌───────────────────┐
+    │   Supabase DB     │       │   MCP Bridge      │
+    │ (Postgres/vector) │◄─────►│ (App-Adapter)    │
+    └───────────────────┘       └───────────────────┘
+              ▲                           ▲
+              │                           │
+        (Web Dashboard)             (Claude / Cursor)
+```
+
+### Component Responsibilities
+
+| Component | Responsibility | Stack |
 |---|---|---|
-| MCP server | Cloudflare D1 + Vectorize | Claude/Cursor/Windsurf clients |
-| Frontend `/api/memories/*` | Supabase `memories` + pgvector | Web dashboard |
-| Backend (FastAPI) | MongoDB | nobody, in practice |
+| `frontend/features/` | Core business logic, memory consolidation, cognitive simulation. | TS, Next.js |
+| `Supabase` | Persistent storage, Vector search (pgvector), RLS, Auth. | Postgres |
+| `mcp-server/` | Exposing internal tools to external agents via JSON-RPC. | Node.js / Workers |
+| `mcp-server/app-adapter` | Thin proxy that calls `frontend/api/*` endpoints. | TS |
 
-The same memory written via the dashboard would never reach Claude, and vice
-versa. The cognitive layer (`brain_*`) had two parallel implementations
-(MCP-server TypeScript and frontend Next.js routes) drifting apart.
-
-v3.2 collapses this into a single architecture.
-
----
-
-## New architecture
-
-```
-                ┌──────────────────────────┐
-                │     Next.js Frontend      │
-                │  (dashboard + API proxy)  │
-                └──────────┬────────────────┘
-                           │  /api/memories/*
-                           │  /api/brain/*
-                           ▼
-                ┌──────────────────────────┐
-                │   StackMemory MCP server  │
-                │  (Cloudflare Workers)     │
-                ├──────────────────────────┤
-                │ • 21 tools                │
-                │ • Ulu-Brain cognitive     │
-                │ • PII scrub + namespace   │
-                └──────────┬────────────────┘
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-       ┌────────────┐            ┌────────────┐
-       │ Cloudflare │            │ Cloudflare │
-       │     D1     │            │ Vectorize  │
-       │ (records)  │            │ (768-dim)  │
-       └────────────┘            └────────────┘
-
-Identity-only paths
-─────────────────────
-Supabase ── auth, profiles, teams, billing, conversations
-            (NEVER memories — that lives in MCP only)
-```
+### Why this structure?
+- **Unified Logic:** Cognitive features like `dream` and `simulate` are written once in the frontend service layer and exposed to both the UI and the MCP.
+- **Security:** Supabase RLS ensures that the MCP adapter can only access the user's data after proper authentication.
+- **Speed:** Next.js Route Handlers provide a fast, scalable API surface.
 
 ### Component responsibilities
 
@@ -132,19 +121,18 @@ Same pattern for `search`, `update`, `delete`, `graph`, `query`, all `brain_*`.
 
 ## Self-hosting
 
-```bash
-# 1. Deploy your own MCP server
-cd mcp-server
-npx wrangler d1 create stackmemory-mcp-db
-npx wrangler vectorize create stackmemory-embeddings --dimensions=768 --metric=cosine
-npx wrangler deploy
+1. **Deploy Supabase Schema:**
+   Run `frontend/supabase/schema.sql` in your Supabase SQL editor.
 
-# 2. Point the frontend at it
-echo "MCP_SERVER_URL=https://<your-worker>.workers.dev/mcp" >> .env
+2. **Configure Environment:**
+   ```bash
+   # frontend/.env.local
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   ```
 
-# 3. Run the dashboard
-docker compose up -d
-```
+3. **Deploy MCP Bridge:**
+   The MCP server can be deployed to any Node.js environment or Cloudflare Worker. It requires `STACKMEMORY_APP_URL` to point to your Next.js API.
 
 ---
 

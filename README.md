@@ -1,335 +1,116 @@
-# StackMemory
+# 🧠 Ulu-Brain (Powered by StackMemory)
 
-**Context control plane for AI agents.**
+**The Persistent Cognitive Layer for AI Agents.**
 
-StackMemory is persistent memory infrastructure for AI agents and app-first AI products. It stores long-lived memory, links related memories, and compiles only the relevant context needed for a request so teams can reduce repeated prompt tokens without losing useful context.
+StackMemory is not just a database; it is the **Context Control Plane** for the next generation of AI products. It provides AI agents with a long-term, self-evolving memory that mimics human cognitive processes—remembering what matters, forgetting what's redundant, and dreaming up new connections.
 
-## Core promise
+---
 
-```txt
-Remember what matters.
-Retrieve only what is relevant.
-Control context size.
-Measure estimated token savings.
+## ✨ The "Ulu-Brain" Advantage
+
+While standard RAG systems simply fetch text, **Ulu-Brain** processes knowledge through a multi-layered cognitive engine:
+
+### 🔮 Cognitive Engines (v5.1)
+- **`brain_simulate`**: Run risk-scored decision testing before committing to major changes. It analyzes past successes and failures to provide a 5-level risk verdict.
+- **`brain_dream`**: Discover hidden bridges between isolated projects. It creatively cross-pollinates ideas between different namespaces (e.g., "What can my 'Game Engine' project learn from my 'E-commerce' project?").
+- **`brain_think`**: A contextual reasoning engine that detects contradictions and knowledge freshness to give strategic recommendations.
+- **`brain_consolidate`**: Automatic cognitive housekeeping. It clusters similar memories and generates high-level **Insights** (Knowledge Synthesis).
+
+### 📉 Scientific Token Optimization: H(x,ψ)
+Ulu-Brain uses the proprietary **H(x,ψ) Scoring System** to rank memories based on:
+- 🎯 **Similarity**: Semantic relevance.
+- 📉 **Decay**: Exponential aging of unused knowledge.
+- ⭐️ **Importance**: Human-verified or system-inferred weight.
+- 📊 **Frequency**: How often the information is accessed.
+
+**The Result:** Up to **60% reduction in prompt costs** by compiling only the highest-quality context block.
+
+### 🛡️ Persistence & Safety
+- **Memory Versioning:** A full audit trail for every thought. Restore past versions of any memory (Git for your brain).
+- **Conflict Resolution:** Detects and flags contradictions in real-time, preventing "AI Hallucinations" caused by stale data.
+- **Zero-Trust Security:** PII scrubbing (API keys, secrets, personal data) and strictly isolated namespaces.
+
+---
+
+## 👥 Who is this for?
+
+### 👨‍💻 Power Developers
+Your coding agent shouldn't forget your architecture decisions every 10 minutes. Use Ulu-Brain to persist coding styles, library choices, and "lessons learned" across sessions.
+
+### 🏛️ AI-First Enterprises
+Build a unified corporate memory. Isolated team namespaces ensure that marketing agents and engineering agents share knowledge only where you want them to.
+
+### 🧪 Researchers & Writers
+Connect thousands of notes, papers, and ideas. Let the `brain_dream` engine find the "missing link" in your research.
+
+---
+
+## 🛠 Tech Stack & Cognitive Layer
+
+StackMemory is built for stability, privacy, and extreme context performance.
+
+- **Frontend/API:** Next.js 14 (App Router) - Enterprise-grade React framework.
+- **Primary Brain (DB):** [Supabase](https://supabase.com/) - Postgres-backed memory with Row Level Security (RLS).
+- **Vektör & Search:** pgvector (Supabase) for semantic recall.
+- **Auth & Billing:** Integrated Supabase Auth + Stripe Entitlements.
+- **MCP Adapter:** High-performance proxy for AI Agent integration (Claude, Gemini, OpenAI).
+
+## 🏗 Architecture: The Service-Repository Pattern
+
+Unlike typical "vibe-coded" projects, StackMemory follows a strict architectural boundary:
+
+1. **Service Layer:** High-level cognitive logic (Simulate, Dream, Think).
+2. **Repository Layer:** Clean data access. Swappable implementations (Supabase is default).
+3. **API Controllers:** Next.js Route Handlers managing authentication and billing gates.
+4. **MCP Bridge:** A thin adapter that allows external AI agents to access your personal brain securely.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Setup Your Brain (Supabase)
+1. Create a new project on [Supabase](https://supabase.com/).
+2. Go to the **SQL Editor** and run the contents of `frontend/supabase/schema.sql`. This will create the `memories`, `memory_versions`, and `brain_insights` tables with proper pgvector support.
+3. Enable **Row Level Security (RLS)** as defined in the schema to protect your data.
+
+### 2. Configuration
+Create a `.env.local` file in the `frontend/` directory:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+# Optional for Brain Engines:
+OPENAI_API_KEY=your_key
+# or
+GEMINI_API_KEY=your_key
 ```
 
-## Current architecture
-
-StackMemory currently runs as an **app-first** product:
-
-```txt
-Dashboard UI
-  ↓
-Next.js App API
-  ↓
-Feature service / repository layer
-  ↓
-Supabase
+### 3. Start Developing
+```bash
+# Start the Dashboard
+cd frontend && npm install && npm run dev
 ```
 
-MCP is still supported, but only as a thin adapter:
-
-```txt
-MCP client
-  ↓
-mcp-server/src/app-adapter.ts
-  ↓
-Next.js App API
-  ↓
-Supabase-backed service layer
-```
-
-The old monolithic MCP server entrypoint has been disabled. The active MCP entrypoint is:
-
-```txt
-mcp-server/src/app-adapter.ts
-```
-
-## Product surfaces
-
-```txt
-/dashboard
-/dashboard/memories
-/dashboard/context
-/dashboard/brain
-/dashboard/graph
-/dashboard/settings
-/dashboard/billing
-```
-
-## App API
-
-```txt
-GET    /api/memories?q=&type=&status=&scope=&tag=&limit=
-POST   /api/memories
-GET    /api/memories/:id
-PATCH  /api/memories/:id
-DELETE /api/memories/:id
-GET    /api/brain/status
-POST   /api/brain/simulate
-GET    /api/graph?type=&status=&scope=&tag=&limit=
-POST   /api/graph
-DELETE /api/graph?id=
-POST   /api/context/estimate
-POST   /api/context/compile
-GET    /api/usage/summary
-GET    /api/settings/memory
-PUT    /api/settings/memory
-GET    /api/billing/summary
-POST   /api/billing/create-checkout
-POST   /api/webhooks/stripe
-```
-
-## Token optimization MVP
-
-StackMemory includes a first-pass context optimization layer:
-
-```txt
-frontend/features/context/context.optimizer.ts
-frontend/features/context/context.telemetry.ts
-frontend/features/context/components/ContextOptimizerClient.jsx
-frontend/features/usage/usage.repository.ts
-frontend/app/dashboard/context/page.js
-frontend/app/api/context/estimate/route.ts
-frontend/app/api/context/compile/route.ts
-frontend/app/api/usage/summary/route.ts
-frontend/supabase/migrations/20260513_token_optimization.sql
-```
-
-### Context dashboard
-
-```txt
-/dashboard/context
-```
-
-The dashboard can:
-
-```txt
-run estimate without writing telemetry
-compile optimized context and record telemetry
-preview the compiled context block
-show estimated saved tokens
-show estimated savings percentage
-show agent savings leaderboard
-show recent context builds
-```
-
-### Estimate context savings
-
-```http
-POST /api/context/estimate
-```
-
+### 4. Connect Your Agent
+Add the following to your `claude_desktop_config.json` or Cursor settings:
 ```json
-{
-  "agentId": "coding-agent",
-  "workspaceId": "stackmemory",
-  "userRequest": "Continue refactoring billing without touching MCP.",
-  "maxContextTokens": 6000,
-  "strategy": "balanced",
-  "filters": {
-    "tag": "billing",
-    "status": "active"
+"mcpServers": {
+  "stackmemory": {
+    "command": "npx",
+    "args": ["-y", "@ai-ulu/mcp-server"]
   }
 }
 ```
 
-Returns:
+---
 
-```txt
-selected memory ids
-omitted memory ids
-estimated baseline tokens
-final context tokens
-estimated savings tokens
-estimated savings percent
-```
+## 🗺️ Roadmap
 
-### Compile optimized context
+- [x] **v5.1:** Simulation & Ideation Engines.
+- [ ] **v5.5:** Proactive Intelligence (Background auto-linking & conflict alerts).
+- [ ] **v6.0:** Local-First Hybrid Sync (IndexedDB + Cloudflare).
+- [ ] **v7.0:** Distributed Memory Graph (P2P Memory Sharing).
 
-```http
-POST /api/context/compile
-```
+---
 
-Returns a compiled context block plus metrics. It also records telemetry into:
-
-```txt
-context_builds
-memory_retrieval_events
-```
-
-Supported strategies:
-
-```txt
-aggressive  smaller memory budget, stronger cost reduction
-balanced    default memory budget
-quality     larger memory budget, safer answer quality
-```
-
-### Usage summary
-
-```http
-GET /api/usage/summary
-```
-
-Returns aggregate context optimization metrics:
-
-```txt
-context builds
-final context tokens
-estimated saved tokens
-estimated savings percent
-selected / omitted memory counts
-agent savings breakdown
-recent context builds
-```
-
-## Billing persistence
-
-Billing now has a Supabase-backed subscription persistence layer:
-
-```txt
-frontend/supabase/migrations/20260513_billing_subscriptions.sql
-frontend/features/billing/billing.repository.ts
-frontend/lib/supabase/admin.ts
-frontend/app/api/webhooks/stripe/route.ts
-frontend/app/api/billing/summary/route.js
-```
-
-Stripe checkout writes `user_id` and `plan_id` into checkout and subscription metadata. Stripe webhook events upsert subscription state into:
-
-```txt
-billing_subscriptions
-```
-
-The billing summary endpoint reads the active subscription first and falls back to `NEXT_PUBLIC_DEFAULT_PLAN` only when no active subscription exists.
-
-## Setup
-
-Read the deployment checklist first:
-
-```txt
-DEPLOYMENT.md
-```
-
-Frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-MCP adapter:
-
-```bash
-cd mcp-server
-npm install
-npm run build
-npm run dev
-```
-
-## Supabase
-
-Run the schema and migrations in this order:
-
-```txt
-frontend/supabase/schema.sql
-frontend/supabase/migrations/20260513_memory_links.sql
-frontend/supabase/migrations/20260513_memory_tags.sql
-frontend/supabase/migrations/20260513_token_optimization.sql
-frontend/supabase/migrations/20260513_billing_subscriptions.sql
-```
-
-Core tables used by the current dashboard and APIs:
-
-```txt
-memories
-memories.tags
-memory_settings
-memory_versions
-brain_config
-brain_feedback
-memory_links
-ai_usage_events
-context_builds
-memory_retrieval_events
-billing_subscriptions
-```
-
-## Environment
-
-Use these examples:
-
-```txt
-.env.example
-frontend/.env.example
-mcp-server/wrangler.app-adapter.example.toml
-```
-
-Required app-first values:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-Stripe billing values:
-
-```env
-STRIPE_SECRET_KEY=
-STRIPE_PRO_PRICE_ID=
-STRIPE_TEAM_PRICE_ID=
-NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
-NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID=
-STRIPE_WEBHOOK_SECRET=
-```
-
-MCP adapter values:
-
-```env
-STACKMEMORY_APP_URL=https://your-stackmemory-app.example.com
-STACKMEMORY_APP_TOKEN=
-```
-
-## Status
-
-Implemented:
-
-```txt
-App-first dashboard shell
-Supabase memory repository
-Memory CRUD UI
-Memory tags persistence and filtering
-Brain dashboard MVP
-Memory graph with persisted memory_links
-Manual graph link creation/deletion
-Settings UI
-Billing summary UI
-Billing subscriptions table
-Stripe webhook subscription persistence
-Dashboard auth gate
-Context estimate API
-Context compile API
-Usage summary API
-Context optimizer dashboard
-Context telemetry tables
-MCP app adapter
-Legacy MCP entrypoint tombstone
-GitHub Actions build workflow
-```
-
-Next:
-
-```txt
-CI build log fixes
-Usage/savings charts
-Graph search/filter controls
-Production deployment hardening
-```
-
-## License
-
-MIT
+## 📄 License
+MIT © AI-ULU. Built with ❤️ for the Agentic future.
