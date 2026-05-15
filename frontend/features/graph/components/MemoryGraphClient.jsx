@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { GitBranch, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Filter, GitBranch, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,30 @@ const defaultLinkForm = {
   reason: '',
 };
 
+const defaultFilters = {
+  query: '',
+  type: 'all',
+  status: 'active',
+  scope: 'all',
+  tag: '',
+  limit: 200,
+};
+
+const memoryTypes = [
+  'all',
+  'identity',
+  'preference',
+  'fact',
+  'project',
+  'rule',
+  'decision',
+  'task',
+  'insight',
+];
+
+const memoryStatuses = ['all', 'active', 'pending', 'deprecated'];
+const memoryScopes = ['all', 'private', 'team', 'org'];
+
 const relationshipTypes = [
   'related',
   'supports',
@@ -43,24 +67,56 @@ function truncateLabel(label) {
   return label.length > 90 ? `${label.slice(0, 90)}...` : label;
 }
 
+function buildGraphQuery(filters) {
+  const params = new URLSearchParams();
+  if (filters.type && filters.type !== 'all') params.set('type', filters.type);
+  if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+  if (filters.scope && filters.scope !== 'all') params.set('scope', filters.scope);
+  if (filters.tag) params.set('tag', filters.tag);
+  if (filters.limit) params.set('limit', String(filters.limit));
+  const query = params.toString();
+  return query ? `/api/graph?${query}` : '/api/graph';
+}
+
 export function MemoryGraphClient() {
   const [graph, setGraph] = useState({ nodes: [], edges: [], source: 'inferred' });
+  const [filters, setFilters] = useState(defaultFilters);
   const [selectedNode, setSelectedNode] = useState(null);
   const [linkForm, setLinkForm] = useState(defaultLinkForm);
   const [loading, setLoading] = useState(true);
   const [savingLink, setSavingLink] = useState(false);
   const [error, setError] = useState('');
 
+  const visibleNodes = useMemo(() => {
+    const term = filters.query.trim().toLowerCase();
+    if (!term) return graph.nodes;
+
+    return graph.nodes.filter((node) => {
+      const searchable = [node.label, node.type, node.id].join(' ').toLowerCase();
+      return searchable.includes(term);
+    });
+  }, [filters.query, graph.nodes]);
+
+  const visibleNodeIds = useMemo(
+    () => new Set(visibleNodes.map((node) => node.id)),
+    [visibleNodes],
+  );
+
+  const visibleEdges = useMemo(
+    () => graph.edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)),
+    [graph.edges, visibleNodeIds],
+  );
+
   const targetOptions = useMemo(
     () => graph.nodes.filter((node) => node.id !== linkForm.sourceMemoryId),
     [graph.nodes, linkForm.sourceMemoryId],
   );
 
-  async function loadGraph() {
+  async function loadGraph(nextFilters = filters) {
     setLoading(true);
     setError('');
     try {
-      const body = await parseResponse(await fetch('/api/graph'));
+      const body = await parseResponse(await fetch(buildGraphQuery(nextFilters)));
       const nextGraph = body.graph || { nodes: [], edges: [], source: 'inferred' };
       setGraph(nextGraph);
 
@@ -75,12 +131,12 @@ export function MemoryGraphClient() {
   }
 
   useEffect(() => {
-    loadGraph();
+    loadGraph(defaultFilters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedEdges = selectedNode
-    ? graph.edges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
+    ? visibleEdges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
     : [];
 
   async function createLink(event) {
@@ -112,7 +168,7 @@ export function MemoryGraphClient() {
       }));
 
       setLinkForm(defaultLinkForm);
-      await loadGraph();
+      await loadGraph(filters);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create memory link');
     } finally {
@@ -124,10 +180,20 @@ export function MemoryGraphClient() {
     setError('');
     try {
       await parseResponse(await fetch(`/api/graph?id=${encodeURIComponent(id)}`, { method: 'DELETE' }));
-      await loadGraph();
+      await loadGraph(filters);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete memory link');
     }
+  }
+
+  async function applyFilters(event) {
+    event.preventDefault();
+    await loadGraph(filters);
+  }
+
+  async function resetFilters() {
+    setFilters(defaultFilters);
+    await loadGraph(defaultFilters);
   }
 
   return (
@@ -135,11 +201,21 @@ export function MemoryGraphClient() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-border/60 bg-card/60">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Nodes</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-bold">{graph.nodes.length}</CardContent>
+          <CardContent>
+            <div className="text-3xl font-bold">{visibleNodes.length}</div>
+            {visibleNodes.length !== graph.nodes.length && (
+              <p className="mt-1 text-xs text-muted-foreground">Filtered from {graph.nodes.length}</p>
+            )}
+          </CardContent>
         </Card>
         <Card className="border-border/60 bg-card/60">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Edges</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-bold">{graph.edges.length}</CardContent>
+          <CardContent>
+            <div className="text-3xl font-bold">{visibleEdges.length}</div>
+            {visibleEdges.length !== graph.edges.length && (
+              <p className="mt-1 text-xs text-muted-foreground">Filtered from {graph.edges.length}</p>
+            )}
+          </CardContent>
         </Card>
         <Card className="border-border/60 bg-card/60">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Source</CardTitle></CardHeader>
@@ -154,6 +230,63 @@ export function MemoryGraphClient() {
           <CardContent className="p-4 text-sm text-destructive">{error}</CardContent>
         </Card>
       )}
+
+      <Card className="border-border/60 bg-card/60">
+        <CardHeader>
+          <CardTitle>Graph filters</CardTitle>
+          <CardDescription>
+            Narrow the graph by memory type, status, scope, tag, limit, or local text search before creating links.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={applyFilters} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+              <Input
+                value={filters.query}
+                onChange={(event) => setFilters({ ...filters, query: event.target.value })}
+                placeholder="Search visible nodes"
+              />
+              <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
+                <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectContent>
+                  {memoryTypes.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  {memoryStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.scope} onValueChange={(value) => setFilters({ ...filters, scope: value })}>
+                <SelectTrigger><SelectValue placeholder="Scope" /></SelectTrigger>
+                <SelectContent>
+                  {memoryScopes.map((scope) => <SelectItem key={scope} value={scope}>{scope}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input value={filters.tag} onChange={(event) => setFilters({ ...filters, tag: event.target.value })} placeholder="Tag" />
+              <Input
+                type="number"
+                min="10"
+                max="500"
+                step="10"
+                value={filters.limit}
+                onChange={(event) => setFilters({ ...filters, limit: Number(event.target.value) })}
+                placeholder="Limit"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
+                Apply filters
+              </Button>
+              <Button type="button" variant="outline" onClick={resetFilters} disabled={loading}>
+                Reset
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card className="border-border/60 bg-card/60">
         <CardHeader>
@@ -240,7 +373,7 @@ export function MemoryGraphClient() {
                   </CardDescription>
                 </div>
               </div>
-              <Button variant="outline" onClick={loadGraph}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button>
+              <Button variant="outline" onClick={() => loadGraph(filters)}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -250,7 +383,7 @@ export function MemoryGraphClient() {
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {graph.nodes.map((node) => (
+                {visibleNodes.map((node) => (
                   <button
                     key={node.id}
                     onClick={() => setSelectedNode(node)}
@@ -263,9 +396,9 @@ export function MemoryGraphClient() {
                     <p className="line-clamp-4 text-sm text-muted-foreground">{node.label}</p>
                   </button>
                 ))}
-                {!graph.nodes.length && (
+                {!visibleNodes.length && (
                   <div className="rounded-2xl border border-border/60 p-8 text-center text-muted-foreground md:col-span-2 xl:col-span-3">
-                    No graph nodes yet. Create memories first.
+                    No graph nodes match the current filters.
                   </div>
                 )}
               </div>
@@ -301,7 +434,7 @@ export function MemoryGraphClient() {
                         )}
                       </div>
                     </div>
-                  )) : <p className="text-sm text-muted-foreground">No edges for this node yet.</p>}
+                  )) : <p className="text-sm text-muted-foreground">No visible edges for this node under the current filters.</p>}
                 </div>
               </>
             ) : (
