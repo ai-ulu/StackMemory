@@ -3,10 +3,12 @@ import path from 'path';
 import crypto from 'crypto';
 import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import { LOCAL_AUTH_COOKIE } from '@/lib/dev/local-auth-shared';
+import bcrypt from 'bcryptjs';
 
 const DEV_DATA_DIR = path.join(process.cwd(), '.local-dev');
 const USERS_FILE = path.join(DEV_DATA_DIR, 'users.json');
 const STORE_FILE = path.join(DEV_DATA_DIR, 'store.json');
+
 async function ensureDir() {
   await fs.mkdir(DEV_DATA_DIR, { recursive: true });
 }
@@ -40,10 +42,14 @@ export async function createLocalUser(email, password) {
     return { user: null, error: { message: 'User already registered' } };
   }
 
+  // SECURITY: Hash password with bcrypt before storing
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+
   const user = {
     id: crypto.randomUUID(),
     email: normalizedEmail,
-    password,
+    passwordHash: hashedPassword, // Store hash instead of plain text
     created_at: new Date().toISOString(),
   };
   users.push(user);
@@ -54,10 +60,18 @@ export async function createLocalUser(email, password) {
 export async function authenticateLocalUser(email, password) {
   const users = await getLocalUsers();
   const normalizedEmail = email.trim().toLowerCase();
-  const user = users.find((item) => item.email === normalizedEmail && item.password === password);
-  if (!user) {
+  const user = users.find((item) => item.email === normalizedEmail);
+  
+  if (!user || !user.passwordHash) {
     return { user: null, error: { message: 'Invalid login credentials' } };
   }
+  
+  // SECURITY: Compare password with bcrypt hash
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isValid) {
+    return { user: null, error: { message: 'Invalid login credentials' } };
+  }
+  
   return { user, error: null };
 }
 
@@ -80,7 +94,12 @@ export async function updateLocalUserPassword(userId, password) {
   if (index === -1) {
     return { error: { message: 'User not found' } };
   }
-  users[index] = { ...users[index], password };
+  
+  // SECURITY: Hash new password with bcrypt
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  
+  users[index] = { ...users[index], passwordHash: hashedPassword };
   await saveLocalUsers(users);
   return { error: null };
 }
@@ -106,21 +125,28 @@ export async function saveLocalStore(store) {
 
 export function sanitizeLocalUser(user) {
   if (!user) return null;
-  return {
+  const sanitized = {
     id: user.id,
     email: user.email,
     created_at: user.created_at,
   };
+  // SECURITY: Never expose password hash to client
+  return sanitized;
 }
 
 export function buildLocalAuthCookie(user) {
+  // SECURITY: Add Secure flag for production, HttpOnly already set
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secureFlag = isProduction ? '; Secure' : '';
   return `${LOCAL_AUTH_COOKIE}=${encodeURIComponent(
     JSON.stringify(sanitizeLocalUser(user))
-  )}; Path=/; HttpOnly; SameSite=Lax`;
+  )}; Path=/; HttpOnly; SameSite=Lax${secureFlag}`;
 }
 
 export function clearLocalAuthCookie() {
-  return `${LOCAL_AUTH_COOKIE}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax`;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secureFlag = isProduction ? '; Secure' : '';
+  return `${LOCAL_AUTH_COOKIE}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax${secureFlag}`;
 }
 
 export function getLocalAuthCookieName() {

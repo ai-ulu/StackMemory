@@ -18,6 +18,15 @@ export async function POST(request) {
   const signature = headers().get('stripe-signature');
   const stripe = getStripeClient();
 
+  // SECURITY: Validate webhook secret is configured
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured');
+    return NextResponse.json(
+      { error: 'Webhook configuration error' },
+      { status: 500 }
+    );
+  }
+
   let event;
 
   try {
