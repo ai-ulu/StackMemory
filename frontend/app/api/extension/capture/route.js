@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
-});
+let openaiClient = null;
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
+    });
+  }
+  return openaiClient;
+}
 
 /**
  * Browser Extension Capture API
@@ -14,6 +21,8 @@ const openai = new OpenAI({
 
 async function generateEmbedding(text) {
   try {
+    const openai = getOpenAI();
+    if (!openai) return null;
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text.slice(0, 8000),
@@ -26,6 +35,8 @@ async function generateEmbedding(text) {
 
 async function processCapture(content, url, title) {
   try {
+    const openai = getOpenAI();
+    if (!openai) return { summary: content.slice(0, 200), type: 'fact', confidence: 0.6, tags: [], isRelevant: true };
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [

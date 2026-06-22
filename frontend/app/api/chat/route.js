@@ -6,11 +6,18 @@ import { appendMessage, listMemories, updateConversation } from '@/lib/dev/local
 import { getLocalRequestUser } from '@/lib/dev/local-server-auth';
 import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 
-// Initialize OpenAI client for embeddings
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
-});
+// Lazily instantiate OpenAI client to avoid crashing on load when key is absent.
+let openaiClient = null;
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
+    });
+  }
+  return openaiClient;
+}
 
 // Memory-First System Prompt (LOCKED)
 const SYSTEM_PROMPT_BASE = `Sen StackMemory üzerinden çalışan, **hafıza öncelikli mimari** kullanan bir yapay zeka asistanısın.
@@ -26,6 +33,8 @@ Kullanıcıyla doğal bir sohbet yürüt.`;
 // Generate embedding for text (with fallback)
 async function generateEmbedding(text) {
   try {
+    const openai = getOpenAI();
+    if (!openai) return null;
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text.slice(0, 8000),
@@ -385,7 +394,7 @@ async function searchLocalMemories(userId, message, limit = 3) {
 export async function POST(request) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }

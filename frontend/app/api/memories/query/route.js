@@ -5,20 +5,29 @@ import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 import { listMemories } from '@/lib/dev/local-data';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
-});
+let openaiClient = null;
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
+    });
+  }
+  return openaiClient;
+}
 
 /**
  * Natural Language Memory Query API
- * 
+ *
  * Allows users to ask questions about their memories in natural language.
  * E.g., "What do I prefer for lunch?", "When did I mention my job?"
  */
 
 async function generateEmbedding(text) {
   try {
+    const openai = getOpenAI();
+    if (!openai) return null;
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text.slice(0, 8000),

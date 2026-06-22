@@ -2,14 +2,29 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
-});
+let openaiClient = null;
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
+    });
+  }
+  return openaiClient;
+}
 
 // LLM-based conflict analysis (Blueprint spec)
 async function analyzeConflict(oldContent, newContent) {
   try {
+    const openai = getOpenAI();
+    if (!openai) {
+      return {
+        type: 'conflict',
+        analysis: 'OpenAI key not configured',
+        options: [newContent, oldContent, `${oldContent} ve ayrıca ${newContent}`],
+      };
+    }
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
