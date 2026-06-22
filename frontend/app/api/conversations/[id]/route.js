@@ -8,7 +8,7 @@ import { isLocalAuthMode } from '@/lib/dev/local-mode-shared';
 export async function GET(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       const { id } = await params;
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -65,7 +65,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       const { id } = await params;
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -123,7 +123,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       const { id } = await params;
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -11,7 +11,7 @@ export async function POST(request) {
     const { origin } = new URL(request.url);
 
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -133,7 +133,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }

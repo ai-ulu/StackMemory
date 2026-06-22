@@ -22,7 +22,7 @@ import {
 export async function GET(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -135,7 +135,7 @@ export async function GET(request, { params }) {
 export async function PATCH(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -225,7 +225,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     if (isLocalAuthMode()) {
-      const user = await getLocalRequestUser();
+      const user = await getLocalRequestUser(request);
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }

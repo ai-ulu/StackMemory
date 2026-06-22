@@ -6,10 +6,19 @@ import { listMemories } from '@/lib/dev/local-data';
 import OpenAI from 'openai';
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
-});
+// Lazily instantiate the OpenAI client so the route does not crash on load
+// when OPENAI_API_KEY is absent (e.g. local mode, which never needs embeddings).
+let openaiClient = null;
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://api.emergentmethods.ai/v1',
+    });
+  }
+  return openaiClient;
+}
 
 /**
  * Memory Search API
@@ -20,6 +29,8 @@ const openai = new OpenAI({
 
 async function generateEmbedding(text) {
   try {
+    const openai = getOpenAI();
+    if (!openai) return null;
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text.slice(0, 8000),
